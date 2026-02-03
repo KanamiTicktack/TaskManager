@@ -7,7 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/vue@3.2.45/dist/vue.global.prod.js"></script>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover, maximum-scale=1.0">
   <meta name="theme-color" content="#6366f1">
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="./icon-192.png">
@@ -39,114 +39,137 @@
       --status-bg: #f3f4f6; --status-text: #1f2937;
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-y: scroll; -webkit-tap-highlight-color: transparent; }
-    .form-control, .form-select { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); }
+    
+    /* Prevent Zoom on inputs for iOS */
+    .form-control, .form-select, input, textarea { 
+        background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; 
+    }
     body.dark-mode ::-webkit-calendar-picker-indicator { filter: invert(1); }
     
-    .app-container { display: flex; flex-direction: column; gap: 16px; max-width: 800px; margin: 0 auto; padding: 20px; min-height: 100vh; }
-    .main-content { flex: 1; min-width: 0; padding-bottom: 100px; }
+    /* Layout Structure */
+    .app-container { 
+        display: block; /* Default to block for mobile to prevent side-by-side */
+        max-width: 900px; margin: 0 auto; padding: 16px; min-height: 100vh; position: relative;
+    }
+    .main-content { width: 100%; padding-bottom: 100px; }
     .app-card { background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 16px; overflow: hidden; }
     
     /* Header */
-    .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 4px; }
     .app-title { font-weight: 800; font-size: 1.5rem; margin: 0; color: var(--text-main); letter-spacing: -0.5px; }
     .btn-theme-toggle { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s; cursor: pointer; }
     .btn-theme-toggle:active { background: var(--hover-bg); transform: scale(0.95); }
 
     /* Tabs */
     .nav-tabs { border: none; gap: 8px; margin-bottom: 16px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
-    .nav-link { border: none; border-radius: 20px !important; color: var(--text-sub); font-weight: 600; padding: 8px 16px; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .nav-link { border: none; border-radius: 20px !important; color: var(--text-sub); font-weight: 600; padding: 8px 16px; cursor: pointer; white-space: nowrap; transition: 0.2s; font-size: 0.9rem; }
     .nav-link:hover { background: var(--hover-bg); color: var(--text-main); }
     .nav-link.active { background: var(--primary) !important; color: #fff !important; }
     
     /* Tasks */
-    .task-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 8px; padding: 12px; display: flex; gap: 12px; cursor: pointer; position: relative; overflow: hidden; transition: 0.1s; }
-    .task-card:active { transform: scale(0.99); }
+    .task-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 8px; padding: 14px; display: flex; gap: 12px; cursor: pointer; position: relative; overflow: hidden; transition: 0.1s; align-items: flex-start; }
+    .task-card:active { transform: scale(0.98); background: var(--hover-bg); }
     .task-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
     .priority-high::before { background: #ef4444; } .priority-medium::before { background: #f59e0b; } .priority-low::before { background: #3b82f6; }
     
-    .custom-checkbox { width: 22px; height: 22px; border: 2px solid var(--text-sub); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s; }
+    .custom-checkbox { width: 24px; height: 24px; border: 2px solid var(--text-sub); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s; margin-top: 2px; }
     .custom-checkbox.checked { background: var(--primary); border-color: var(--primary); }
-    .custom-checkbox .material-icons-round { font-size: 16px; color: white; opacity: 0; transition: 0.2s; }
+    .custom-checkbox .material-icons-round { font-size: 18px; color: white; opacity: 0; transition: 0.2s; }
     .custom-checkbox.checked .material-icons-round { opacity: 1; }
     
     .task-content { flex: 1; min-width: 0; }
-    .task-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; line-height: 1.4; }
+    .task-title { font-weight: 600; font-size: 1rem; margin-bottom: 6px; line-height: 1.4; word-break: break-word; }
     .task-meta { display: flex; gap: 6px; font-size: 0.75rem; color: var(--text-sub); flex-wrap: wrap; align-items: center; }
-    .badge-base { padding: 2px 8px; border-radius: 6px; background: var(--hover-bg); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 3px; }
+    .badge-base { padding: 3px 8px; border-radius: 6px; background: var(--hover-bg); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 3px; font-weight: 500; }
     .tag-badge { background-color: var(--tag-bg); color: var(--tag-text); }
     .gcal-badge { background: #e0e7ff; color: #4338ca; border: none; }
     body.dark-mode .gcal-badge { background: #312e81; color: #e0e7ff; }
-    .task-content.text-decoration-line-through { color: var(--text-sub); }
-    body.dark-mode .task-content.text-decoration-line-through { color: #d1d5db !important; opacity: 1 !important; }
-    body.dark-mode .task-card.opacity-75 { opacity: 1 !important; }
+    .task-content.text-decoration-line-through { color: var(--text-sub); opacity: 0.7; }
+    body.dark-mode .task-content.text-decoration-line-through { color: #9ca3af !important; opacity: 0.6; }
     
-    /* PC Layout & Header Visibility Fix */
-    .side-panel { width: 100%; max-width: 500px; background: var(--bg-card); border-left: 1px solid var(--border-color); position: fixed; right: 0; top: 0; height: 100vh; overflow-y: auto; z-index: 2000; padding: 20px; display: flex; flex-direction: column; box-shadow: -5px 0 25px rgba(0,0,0,0.2); transition: transform 0.3s ease; }
-    .slide-enter-active, .slide-leave-active { transition: transform 0.3s ease; }
+    /* Side Panel (Detail View) */
+    .side-panel { 
+        position: fixed; top: 0; right: 0; width: 100%; height: 100vh; 
+        background: var(--bg-card); z-index: 3000; /* Higher than FAB */
+        display: flex; flex-direction: column; 
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
+        box-shadow: -10px 0 30px rgba(0,0,0,0.1); 
+        padding: 20px; overflow-y: auto;
+    }
+    .slide-enter-active, .slide-leave-active { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
     .slide-enter-from, .slide-leave-to { transform: translateX(100%); }
     
-    /* Default (Mobile): Show Mobile Header, Hide PC Header */
-    .panel-header-mobile { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-    .panel-header-pc { display: none !important; }
-    .btn-panel-back { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; cursor: pointer; }
-    .btn-panel-back:hover { background: var(--hover-bg); }
-
     /* PC Layout Override */
     @media (min-width: 992px) {
-        .app-container { flex-direction: row; max-width: 1400px; align-items: flex-start; }
-        .main-content { flex: 1; }
-        .side-panel { position: sticky; top: 20px; height: calc(100vh - 40px); border-radius: var(--radius); box-shadow: var(--shadow); z-index: 100; transform: none !important; border: 1px solid var(--border-color); }
-        
-        /* PC: Hide Mobile Header, Show PC Header */
+        .app-container { display: flex; flex-direction: row; align-items: flex-start; gap: 24px; max-width: 1200px; }
+        .main-content { flex: 1; padding-bottom: 20px; }
+        .side-panel { 
+            position: sticky; top: 20px; width: 400px; height: calc(100vh - 40px); 
+            border-radius: var(--radius); border: 1px solid var(--border-color); 
+            z-index: 100; transform: none !important; display: flex; /* Always visible if triggered */
+        }
+        .slide-enter-from, .slide-leave-to { opacity: 0; transform: translateY(10px); }
+        /* Hide mobile header in panel on PC */
         .panel-header-mobile { display: none !important; }
         .panel-header-pc { display: flex !important; }
     }
+
+    /* Panel Headers */
+    .panel-header-mobile { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
+    .panel-header-pc { display: none !important; align-items: center; justify-content: space-between; margin-bottom: 24px; }
     
+    .btn-panel-back { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; cursor: pointer; margin-left: -8px; }
+    .btn-close { background: transparent; border: none; font-size: 1.5rem; line-height: 1; color: var(--text-sub); cursor: pointer; }
+
     /* Calendar */
     .calendar-wrapper { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 20px; overflow: hidden; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--border-color); min-width: 300px; }
-    .calendar-header-cell { padding: 8px 4px; text-align: center; font-size: 0.75rem; font-weight: 700; background: var(--hover-bg); color: var(--text-sub); }
+    .calendar-header-cell { padding: 12px 4px; text-align: center; font-size: 0.75rem; font-weight: 700; background: var(--hover-bg); color: var(--text-sub); }
     .header-sun { color: #ef4444; } .header-sat { color: #3b82f6; }
     .calendar-cell { background: var(--bg-card); padding: 4px; min-height: 100px; cursor: pointer; display: flex; flex-direction: column; transition: 0.1s; }
     .calendar-cell:active { background: var(--hover-bg); }
     .calendar-cell.selected { background: rgba(99, 102, 241, 0.1) !important; box-shadow: inset 0 0 0 2px var(--primary); }
-    .date-num { align-self: center; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; border-radius: 50%; margin-bottom: 4px; }
+    .date-num { align-self: center; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 600; border-radius: 50%; margin-bottom: 4px; }
     .date-num.today { background: var(--primary); color: white; }
-    .cal-item { font-size: 0.7rem; padding: 2px 4px; margin-bottom: 2px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--bg-input); border: 1px solid var(--border-color); border-left-width: 3px; color: var(--text-main); }
+    .cal-item { font-size: 0.7rem; padding: 3px 6px; margin-bottom: 2px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--bg-input); border: 1px solid var(--border-color); border-left-width: 3px; color: var(--text-main); }
     .cal-item.is-gcal { color: white; border: none; }
     .cal-item.completed { text-decoration: line-through; opacity: 0.6; }
     .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-sub); margin: 1px; }
     
-    /* Buttons & Inputs */
-    .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); display: flex; justify-content: center; align-items: center; z-index: 1000; cursor: pointer; transition: 0.2s; }
-    .fab-btn:hover { transform: scale(1.05); }
-    .fab-btn:active { transform: scale(0.95); }
+    /* FAB */
+    .fab-btn { 
+        position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; 
+        border-radius: 20px; background: var(--primary); color: white; border: none; 
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); 
+        display: flex; justify-content: center; align-items: center; 
+        z-index: 2000; cursor: pointer; transition: 0.2s; 
+    }
+    .fab-btn:active { transform: scale(0.92); }
     
-    .date-shortcut-btn { font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); margin-right: 4px; transition: 0.2s; cursor: pointer; }
-    .date-shortcut-btn:active { background: var(--hover-bg); transform: translateY(1px); }
+    /* Inputs */
+    .date-shortcut-btn { font-size: 0.75rem; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); margin-right: 6px; transition: 0.2s; cursor: pointer; }
+    .date-shortcut-btn:active { background: var(--hover-bg); }
     
-    .priority-select-btn { border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); padding: 8px; flex: 1; border-radius: 8px; text-align: center; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
+    .priority-select-btn { border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); padding: 10px; flex: 1; border-radius: 8px; text-align: center; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
     .priority-select-btn.active-high { background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: #ef4444; font-weight: bold; }
     .priority-select-btn.active-medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border-color: #f59e0b; font-weight: bold; }
     .priority-select-btn.active-low { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border-color: #3b82f6; font-weight: bold; }
     .priority-select-btn.active-none { background: var(--text-sub); color: white; border-color: var(--text-sub); }
     
-    .tag-chip { font-size: 0.8rem; padding: 4px 10px; border-radius: 16px; background-color: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--border-color); cursor: pointer; transition: 0.2s; display: inline-block; }
-    .tag-chip:hover { background-color: var(--border-color); }
+    .tag-chip { font-size: 0.8rem; padding: 6px 12px; border-radius: 20px; background-color: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--border-color); cursor: pointer; transition: 0.2s; display: inline-block; margin-right: 4px; margin-bottom: 4px; }
+    .tag-chip:active { background-color: var(--border-color); }
 
-    .btn-delete { color: var(--danger); border: 1px solid transparent; background: transparent; transition: 0.2s; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
-    .btn-delete:hover { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); }
-    .btn-restore { color: var(--primary); border: 1px solid var(--primary); background: transparent; border-radius: 6px; padding: 4px 10px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 4px; transition: 0.2s; cursor: pointer; }
+    .btn-delete { color: var(--danger); border: 1px solid transparent; background: transparent; transition: 0.2s; padding: 10px; border-radius: 8px; cursor: pointer; }
+    .btn-delete:active { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); }
+    .btn-restore { color: var(--primary); border: 1px solid var(--primary); background: transparent; border-radius: 8px; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: 0.2s; cursor: pointer; }
     .btn-restore:active { background: rgba(99, 102, 241, 0.1); }
     
-    /* Modal & Status */
+    /* Common */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); transition: opacity 0.3s; }
     .modal-content { background: var(--bg-card); color: var(--text-main); width: 100%; max-width: 400px; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid var(--border-color); transform: scale(0.95); animation: modalPop 0.2s forwards; }
-    @keyframes modalPop { to { transform: scale(1); } }
-    .modal-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 12px; }
-    .modal-body { font-size: 0.95rem; color: var(--text-sub); margin-bottom: 24px; line-height: 1.5; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
-    .btn-modal { padding: 8px 16px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-modal { padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
     .btn-cancel { background: transparent; color: var(--text-sub); }
     .btn-cancel:active { background: var(--hover-bg); color: var(--text-main); }
     .btn-confirm { background: var(--primary); color: white; }
@@ -155,9 +178,8 @@
     
     .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9998; display: flex; align-items: center; justify-content: center; flex-direction: column; color: white; }
     .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s infinite linear; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .toast-notification { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 24px; border-radius: 50px; z-index: 3000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); white-space: nowrap; }
-    .status-indicator { position: fixed; bottom: 20px; left: 20px; background: var(--status-bg); color: var(--status-text); padding: 8px 16px; border-radius: 30px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 3000; transition: opacity 0.3s, transform 0.3s; }
+    .toast-notification { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 24px; border-radius: 50px; z-index: 3000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); white-space: nowrap; font-weight: 500; }
+    .status-indicator { position: fixed; bottom: 20px; left: 20px; background: var(--status-bg); color: var(--status-text); padding: 8px 16px; border-radius: 30px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 3000; }
     .status-spinner { width: 14px; height: 14px; border: 2px solid; border-radius: 50%; border-color: currentColor transparent transparent transparent; animation: spin 1s linear infinite; }
     .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(10px); }
   </style>
@@ -185,7 +207,7 @@
     <div class="main-content" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
       
       <div class="app-header">
-          <h1 class="app-title">TASKS ☀️</h1>
+          <h1 class="app-title">Tasks</h1>
           <button class="btn-theme-toggle" @click="toggleDarkMode" title="Switch Theme">
               <span class="material-icons-round">{{ darkMode ? 'light_mode' : 'dark_mode' }}</span>
           </button>
@@ -322,11 +344,11 @@
         <div class="panel-header-mobile">
             <button class="btn-panel-back" @click="closePanel"><span class="material-icons-round">arrow_back</span></button>
             <h5 class="fw-bold m-0 flex-grow-1">{{ isEditMode ? '編集' : '新規作成' }}</h5>
-            <button class="btn-close" @click="closePanel" style="filter: var(--text-main) == '#f3f4f6' ? invert(1) : none"></button>
+            <button class="btn-close" @click="closePanel">×</button>
         </div>
         <div class="d-flex justify-content-between mb-4 panel-header-pc">
           <h5 class="fw-bold m-0">{{ isEditMode ? '編集' : '新規作成' }}</h5>
-          <button class="btn-close" @click="closePanel" style="filter: var(--text-main) == '#f3f4f6' ? invert(1) : none"></button>
+          <button class="btn-close" @click="closePanel">×</button>
         </div>
 
         <div v-if="panelData.isGCal" class="d-flex flex-column h-100">
@@ -586,7 +608,8 @@ createApp({
           const recurrence = (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1] ? (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1].trim() : '';
           let priority = 'none'; if(body.includes('⏫')) priority='high'; else if(body.includes('🔼')) priority='medium'; else if(body.includes('🔽')) priority='low';
           const tags = [];
-          let tempBody = body.replace(/\[.*?\]\((.*?)\)/g, '').replace(/https?:\/\/[^\s]+/g, '');
+          // Link remove logic improved
+          let tempBody = body.replace(/\[.*?\]\(.*?\)/g, '').replace(/https?:\/\/\S+/g, '');
           (tempBody.match(/#[^\s#]+/g) || []).forEach(t => {
               let tag = t.replace(/[.,!?:;)}\]]+$/, '');
               if(tag.toLowerCase() !== '#todo' && !tag.includes('=') && tag.length > 1) {
@@ -801,6 +824,27 @@ createApp({
     convertIsoToYMD(iso) { return iso ? this.getLocalYMD(new Date(iso)) : ''; },
     getTodayStr() { return this.getLocalYMD(new Date()); },
     formatTimeRange(item) { if(item.isAllDay) return '終日'; const d1=new Date(item.start); const d2=new Date(item.end); return `${String(d1.getHours()).padStart(2,'0')}:${String(d1.getMinutes()).padStart(2,'0')} - ${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`; },
+    saveTaskChanges() { 
+        let d = this.panelData.desc; if(this.panelData.url) d = `[${d}](${this.panelData.url})`;
+        if(this.isEditMode) { const t=this.panelData.taskRef; t.desc=d; t.due=this.panelData.due; t.priority=this.panelData.priority; t.recurrence=this.panelData.recurrence; t.tags=[...this.panelData.tags]; }
+        else { this.tasks.push({lineIndex:-1, desc:d, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, created:this.getTodayStr(), completed:false, tags:[...this.panelData.tags]}); }
+        this.closePanel(); this.pushChanges();
+    },
+    openAddPanelWithDate(d) { this.isEditMode=false; this.showPanel=true; this.panelData={desc:'', url:'', due:d, recurrence:'', priority:'none', completed:false, tags:[], isGCal:false}; this.tagInput=''; },
+    openEditPanel(item) {
+      this.isEditMode=true; this.showPanel=true;
+      if(item.isGCal) {
+          const sd=new Date(item.start); const ed=new Date(item.end);
+          let sh='', sm='', eh='', em='';
+          if(!item.isAllDay) { sh=String(sd.getHours()).padStart(2,'0'); sm=String(sd.getMinutes()).padStart(2,'0'); eh=String(ed.getHours()).padStart(2,'0'); em=String(ed.getMinutes()).padStart(2,'0'); }
+          this.panelData={isGCal:true, isNew:false, eid:item.id, calendarId:item.calendarId, title:item.title, desc:item.desc, dateInput:this.convertIsoToYMD(item.start), startHour:sh, startMin:sm, endHour:eh, endMin:em};
+      } else {
+          const org=this.tasks.find(t=>t.lineIndex===item.lineIndex)||item;
+          // Crash Fix: Safe handling of undefined tags
+          this.panelData={...org, taskRef:org, isGCal:false, tags:[...(org.tags || [])]};
+          this.tagInput=''; const m=org.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/); if(m){this.panelData.desc=m[1]; this.panelData.url=m[2];}
+      }
+    }
   }
 }).mount('#app');
 </script>
