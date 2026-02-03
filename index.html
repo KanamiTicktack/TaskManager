@@ -520,6 +520,18 @@ createApp({
     }
   },
   methods: {
+    // ★★★ Added openAddPanel function (Revived) ★★★
+    openAddPanel() { this.openAddPanelWithDate(this.getTodayStr()); },
+    // ★★★ Added closePanel function (Revived) ★★★
+    closePanel() { this.showPanel = false; },
+    // ★★★ Added openAddGCalPanel function (Revived) ★★★
+    openAddGCalPanel(d) { 
+        this.isEditMode = false; this.showPanel = true; 
+        const now = new Date();
+        const curH = String(now.getHours()).padStart(2,'0');
+        this.panelData = { isGCal: true, isNew: true, title: '', desc: '', dateInput: d, startHour: curH, startMin: '00', endHour: '', endMin: '', targetCalendarId: this.settings.calendarIds[0]||'' }; 
+    },
+    
     setTab(id) {
       this.currentTab = id;
       if (id === 'completed' && this.archiveTasks.length === 0 && this.settings.archivePath) {
@@ -577,7 +589,6 @@ createApp({
           this.showInfo('Error', e.toString()); this.loading = false;
       }
     },
-    // ★★★ Added loadArchiveData function (Revived) ★★★
     async loadArchiveData() {
         if(!this.settings.archivePath) return;
         try {
