@@ -14,7 +14,9 @@
   
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
+      navigator.serviceWorker.register('./sw.js')
+      .then(function() { console.log('Service Worker Registered'); })
+      .catch(function(err) { console.log('SW Registration Failed: ', err); });
     }
   </script>
 
@@ -37,7 +39,11 @@
       --status-bg: #f3f4f6; --status-text: #1f2937;
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-y: scroll; -webkit-tap-highlight-color: transparent; }
-    .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
+    
+    /* Prevent Zoom on inputs for iOS */
+    .form-control, .form-select, input, textarea { 
+        background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; 
+    }
     body.dark-mode ::-webkit-calendar-picker-indicator { filter: invert(1); }
     
     /* Layout */
@@ -47,45 +53,38 @@
     }
     .split-layout { display: block; }
     
-    /* ★PC Split Layout with Independent Scroll★ */
+    /* ★PC Split Layout with Independent Scroll & Hidden Scrollbar★ */
     @media (min-width: 992px) {
         .app-container {
-            height: 100vh; /* Fix height to viewport */
-            overflow: hidden; /* Stop body scroll */
+            height: 100vh; /* Viewport height fixed */
+            overflow: hidden; /* Disable body scroll */
             padding-bottom: 0;
         }
-        .app-header {
-            flex-shrink: 0; /* Header doesn't shrink */
-        }
+        .app-header { flex-shrink: 0; }
         .main-content {
-            flex: 1;
-            min-height: 0; /* Allow flex child to shrink */
-            display: flex;
-            flex-direction: column;
+            flex: 1; min-height: 0; display: flex; flex-direction: column;
         }
         .split-layout { 
             display: grid; 
             grid-template-columns: 1fr 1fr; 
             gap: 24px; 
             align-items: start;
-            height: 100%; /* Fill remaining space */
+            height: 100%; /* Fill remaining height */
             overflow: hidden;
         }
         .view-primary, .view-secondary { 
             display: block !important; 
-            height: 100%; /* Full height of split area */
+            height: 100%; 
             overflow-y: auto; /* Independent scroll */
-            padding-bottom: 100px; /* Space for FAB/Bottom */
+            padding-bottom: 100px;
             padding-right: 4px;
             
             /* Hide Scrollbar */
-            -ms-overflow-style: none;  /* IE and Edge */
+            -ms-overflow-style: none;  /* IE/Edge */
             scrollbar-width: none;  /* Firefox */
         }
-        /* Hide Scrollbar for Chrome, Safari and Opera */
-        .view-primary::-webkit-scrollbar, .view-secondary::-webkit-scrollbar {
-            display: none;
-        }
+        /* Hide Scrollbar for Chrome/Safari */
+        .view-primary::-webkit-scrollbar, .view-secondary::-webkit-scrollbar { display: none; }
     }
 
     .app-card { background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 16px; overflow: hidden; }
@@ -663,6 +662,7 @@ createApp({
           const recurrence = (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1] ? (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1].trim() : '';
           let priority = 'none'; if(body.includes('⏫')) priority='high'; else if(body.includes('🔼')) priority='medium'; else if(body.includes('🔽')) priority='low';
           const tags = [];
+          // Link remove logic improved
           let tempBody = body.replace(/\[.*?\]\(.*?\)/g, '').replace(/https?:\/\/\S+/g, '');
           (tempBody.match(/#[^\s#]+/g) || []).forEach(t => {
               let tag = t.replace(/[.,!?:;)}\]]+$/, '');
@@ -925,6 +925,25 @@ createApp({
               }
           }
       } catch(e) { console.error('Open Panel Error:', e); }
+    },
+    // ★★★ Added openAddPanelWithDate function (Revived & Fixed) ★★★
+    openAddPanelWithDate(d) {
+        try {
+            this.isEditMode = false;
+            this.showPanel = true;
+            this.panelData = {
+                desc: '', url: '', due: d, recurrence: '', 
+                priority: 'none', completed: false, tags: [], 
+                isGCal: false,
+                startHour: '09', startMin: '00', endHour: '', endMin: '', 
+                meetingUrl: '', // Explicitly init
+                title: '' // Explicitly init
+            };
+            this.tagInput = '';
+        } catch (e) {
+            console.error(e);
+            alert('エラーが発生しました: ' + e);
+        }
     }
   }
 }).mount('#app');
