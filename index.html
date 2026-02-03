@@ -80,20 +80,27 @@
     body.dark-mode .task-content.text-decoration-line-through { color: #d1d5db !important; opacity: 1 !important; }
     body.dark-mode .task-card.opacity-75 { opacity: 1 !important; }
     
-    /* PC Layout */
+    /* PC Layout & Header Visibility Fix */
     .side-panel { width: 100%; max-width: 500px; background: var(--bg-card); border-left: 1px solid var(--border-color); position: fixed; right: 0; top: 0; height: 100vh; overflow-y: auto; z-index: 2000; padding: 20px; display: flex; flex-direction: column; box-shadow: -5px 0 25px rgba(0,0,0,0.2); transition: transform 0.3s ease; }
     .slide-enter-active, .slide-leave-active { transition: transform 0.3s ease; }
     .slide-enter-from, .slide-leave-to { transform: translateX(100%); }
     
+    /* Default (Mobile): Show Mobile Header, Hide PC Header */
+    .panel-header-mobile { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .panel-header-pc { display: none !important; }
+    .btn-panel-back { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; cursor: pointer; }
+    .btn-panel-back:hover { background: var(--hover-bg); }
+
+    /* PC Layout Override */
     @media (min-width: 992px) {
         .app-container { flex-direction: row; max-width: 1400px; align-items: flex-start; }
         .main-content { flex: 1; }
         .side-panel { position: sticky; top: 20px; height: calc(100vh - 40px); border-radius: var(--radius); box-shadow: var(--shadow); z-index: 100; transform: none !important; border: 1px solid var(--border-color); }
+        
+        /* PC: Hide Mobile Header, Show PC Header */
+        .panel-header-mobile { display: none !important; }
+        .panel-header-pc { display: flex !important; }
     }
-
-    .panel-header-mobile { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-    .btn-panel-back { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; cursor: pointer; }
-    .btn-panel-back:hover { background: var(--hover-bg); }
     
     /* Calendar */
     .calendar-wrapper { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 20px; overflow: hidden; }
@@ -178,7 +185,7 @@
     <div class="main-content" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
       
       <div class="app-header">
-          <h1 class="app-title">Tasks</h1>
+          <h1 class="app-title">TASKS ☀️</h1>
           <button class="btn-theme-toggle" @click="toggleDarkMode" title="Switch Theme">
               <span class="material-icons-round">{{ darkMode ? 'light_mode' : 'dark_mode' }}</span>
           </button>
@@ -794,26 +801,6 @@ createApp({
     convertIsoToYMD(iso) { return iso ? this.getLocalYMD(new Date(iso)) : ''; },
     getTodayStr() { return this.getLocalYMD(new Date()); },
     formatTimeRange(item) { if(item.isAllDay) return '終日'; const d1=new Date(item.start); const d2=new Date(item.end); return `${String(d1.getHours()).padStart(2,'0')}:${String(d1.getMinutes()).padStart(2,'0')} - ${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`; },
-    saveTaskChanges() { 
-        let d = this.panelData.desc; if(this.panelData.url) d = `[${d}](${this.panelData.url})`;
-        if(this.isEditMode) { const t=this.panelData.taskRef; t.desc=d; t.due=this.panelData.due; t.priority=this.panelData.priority; t.recurrence=this.panelData.recurrence; t.tags=[...this.panelData.tags]; }
-        else { this.tasks.push({lineIndex:-1, desc:d, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, created:this.getTodayStr(), completed:false, tags:[...this.panelData.tags]}); }
-        this.closePanel(); this.pushChanges();
-    },
-    openAddPanelWithDate(d) { this.isEditMode=false; this.showPanel=true; this.panelData={desc:'', url:'', due:d, recurrence:'', priority:'none', completed:false, tags:[], isGCal:false}; this.tagInput=''; },
-    openEditPanel(item) {
-      this.isEditMode=true; this.showPanel=true;
-      if(item.isGCal) {
-          const sd=new Date(item.start); const ed=new Date(item.end);
-          let sh='', sm='', eh='', em='';
-          if(!item.isAllDay) { sh=String(sd.getHours()).padStart(2,'0'); sm=String(sd.getMinutes()).padStart(2,'0'); eh=String(ed.getHours()).padStart(2,'0'); em=String(ed.getMinutes()).padStart(2,'0'); }
-          this.panelData={isGCal:true, isNew:false, eid:item.id, calendarId:item.calendarId, title:item.title, desc:item.desc, dateInput:this.convertIsoToYMD(item.start), startHour:sh, startMin:sm, endHour:eh, endMin:em};
-      } else {
-          const org=this.tasks.find(t=>t.lineIndex===item.lineIndex)||item;
-          this.panelData={...org, taskRef:org, isGCal:false, tags:[...org.tags]};
-          this.tagInput=''; const m=org.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/); if(m){this.panelData.desc=m[1]; this.panelData.url=m[2];}
-      }
-    }
   }
 }).mount('#app');
 </script>
