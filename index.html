@@ -48,7 +48,7 @@
     
     /* Layout Structure */
     .app-container { 
-        display: block; /* Default to block for mobile to prevent side-by-side */
+        display: block; 
         max-width: 900px; margin: 0 auto; padding: 16px; min-height: 100vh; position: relative;
     }
     .main-content { width: 100%; padding-bottom: 100px; }
@@ -91,7 +91,7 @@
     /* Side Panel (Detail View) */
     .side-panel { 
         position: fixed; top: 0; right: 0; width: 100%; height: 100vh; 
-        background: var(--bg-card); z-index: 3000; /* Higher than FAB */
+        background: var(--bg-card); z-index: 3000; 
         display: flex; flex-direction: column; 
         transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
         box-shadow: -10px 0 30px rgba(0,0,0,0.1); 
@@ -107,10 +107,9 @@
         .side-panel { 
             position: sticky; top: 20px; width: 400px; height: calc(100vh - 40px); 
             border-radius: var(--radius); border: 1px solid var(--border-color); 
-            z-index: 100; transform: none !important; display: flex; /* Always visible if triggered */
+            z-index: 100; transform: none !important; display: flex; 
         }
         .slide-enter-from, .slide-leave-to { opacity: 0; transform: translateY(10px); }
-        /* Hide mobile header in panel on PC */
         .panel-header-mobile { display: none !important; }
         .panel-header-pc { display: flex !important; }
     }
@@ -358,12 +357,27 @@
             </div>
             <input type="text" v-model="panelData.title" class="form-control fw-bold fs-5 mb-3" placeholder="タイトル">
             
-            <div class="row g-2 mb-3 align-items-center">
-                <div class="col-12 col-sm-5"><input type="date" v-model="panelData.dateInput" class="form-control"></div>
-                <div class="col-12 col-sm-7 d-flex gap-1 align-items-center">
-                    <select v-model="panelData.startHour" class="form-select"><option v-for="h in hours" :value="h">{{h}}</option></select>:<select v-model="panelData.startMin" class="form-select"><option v-for="m in minutes" :value="m">{{m}}</option></select>
-                    <span class="mx-1">-</span>
-                    <select v-model="panelData.endHour" class="form-select"><option value="">--</option><option v-for="h in hours" :value="h">{{h}}</option></select>:<select v-model="panelData.endMin" class="form-select"><option value="">--</option><option v-for="m in minutes" :value="m">{{m}}</option></select>
+            <div class="mb-3">
+                <label class="small fw-bold text-secondary mb-1">日付</label>
+                <input type="date" v-model="panelData.dateInput" class="form-control text-center" style="font-size: 1.1rem;">
+            </div>
+            
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <label class="small fw-bold text-secondary mb-1">開始</label>
+                    <div class="d-flex align-items-center gap-1">
+                        <select v-model="panelData.startHour" class="form-select text-center p-1"><option v-for="h in hours" :value="h">{{h}}</option></select>
+                        <span>:</span>
+                        <select v-model="panelData.startMin" class="form-select text-center p-1"><option v-for="m in minutes" :value="m">{{m}}</option></select>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <label class="small fw-bold text-secondary mb-1">終了</label>
+                    <div class="d-flex align-items-center gap-1">
+                        <select v-model="panelData.endHour" class="form-select text-center p-1"><option value="">--</option><option v-for="h in hours" :value="h">{{h}}</option></select>
+                        <span>:</span>
+                        <select v-model="panelData.endMin" class="form-select text-center p-1"><option value="">--</option><option v-for="m in minutes" :value="m">{{m}}</option></select>
+                    </div>
                 </div>
             </div>
             
@@ -610,6 +624,7 @@ createApp({
           const recurrence = (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1] ? (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1].trim() : '';
           let priority = 'none'; if(body.includes('⏫')) priority='high'; else if(body.includes('🔼')) priority='medium'; else if(body.includes('🔽')) priority='low';
           const tags = [];
+          // Link remove logic improved
           let tempBody = body.replace(/\[.*?\]\(.*?\)/g, '').replace(/https?:\/\/\S+/g, '');
           (tempBody.match(/#[^\s#]+/g) || []).forEach(t => {
               let tag = t.replace(/[.,!?:;)}\]]+$/, '');
@@ -797,7 +812,17 @@ createApp({
     restoreTask(task) { if(task.isArchived) this.restoreArchivedTask(task); else { const t=this.tasks.find(x=>x.lineIndex===task.lineIndex); if(t){t.completed=false; t.doneDate=''; this.pushChanges(true);} } },
     async confirmDelete(task) { if(await this.confirmAction('削除', '本当に削除しますか？', true)) this.deleteTask(task); },
     deleteTask(task) { 
-        if(task.isArchived) { /* Archive Delete Logic (Simplified) */ } 
+        if(task.isArchived) {
+            if(!this.settings.archivePath) return;
+            this.loading = true; this.loadingMessage = '削除中...';
+            this.fetchFileContent(this.settings.archivePath).then(res => {
+                const lines = (res.content || '').split('\n');
+                const newLines = lines.filter(l => l !== task.originalLine);
+                this.saveFileContentPromise(this.settings.archivePath, newLines.join('\n'), res.sha)
+                    .then(() => { this.loading = false; this.showToastNotification('削除しました'); this.loadArchiveData(); })
+                    .catch(e => { this.loading = false; this.showInfo('Error', e); });
+            });
+        } 
         else { const idx=this.tasks.findIndex(t=>t.lineIndex===task.lineIndex); if(idx>-1){const org=this.tasks[idx]; this.tasks.splice(idx,1); if(org.lineIndex>=0){this.lines.splice(org.lineIndex,1); this.tasks.forEach(t=>{if(t.lineIndex>org.lineIndex)t.lineIndex--;}); this.pushChanges(); this.closePanel();}} } 
     },
     addTagFromHistory(tag) { if(!this.panelData.tags.includes(tag)) this.panelData.tags.push(tag); },
