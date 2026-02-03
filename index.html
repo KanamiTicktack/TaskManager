@@ -14,12 +14,14 @@
   
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
+      navigator.serviceWorker.register('./sw.js')
+      .then(function() { console.log('Service Worker Registered'); })
+      .catch(function(err) { console.log('SW Registration Failed: ', err); });
     }
   </script>
 
   <style>
-    /* === Design System === */
+    /* === CSS Design System === */
     :root {
       --primary: #6366f1; --primary-hover: #4f46e5; --danger: #ef4444;
       --bg-body: #f3f4f6; --bg-card: #ffffff; --bg-input: #ffffff;
@@ -37,10 +39,14 @@
       --status-bg: #f3f4f6; --status-text: #1f2937;
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-y: scroll; -webkit-tap-highlight-color: transparent; }
-    .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
+    
+    /* Prevent Zoom on inputs for iOS */
+    .form-control, .form-select, input, textarea { 
+        background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; 
+    }
     body.dark-mode ::-webkit-calendar-picker-indicator { filter: invert(1); }
     
-    /* Layout */
+    /* Layout Structure */
     .app-container { 
         display: flex; flex-direction: column; gap: 16px; 
         max-width: 1600px; /* Expanded for PC split view */
@@ -102,24 +108,30 @@
         position: fixed; top: 0; right: 0; width: 100%; height: 100vh; 
         background: var(--bg-card); z-index: 3000; 
         display: flex; flex-direction: column; 
-        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
         box-shadow: -10px 0 30px rgba(0,0,0,0.1); 
         padding: 20px; overflow-y: auto;
     }
+    
+    /* Mobile Transition */
     .slide-enter-active, .slide-leave-active { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
     .slide-enter-from, .slide-leave-to { transform: translateX(100%); }
     
+    /* PC Layout Override */
     @media (min-width: 992px) {
         .side-panel { 
             position: fixed; top: 20px; right: 20px; width: 400px; height: calc(100vh - 40px); 
             border-radius: var(--radius); border: 1px solid var(--border-color); 
-            z-index: 4000; transform: none !important; /* Float above everything on PC */
+            z-index: 4000;
         }
-        .slide-enter-from, .slide-leave-to { opacity: 0; transform: translateY(10px); }
+        /* PC Transition (Fade instead of slide to prevent bugs) */
+        .slide-enter-active, .slide-leave-active { transition: opacity 0.2s ease; transform: none; }
+        .slide-enter-from, .slide-leave-to { opacity: 0; transform: none; }
+        
         .panel-header-mobile { display: none !important; }
         .panel-header-pc { display: flex !important; }
     }
 
+    /* Panel Headers */
     .panel-header-mobile { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
     .panel-header-pc { display: none !important; align-items: center; justify-content: space-between; margin-bottom: 24px; }
     .btn-panel-back { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; cursor: pointer; margin-left: -8px; }
@@ -637,7 +649,6 @@ createApp({
           const recurrence = (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1] ? (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1].trim() : '';
           let priority = 'none'; if(body.includes('⏫')) priority='high'; else if(body.includes('🔼')) priority='medium'; else if(body.includes('🔽')) priority='low';
           const tags = [];
-          // Link remove logic improved
           let tempBody = body.replace(/\[.*?\]\(.*?\)/g, '').replace(/https?:\/\/\S+/g, '');
           (tempBody.match(/#[^\s#]+/g) || []).forEach(t => {
               let tag = t.replace(/[.,!?:;)}\]]+$/, '');
@@ -656,10 +667,12 @@ createApp({
     openAddPanel() { this.openAddPanelWithDate(this.getTodayStr()); },
     closePanel() { this.showPanel = false; },
     openAddGCalPanel(d) { 
-        this.isEditMode = false; this.showPanel = true; 
-        const now = new Date();
-        const curH = String(now.getHours()).padStart(2,'0');
-        this.panelData = { isGCal: true, isNew: true, title: '', desc: '', dateInput: d, startHour: curH, startMin: '00', endHour: '', endMin: '', targetCalendarId: this.settings.calendarIds[0]||'' }; 
+        try {
+            this.isEditMode = false; this.showPanel = true; 
+            const now = new Date();
+            const curH = String(now.getHours()).padStart(2,'0');
+            this.panelData = { isGCal: true, isNew: true, title: '', desc: '', dateInput: d, startHour: curH, startMin: '00', endHour: '', endMin: '', targetCalendarId: this.settings.calendarIds[0]||'' }; 
+        } catch(e) { console.error(e); }
     },
     setTab(id) {
       this.currentTab = id;
@@ -825,7 +838,17 @@ createApp({
     restoreTask(task) { if(task.isArchived) this.restoreArchivedTask(task); else { const t=this.tasks.find(x=>x.lineIndex===task.lineIndex); if(t){t.completed=false; t.doneDate=''; this.pushChanges(true);} } },
     async confirmDelete(task) { if(await this.confirmAction('削除', '本当に削除しますか？', true)) this.deleteTask(task); },
     deleteTask(task) { 
-        if(task.isArchived) { /* Archive Delete Logic (Simplified) */ } 
+        if(task.isArchived) {
+            if(!this.settings.archivePath) return;
+            this.loading = true; this.loadingMessage = '削除中...';
+            this.fetchFileContent(this.settings.archivePath).then(res => {
+                const lines = (res.content || '').split('\n');
+                const newLines = lines.filter(l => l !== task.originalLine);
+                this.saveFileContentPromise(this.settings.archivePath, newLines.join('\n'), res.sha)
+                    .then(() => { this.loading = false; this.showToastNotification('削除しました'); this.loadArchiveData(); })
+                    .catch(e => { this.loading = false; this.showInfo('Error', e); });
+            });
+        } 
         else { const idx=this.tasks.findIndex(t=>t.lineIndex===task.lineIndex); if(idx>-1){const org=this.tasks[idx]; this.tasks.splice(idx,1); if(org.lineIndex>=0){this.lines.splice(org.lineIndex,1); this.tasks.forEach(t=>{if(t.lineIndex>org.lineIndex)t.lineIndex--;}); this.pushChanges(); this.closePanel();}} } 
     },
     addTagFromHistory(tag) { if(!this.panelData.tags.includes(tag)) this.panelData.tags.push(tag); },
@@ -843,6 +866,33 @@ createApp({
     convertIsoToYMD(iso) { return iso ? this.getLocalYMD(new Date(iso)) : ''; },
     getTodayStr() { return this.getLocalYMD(new Date()); },
     formatTimeRange(item) { if(item.isAllDay) return '終日'; const d1=new Date(item.start); const d2=new Date(item.end); return `${String(d1.getHours()).padStart(2,'0')}:${String(d1.getMinutes()).padStart(2,'0')} - ${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`; },
+    saveTaskChanges() { 
+        let d = this.panelData.desc; if(this.panelData.url) d = `[${d}](${this.panelData.url})`;
+        if(this.isEditMode) { const t=this.panelData.taskRef; t.desc=d; t.due=this.panelData.due; t.priority=this.panelData.priority; t.recurrence=this.panelData.recurrence; t.tags=[...this.panelData.tags]; }
+        else { this.tasks.push({lineIndex:-1, desc:d, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, created:this.getTodayStr(), completed:false, tags:[...this.panelData.tags]}); }
+        this.closePanel(); this.pushChanges();
+    },
+    openAddPanelWithDate(d) { this.isEditMode=false; this.showPanel=true; this.panelData={desc:'', url:'', due:d, recurrence:'', priority:'none', completed:false, tags:[], isGCal:false}; this.tagInput=''; },
+    openEditPanel(item) {
+      try {
+          this.isEditMode=true; this.showPanel=true;
+          if(item.isGCal) {
+              const sd=new Date(item.start); const ed=new Date(item.end);
+              let sh='', sm='', eh='', em='';
+              if(!item.isAllDay) { sh=String(sd.getHours()).padStart(2,'0'); sm=String(sd.getMinutes()).padStart(2,'0'); eh=String(ed.getHours()).padStart(2,'0'); em=String(ed.getMinutes()).padStart(2,'0'); }
+              this.panelData={isGCal:true, isNew:false, eid:item.id, calendarId:item.calendarId, title:item.title, desc:item.desc, dateInput:this.convertIsoToYMD(item.start), startHour:sh, startMin:sm, endHour:eh, endMin:em};
+          } else {
+              const org=this.tasks.find(t=>t.lineIndex===item.lineIndex)||item;
+              // ★Safe handling for crash protection★
+              this.panelData={...org, taskRef:org, isGCal:false, tags:[...(org.tags || [])]};
+              this.tagInput=''; 
+              if(org.desc) {
+                  const m=org.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/); 
+                  if(m){this.panelData.desc=m[1]; this.panelData.url=m[2];}
+              }
+          }
+      } catch(e) { console.error('Open Panel Error:', e); }
+    }
   }
 }).mount('#app');
 </script>
