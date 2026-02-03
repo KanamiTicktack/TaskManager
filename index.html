@@ -38,31 +38,39 @@
       --tag-bg: #374151; --tag-text: #d1d5db;
       --status-bg: #f3f4f6; --status-text: #1f2937;
     }
-    body { background-color: var(--bg-body); color: var(--text-main); font-family: sans-serif; overflow-y: scroll; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-y: scroll; -webkit-tap-highlight-color: transparent; }
     .form-control, .form-select { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); }
     body.dark-mode ::-webkit-calendar-picker-indicator { filter: invert(1); }
     
-    .app-container { display: flex; gap: 24px; max-width: 1400px; margin: 0 auto; padding: 20px; }
+    .app-container { display: flex; flex-direction: column; gap: 16px; max-width: 800px; margin: 0 auto; padding: 20px; min-height: 100vh; }
     .main-content { flex: 1; min-width: 0; padding-bottom: 100px; }
     .app-card { background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 16px; overflow: hidden; }
     
-    .nav-tabs { border: none; gap: 8px; margin-bottom: 16px; }
-    .nav-link { border: none; border-radius: 20px !important; color: var(--text-sub); font-weight: 600; padding: 8px 16px; cursor: pointer; }
-    .nav-link:hover { background: var(--hover-bg); }
+    /* Header */
+    .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .app-title { font-weight: 800; font-size: 1.5rem; margin: 0; color: var(--text-main); letter-spacing: -0.5px; }
+    .btn-theme-toggle { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s; cursor: pointer; }
+    .btn-theme-toggle:active { background: var(--hover-bg); transform: scale(0.95); }
+
+    /* Tabs */
+    .nav-tabs { border: none; gap: 8px; margin-bottom: 16px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+    .nav-link { border: none; border-radius: 20px !important; color: var(--text-sub); font-weight: 600; padding: 8px 16px; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+    .nav-link:hover { background: var(--hover-bg); color: var(--text-main); }
     .nav-link.active { background: var(--primary) !important; color: #fff !important; }
     
-    .task-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 8px; padding: 12px; display: flex; gap: 12px; cursor: pointer; position: relative; overflow: hidden; }
+    .task-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 8px; padding: 12px; display: flex; gap: 12px; cursor: pointer; position: relative; overflow: hidden; transition: 0.1s; }
+    .task-card:active { transform: scale(0.99); }
     .task-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
     .priority-high::before { background: #ef4444; } .priority-medium::before { background: #f59e0b; } .priority-low::before { background: #3b82f6; }
     
-    .custom-checkbox { width: 22px; height: 22px; border: 2px solid var(--text-sub); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .custom-checkbox { width: 22px; height: 22px; border: 2px solid var(--text-sub); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s; }
     .custom-checkbox.checked { background: var(--primary); border-color: var(--primary); }
-    .custom-checkbox .material-icons-round { font-size: 16px; color: white; opacity: 0; }
+    .custom-checkbox .material-icons-round { font-size: 16px; color: white; opacity: 0; transition: 0.2s; }
     .custom-checkbox.checked .material-icons-round { opacity: 1; }
     
     .task-content { flex: 1; min-width: 0; }
     .task-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; line-height: 1.4; }
-    .task-meta { display: flex; gap: 6px; font-size: 0.75rem; color: var(--text-sub); flex-wrap: wrap; }
+    .task-meta { display: flex; gap: 6px; font-size: 0.75rem; color: var(--text-sub); flex-wrap: wrap; align-items: center; }
     .badge-base { padding: 2px 8px; border-radius: 6px; background: var(--hover-bg); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 3px; }
     .tag-badge { background-color: var(--tag-bg); color: var(--tag-text); }
     .gcal-badge { background: #e0e7ff; color: #4338ca; border: none; }
@@ -72,43 +80,56 @@
     body.dark-mode .task-content.text-decoration-line-through { color: #d1d5db !important; opacity: 1 !important; }
     body.dark-mode .task-card.opacity-75 { opacity: 1 !important; }
     
-    .side-panel { width: 420px; background: var(--bg-card); border-left: 1px solid var(--border-color); position: sticky; top: 20px; height: calc(100vh - 40px); border-radius: var(--radius); overflow-y: auto; z-index: 1000; padding: 24px; display: flex; flex-direction: column; }
-    @media (max-width: 768px) {
-        .app-container { display: block; padding: 10px; }
-        .side-panel { position: fixed; right: 0; top: 0; width: 100%; height: 100vh; border-radius: 0; z-index: 2000; padding: 16px; }
-        .panel-header-mobile { display: flex !important; align-items: center; gap: 12px; margin-bottom: 16px; }
-        .panel-header-pc { display: none !important; }
+    .side-panel { width: 100%; max-width: 500px; background: var(--bg-card); border-left: 1px solid var(--border-color); position: fixed; right: 0; top: 0; height: 100vh; overflow-y: auto; z-index: 2000; padding: 20px; display: flex; flex-direction: column; box-shadow: -5px 0 25px rgba(0,0,0,0.2); transition: transform 0.3s ease; }
+    .slide-enter-active, .slide-leave-active { transition: transform 0.3s ease; }
+    .slide-enter-from, .slide-leave-to { transform: translateX(100%); }
+    
+    /* PC Layout override */
+    @media (min-width: 992px) {
+        .app-container { flex-direction: row; max-width: 1400px; align-items: flex-start; }
+        .main-content { flex: 1; }
+        .side-panel { position: sticky; top: 20px; height: calc(100vh - 40px); border-radius: var(--radius); box-shadow: var(--shadow); z-index: 100; transform: none !important; border: 1px solid var(--border-color); }
+        .app-header { margin-bottom: 20px; }
     }
-    .panel-header-mobile { display: none; }
+
+    .panel-header-mobile { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
     .btn-panel-back { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; cursor: pointer; }
+    .btn-panel-back:hover { background: var(--hover-bg); }
     
     .calendar-wrapper { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 20px; overflow: hidden; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--border-color); min-width: 300px; }
     .calendar-header-cell { padding: 8px 4px; text-align: center; font-size: 0.75rem; font-weight: 700; background: var(--hover-bg); color: var(--text-sub); }
     .header-sun { color: #ef4444; } .header-sat { color: #3b82f6; }
-    .calendar-cell { background: var(--bg-card); padding: 4px; min-height: 100px; cursor: pointer; display: flex; flex-direction: column; transition: 0.2s; }
-    .calendar-cell:hover { background: var(--hover-bg); }
+    .calendar-cell { background: var(--bg-card); padding: 4px; min-height: 100px; cursor: pointer; display: flex; flex-direction: column; transition: 0.1s; }
+    .calendar-cell:active { background: var(--hover-bg); }
     .calendar-cell.selected { background: rgba(99, 102, 241, 0.1) !important; box-shadow: inset 0 0 0 2px var(--primary); }
-    .date-num { align-self: center; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; border-radius: 50%; }
+    .date-num { align-self: center; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; border-radius: 50%; margin-bottom: 4px; }
     .date-num.today { background: var(--primary); color: white; }
     .cal-item { font-size: 0.7rem; padding: 2px 4px; margin-bottom: 2px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--bg-input); border: 1px solid var(--border-color); border-left-width: 3px; color: var(--text-main); }
     .cal-item.is-gcal { color: white; border: none; }
     .cal-item.completed { text-decoration: line-through; opacity: 0.6; }
     .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-sub); margin: 1px; }
     
-    .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); display: flex; justify-content: center; align-items: center; z-index: 2000; cursor: pointer; transition: 0.2s; }
+    .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); display: flex; justify-content: center; align-items: center; z-index: 1000; cursor: pointer; transition: 0.2s; }
     .fab-btn:hover { transform: scale(1.05); }
-    .date-shortcut-btn { font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); margin-right: 4px; transition: 0.2s; }
-    .date-shortcut-btn:hover { background: var(--hover-bg); }
-    .priority-select-btn { border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); padding: 6px; flex: 1; border-radius: 6px; text-align: center; font-size: 0.85rem; cursor: pointer; }
-    .priority-select-btn.active-high { background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: #ef4444; font-weight: bold; }
-    .priority-select-btn.active-medium { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border-color: #f59e0b; font-weight: bold; }
-    .priority-select-btn.active-low { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border-color: #3b82f6; font-weight: bold; }
+    .fab-btn:active { transform: scale(0.95); }
+    
+    .date-shortcut-btn { font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); margin-right: 4px; transition: 0.2s; cursor: pointer; }
+    .date-shortcut-btn:active { background: var(--hover-bg); transform: translateY(1px); }
+    
+    .priority-select-btn { border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); padding: 8px; flex: 1; border-radius: 8px; text-align: center; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
+    .priority-select-btn.active-high { background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: #ef4444; font-weight: bold; }
+    .priority-select-btn.active-medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border-color: #f59e0b; font-weight: bold; }
+    .priority-select-btn.active-low { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border-color: #3b82f6; font-weight: bold; }
     .priority-select-btn.active-none { background: var(--text-sub); color: white; border-color: var(--text-sub); }
-    .btn-delete { color: var(--danger); border: 1px solid transparent; background: transparent; transition: 0.2s; padding: 8px 12px; border-radius: 8px; }
+    
+    .tag-chip { font-size: 0.8rem; padding: 4px 10px; border-radius: 16px; background-color: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--border-color); cursor: pointer; transition: 0.2s; display: inline-block; }
+    .tag-chip:hover { background-color: var(--border-color); }
+
+    .btn-delete { color: var(--danger); border: 1px solid transparent; background: transparent; transition: 0.2s; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
     .btn-delete:hover { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); }
-    .btn-restore { color: var(--primary); border: 1px solid var(--primary); background: transparent; border-radius: 6px; padding: 4px 8px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 4px; transition: 0.2s; }
-    .btn-restore:hover { background: rgba(99, 102, 241, 0.1); }
+    .btn-restore { color: var(--primary); border: 1px solid var(--primary); background: transparent; border-radius: 6px; padding: 4px 10px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 4px; transition: 0.2s; cursor: pointer; }
+    .btn-restore:active { background: rgba(99, 102, 241, 0.1); }
     
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); transition: opacity 0.3s; }
     .modal-content { background: var(--bg-card); color: var(--text-main); width: 100%; max-width: 400px; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid var(--border-color); transform: scale(0.95); animation: modalPop 0.2s forwards; }
@@ -118,15 +139,15 @@
     .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
     .btn-modal { padding: 8px 16px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
     .btn-cancel { background: transparent; color: var(--text-sub); }
-    .btn-cancel:hover { background: var(--hover-bg); color: var(--text-main); }
+    .btn-cancel:active { background: var(--hover-bg); color: var(--text-main); }
     .btn-confirm { background: var(--primary); color: white; }
-    .btn-confirm:hover { background: var(--primary-hover); }
+    .btn-confirm:active { opacity: 0.8; }
     .btn-confirm.danger { background: var(--danger); }
     
     .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9998; display: flex; align-items: center; justify-content: center; flex-direction: column; color: white; }
     .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s infinite linear; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .toast-notification { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 24px; border-radius: 50px; z-index: 3000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .toast-notification { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 24px; border-radius: 50px; z-index: 3000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); white-space: nowrap; }
     .status-indicator { position: fixed; bottom: 20px; left: 20px; background: var(--status-bg); color: var(--status-text); padding: 8px 16px; border-radius: 30px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 3000; transition: opacity 0.3s, transform 0.3s; }
     .status-spinner { width: 14px; height: 14px; border: 2px solid; border-radius: 50%; border-color: currentColor transparent transparent transparent; animation: spin 1s linear infinite; }
     .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(10px); }
@@ -152,6 +173,13 @@
   </div>
 
   <div class="app-container">
+    <div class="app-header">
+        <h1 class="app-title">Tasks</h1>
+        <button class="btn-theme-toggle" @click="toggleDarkMode" title="Switch Theme">
+            <span class="material-icons-round">{{ darkMode ? 'light_mode' : 'dark_mode' }}</span>
+        </button>
+    </div>
+
     <div class="main-content" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
       
       <ul class="nav nav-tabs">
@@ -161,17 +189,16 @@
       </ul>
 
       <div v-if="currentTab !== 'settings'" class="d-flex justify-content-end mb-3">
-        <select class="form-select form-select-sm" v-model="filterTag" style="width: auto; max-width: 200px;">
+        <select class="form-select form-select-sm" v-model="filterTag" style="width: auto; max-width: 200px; border-radius: 20px;">
           <option value="">🏷️ すべてのタグ</option>
-          <option v-for="tag in allTagsList" :key="tag" :value="tag">{{ tag }}</option>
+          <option v-for="tag in allTagsList" :key="tag" :value="tag">#{{ tag.replace(/^#/, '') }}</option>
         </select>
       </div>
 
       <transition name="fade" mode="out-in">
         <div v-if="currentTab === 'settings'" key="settings">
           <div class="app-card p-4">
-            <h5 class="fw-bold mb-4">アプリ設定</h5>
-            <label class="form-check form-switch mb-4 p-0 d-flex align-items-center gap-2"><input class="form-check-input m-0" type="checkbox" role="switch" v-model="darkMode" @change="toggleDarkMode"><span class="form-check-label fw-bold">🌙 ダークモード</span></label>
+            <h5 class="fw-bold mb-4">設定</h5>
             <h6 class="fw-bold text-secondary">Googleカレンダー表示</h6>
             <div class="border rounded p-3 mb-4" style="max-height: 200px; overflow-y: auto;">
                 <div v-if="availableCalendars.length === 0" class="text-muted small">読み込み中...</div>
@@ -205,7 +232,11 @@
                     <div class="custom-checkbox" @click.stop="toggleTask(task)"><span class="material-icons-round">check</span></div>
                     <div class="task-content">
                         <div class="task-title" v-html="renderDesc(task.desc)"></div>
-                        <div class="task-meta"><span v-for="tag in task.tags" class="badge-base tag-badge">{{ tag }}</span><span v-if="task.due" class="badge-base"><span class="material-icons-round" style="font-size:12px">event</span> {{ task.due }}</span><span v-if="task.recurrence" class="badge-base">🔁 {{ task.recurrence }}</span></div>
+                        <div class="task-meta">
+                            <span v-for="tag in task.tags" class="badge-base tag-badge">#{{ tag.replace(/^#/, '') }}</span>
+                            <span v-if="task.due" class="badge-base"><span class="material-icons-round" style="font-size:12px">event</span> {{ task.due }}</span>
+                            <span v-if="task.recurrence" class="badge-base">🔁 {{ task.recurrence }}</span>
+                        </div>
                     </div>
                 </div>
              </div>
@@ -215,7 +246,11 @@
                  <div class="custom-checkbox checked" @click.stop="confirmRestore(task)"><span class="material-icons-round">check</span></div>
                  <div class="task-content text-decoration-line-through">
                     <div class="task-title" v-html="renderDesc(task.desc)"></div>
-                    <div class="task-meta"><span v-if="task.isArchived" class="badge bg-secondary text-white" style="font-size:0.6rem">Archived</span><span v-for="tag in task.tags" class="badge-base tag-badge">{{ tag }}</span> Done: {{ task.doneDate }}</div>
+                    <div class="task-meta">
+                        <span v-if="task.isArchived" class="badge bg-secondary text-white" style="font-size:0.6rem">Archived</span>
+                        <span v-for="tag in task.tags" class="badge-base tag-badge">#{{ tag.replace(/^#/, '') }}</span>
+                        Done: {{ task.doneDate }}
+                    </div>
                  </div>
                  <div class="d-flex gap-2">
                      <button class="btn-restore" @click.stop="confirmRestore(task)"><span class="material-icons-round" style="font-size:16px">undo</span></button>
@@ -263,6 +298,7 @@
                             <span v-if="item.isGCal" class="badge-base" :style="{background: item.color, color:'white'}">{{ item.calendarName }}</span>
                             <span v-if="item.isGCal">{{ item.isAllDay ? '終日' : item.timeStr }}</span>
                             <span v-if="!item.isGCal && item.priority!='none'" class="fw-bold" :style="{color: getPriorityColor(item.priority)}">Prior: {{ item.priority }}</span>
+                            <span v-if="!item.isGCal" v-for="tag in item.tags" class="badge-base tag-badge">#{{ tag.replace(/^#/, '') }}</span>
                         </div>
                     </div>
                 </div>
@@ -329,14 +365,14 @@
                     </div>
                     <label class="small fw-bold text-secondary mb-1">タグ</label>
                     <div class="input-group input-group-sm mb-2"><span class="input-group-text bg-transparent border-end-0">#</span><input type="text" class="form-control border-start-0 ps-0" v-model="tagInput" @keydown.enter.prevent="addTag" placeholder="New"><button class="btn btn-outline-secondary" @click="addTag">+</button></div>
-                    <div class="d-flex flex-wrap gap-1 mb-2"><span v-for="tag in panelData.tags" :key="tag" class="badge bg-primary d-flex align-items-center gap-1" style="cursor:pointer" @click="removeTag(tag)">{{ tag }} <span class="material-icons-round" style="font-size:10px">close</span></span></div>
+                    <div class="d-flex flex-wrap gap-1 mb-2"><span v-for="tag in panelData.tags" :key="tag" class="badge bg-primary d-flex align-items-center gap-1" style="cursor:pointer" @click="removeTag(tag)">{{ tag.replace(/^#/, '') }} <span class="material-icons-round" style="font-size:10px">close</span></span></div>
                 </div>
             </div>
             <div class="mb-3">
                 <label class="small fw-bold text-secondary mb-1">よく使うタグ (History)</label>
                 <div class="d-flex flex-wrap gap-1 p-2 border rounded" style="background: var(--bg-input); min-height: 40px; border-color: var(--border-color) !important;">
                     <div v-if="suggestedTags.length === 0" class="text-muted small">履歴なし</div>
-                    <span v-for="tag in suggestedTags" :key="tag" class="tag-chip" @click="addTagFromHistory(tag)">#{{ tag }}</span>
+                    <span v-for="tag in suggestedTags" :key="tag" class="tag-chip" @click="addTagFromHistory(tag)">#{{ tag.replace(/^#/, '') }}</span>
                 </div>
             </div>
             <div class="mt-auto">
@@ -520,24 +556,18 @@ createApp({
     }
   },
   methods: {
-    // ★★★ Added openAddPanel function (Revived) ★★★
-    openAddPanel() { this.openAddPanelWithDate(this.getTodayStr()); },
-    // ★★★ Added closePanel function (Revived) ★★★
-    closePanel() { this.showPanel = false; },
-    // ★★★ Added openAddGCalPanel function (Revived) ★★★
-    openAddGCalPanel(d) { 
-        this.isEditMode = false; this.showPanel = true; 
-        const now = new Date();
-        const curH = String(now.getHours()).padStart(2,'0');
-        this.panelData = { isGCal: true, isNew: true, title: '', desc: '', dateInput: d, startHour: curH, startMin: '00', endHour: '', endMin: '', targetCalendarId: this.settings.calendarIds[0]||'' }; 
+    // 修正: addTagで # を自動付与
+    addTag() { 
+        let val = this.tagInput.trim();
+        if(!val) return;
+        if(!val.startsWith('#')) val = '#' + val;
+        if(!this.panelData.tags.includes(val)) { 
+            this.panelData.tags.push(val); 
+            this.tagInput = ''; 
+        } 
     },
     
-    setTab(id) {
-      this.currentTab = id;
-      if (id === 'completed' && this.archiveTasks.length === 0 && this.settings.archivePath) {
-        this.loadArchiveData();
-      }
-    },
+    // 修正: タグ抽出ロジックでURLを除外
     parseContent(text) {
       this.lines = text.split('\n'); this.tasks = []; const foundTags = new Set(); 
       this.lines.forEach((line, index) => {
@@ -549,24 +579,52 @@ createApp({
           const created = (body.match(/➕\s*(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
           const recurrence = (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1] ? (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1].trim() : '';
           let priority = 'none'; if(body.includes('⏫')) priority='high'; else if(body.includes('🔼')) priority='medium'; else if(body.includes('🔽')) priority='low';
-          const tags = []; 
-          (body.match(/#[^\s]+/g)||[]).forEach(t => {
+          
+          const tags = [];
+          
+          // URL内の#をタグとして誤認識しないための処理
+          // 1. Markdownリンク [..](..) を除去した一時文字列を作成
+          let tempBody = body.replace(/\[.*?\]\((.*?)\)/g, '');
+          // 2. 生のURL (http...) を除去
+          tempBody = tempBody.replace(/https?:\/\/[^\s]+/g, '');
+          
+          // 残った文字列からタグを抽出
+          (tempBody.match(/#[^\s#]+/g) || []).forEach(t => {
+              // 末尾の記号除去
               let tag = t.replace(/[.,!?:;)}\]]+$/, '');
               if(tag.toLowerCase() !== '#todo' && !tag.includes('=') && tag.length > 1) {
                 tags.push(tag); foundTags.add(tag);
               }
           });
+
+          // 表示用desc生成
           let desc = body.replace(/📅\s*\d{4}-\d{2}-\d{2}|✅\s*\d{4}-\d{2}-\d{2}|🔁\s*[^✅➕📅#\n\r]+|➕\s*\d{4}-\d{2}-\d{2}|⏫|🔼|🔽/g, '');
           tags.forEach(t => desc = desc.replace(new RegExp(`(^|\\s)${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\s|$)`, 'g'), ' '));
           desc = desc.replace(/#todo/gi, '').trim();
+          
           this.tasks.push({ lineIndex: index, originalLine: line, desc, due, recurrence, priority, created, completed, tags });
         }
       });
       this.allTagsList = Array.from(foundTags).sort();
     },
+
+    openAddPanel() { this.openAddPanelWithDate(this.getTodayStr()); },
+    closePanel() { this.showPanel = false; },
+    openAddGCalPanel(d) { 
+        this.isEditMode = false; this.showPanel = true; 
+        const now = new Date();
+        const curH = String(now.getHours()).padStart(2,'0');
+        this.panelData = { isGCal: true, isNew: true, title: '', desc: '', dateInput: d, startHour: curH, startMin: '00', endHour: '', endMin: '', targetCalendarId: this.settings.calendarIds[0]||'' }; 
+    },
+    setTab(id) {
+      this.currentTab = id;
+      if (id === 'completed' && this.archiveTasks.length === 0 && this.settings.archivePath) {
+        this.loadArchiveData();
+      }
+    },
     toggleDarkMode() { 
-        if(this.darkMode) { document.body.classList.add('dark-mode'); localStorage.setItem('obsidian_tasks_theme', 'dark'); } 
-        else { document.body.classList.remove('dark-mode'); localStorage.setItem('obsidian_tasks_theme', 'light'); } 
+        if(this.darkMode) { this.darkMode = false; document.body.classList.remove('dark-mode'); localStorage.setItem('obsidian_tasks_theme', 'light'); } 
+        else { this.darkMode = true; document.body.classList.add('dark-mode'); localStorage.setItem('obsidian_tasks_theme', 'dark'); } 
     },
     async saveSettings() {
       localStorage.setItem('gh_tasks_settings', JSON.stringify(this.settings));
@@ -602,7 +660,8 @@ createApp({
                     let body = m[2];
                     const doneDate = (body.match(/✅\s*(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
                     const tags = []; 
-                    (body.match(/#[^\s]+/g)||[]).forEach(t => {
+                    let tempBody = body.replace(/\[.*?\]\((.*?)\)/g, '').replace(/https?:\/\/[^\s]+/g, '');
+                    (tempBody.match(/#[^\s#]+/g) || []).forEach(t => {
                         let tag = t.replace(/[.,!?:;)}\]]+$/, '');
                         if(tag.toLowerCase()!=='#todo' && !tag.includes('=') && tag.length>1) tags.push(tag);
                     });
@@ -724,31 +783,6 @@ createApp({
         if(task.isArchived) { /* Archive Delete Logic (Simplified) */ } 
         else { const idx=this.tasks.findIndex(t=>t.lineIndex===task.lineIndex); if(idx>-1){const org=this.tasks[idx]; this.tasks.splice(idx,1); if(org.lineIndex>=0){this.lines.splice(org.lineIndex,1); this.tasks.forEach(t=>{if(t.lineIndex>org.lineIndex)t.lineIndex--;}); this.pushChanges(); this.closePanel();}} } 
     },
-    getLocalYMD(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; },
-    convertIsoToYMD(iso) { return iso ? this.getLocalYMD(new Date(iso)) : ''; },
-    getTodayStr() { return this.getLocalYMD(new Date()); },
-    formatTimeRange(item) { if(item.isAllDay) return '終日'; const d1=new Date(item.start); const d2=new Date(item.end); return `${String(d1.getHours()).padStart(2,'0')}:${String(d1.getMinutes()).padStart(2,'0')} - ${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`; },
-    saveTaskChanges() { 
-        let d = this.panelData.desc; if(this.panelData.url) d = `[${d}](${this.panelData.url})`;
-        if(this.isEditMode) { const t=this.panelData.taskRef; t.desc=d; t.due=this.panelData.due; t.priority=this.panelData.priority; t.recurrence=this.panelData.recurrence; t.tags=[...this.panelData.tags]; }
-        else { this.tasks.push({lineIndex:-1, desc:d, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, created:this.getTodayStr(), completed:false, tags:[...this.panelData.tags]}); }
-        this.closePanel(); this.pushChanges();
-    },
-    openAddPanelWithDate(d) { this.isEditMode=false; this.showPanel=true; this.panelData={desc:'', url:'', due:d, recurrence:'', priority:'none', completed:false, tags:[], isGCal:false}; this.tagInput=''; },
-    openEditPanel(item) {
-      this.isEditMode=true; this.showPanel=true;
-      if(item.isGCal) {
-          const sd=new Date(item.start); const ed=new Date(item.end);
-          let sh='', sm='', eh='', em='';
-          if(!item.isAllDay) { sh=String(sd.getHours()).padStart(2,'0'); sm=String(sd.getMinutes()).padStart(2,'0'); eh=String(ed.getHours()).padStart(2,'0'); em=String(ed.getMinutes()).padStart(2,'0'); }
-          this.panelData={isGCal:true, isNew:false, eid:item.id, calendarId:item.calendarId, title:item.title, desc:item.desc, dateInput:this.convertIsoToYMD(item.start), startHour:sh, startMin:sm, endHour:eh, endMin:em};
-      } else {
-          const org=this.tasks.find(t=>t.lineIndex===item.lineIndex)||item;
-          this.panelData={...org, taskRef:org, isGCal:false, tags:[...org.tags]};
-          this.tagInput=''; const m=org.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/); if(m){this.panelData.desc=m[1]; this.panelData.url=m[2];}
-      }
-    },
-    addTag() { if(this.tagInput && !this.panelData.tags.includes(this.tagInput)) { this.panelData.tags.push(this.tagInput); this.tagInput=''; } },
     addTagFromHistory(tag) { if(!this.panelData.tags.includes(tag)) this.panelData.tags.push(tag); },
     removeTag(t) { this.panelData.tags = this.panelData.tags.filter(tg => tg !== t); },
     renderDesc(text) { return text ? text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" onclick="event.stopPropagation()">$1</a>') : ''; },
@@ -757,7 +791,13 @@ createApp({
     loadMoreCompleted() { this.displayLimit += 50; },
     getPriorityColor(p) { return p==='high'?'#ef4444':p==='medium'?'#f59e0b':p==='low'?'#3b82f6':'#ccc'; },
     setDateShortcut(d) { const dt=new Date(); dt.setDate(dt.getDate()+d); this.panelData.due=this.getLocalYMD(dt); },
-    showToastNotification(m) { this.toast.message=m; this.toast.show=true; setTimeout(()=>this.toast.show=false, 3000); }
+    showToastNotification(m) { this.toast.message=m; this.toast.show=true; setTimeout(()=>this.toast.show=false, 3000); },
+    
+    // --- Helper Functions ---
+    getLocalYMD(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; },
+    convertIsoToYMD(iso) { return iso ? this.getLocalYMD(new Date(iso)) : ''; },
+    getTodayStr() { return this.getLocalYMD(new Date()); },
+    formatTimeRange(item) { if(item.isAllDay) return '終日'; const d1=new Date(item.start); const d2=new Date(item.end); return `${String(d1.getHours()).padStart(2,'0')}:${String(d1.getMinutes()).padStart(2,'0')} - ${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`; },
   }
 }).mount('#app');
 </script>
