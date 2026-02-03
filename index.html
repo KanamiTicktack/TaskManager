@@ -14,9 +14,7 @@
   
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js')
-      .then(function() { console.log('Service Worker Registered'); })
-      .catch(function(err) { console.log('SW Registration Failed: ', err); });
+      navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
     }
   </script>
 
@@ -48,11 +46,48 @@
         max-width: 1600px; margin: 0 auto; padding: 16px; min-height: 100vh; position: relative;
     }
     .split-layout { display: block; }
+    
+    /* ★PC Split Layout with Independent Scroll★ */
     @media (min-width: 992px) {
-        .split-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
-        .view-primary { min-width: 0; }
-        .view-secondary { min-width: 0; display: block !important; }
+        .app-container {
+            height: 100vh; /* Fix height to viewport */
+            overflow: hidden; /* Stop body scroll */
+            padding-bottom: 0;
+        }
+        .app-header {
+            flex-shrink: 0; /* Header doesn't shrink */
+        }
+        .main-content {
+            flex: 1;
+            min-height: 0; /* Allow flex child to shrink */
+            display: flex;
+            flex-direction: column;
+        }
+        .split-layout { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 24px; 
+            align-items: start;
+            height: 100%; /* Fill remaining space */
+            overflow: hidden;
+        }
+        .view-primary, .view-secondary { 
+            display: block !important; 
+            height: 100%; /* Full height of split area */
+            overflow-y: auto; /* Independent scroll */
+            padding-bottom: 100px; /* Space for FAB/Bottom */
+            padding-right: 4px;
+            
+            /* Hide Scrollbar */
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        /* Hide Scrollbar for Chrome, Safari and Opera */
+        .view-primary::-webkit-scrollbar, .view-secondary::-webkit-scrollbar {
+            display: none;
+        }
     }
+
     .app-card { background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 16px; overflow: hidden; }
     
     /* Header */
@@ -158,7 +193,9 @@
     .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
     .btn-modal { padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
     .btn-cancel { background: transparent; color: var(--text-sub); }
+    .btn-cancel:active { background: var(--hover-bg); color: var(--text-main); }
     .btn-confirm { background: var(--primary); color: white; }
+    .btn-confirm:active { opacity: 0.8; }
     .btn-confirm.danger { background: var(--danger); }
     
     .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9998; display: flex; align-items: center; justify-content: center; flex-direction: column; color: white; }
@@ -196,127 +233,129 @@
         </button>
     </div>
 
-    <div class="split-layout">
-        
-        <div class="view-primary">
-            <ul class="nav nav-tabs">
-                <li class="nav-item"><a class="nav-link" :class="{active: currentTab === 'active'}" @click.prevent="setTab('active')" href="#">未完了 <span v-if="activeCount" class="badge bg-secondary rounded-pill ms-1">{{ activeCount }}</span></a></li>
-                <li class="nav-item"><a class="nav-link" :class="{active: currentTab === 'completed'}" @click.prevent="setTab('completed')" href="#">完了済</a></li>
-                <li class="nav-item" v-if="!isPC"><a class="nav-link" :class="{active: currentTab === 'calendar'}" @click.prevent="setTab('calendar')" href="#">カレンダー</a></li>
-                <li class="nav-item"><a class="nav-link" :class="{active: currentTab === 'settings'}" @click.prevent="setTab('settings')" href="#">設定</a></li>
-            </ul>
+    <div class="main-content">
+        <div class="split-layout">
+            
+            <div class="view-primary">
+                <ul class="nav nav-tabs">
+                    <li class="nav-item"><a class="nav-link" :class="{active: currentTab === 'active'}" @click.prevent="setTab('active')" href="#">未完了 <span v-if="activeCount" class="badge bg-secondary rounded-pill ms-1">{{ activeCount }}</span></a></li>
+                    <li class="nav-item"><a class="nav-link" :class="{active: currentTab === 'completed'}" @click.prevent="setTab('completed')" href="#">完了済</a></li>
+                    <li class="nav-item" v-if="!isPC"><a class="nav-link" :class="{active: currentTab === 'calendar'}" @click.prevent="setTab('calendar')" href="#">カレンダー</a></li>
+                    <li class="nav-item"><a class="nav-link" :class="{active: currentTab === 'settings'}" @click.prevent="setTab('settings')" href="#">設定</a></li>
+                </ul>
 
-            <div v-if="currentTab !== 'settings'" class="d-flex justify-content-end mb-3">
-                <select class="form-select form-select-sm" v-model="filterTag" style="width: auto; max-width: 200px; border-radius: 20px;">
-                    <option value="">🏷️ すべてのタグ</option>
-                    <option v-for="tag in allTagsList" :key="tag" :value="tag">#{{ tag.replace(/^#/, '') }}</option>
-                </select>
-            </div>
-
-            <transition name="fade" mode="out-in">
-                <div v-if="currentTab === 'settings'" key="settings">
-                    <div class="app-card p-4">
-                        <h5 class="fw-bold mb-4">設定</h5>
-                        <h6 class="fw-bold text-secondary">Googleカレンダー表示</h6>
-                        <div class="border rounded p-3 mb-4" style="max-height: 200px; overflow-y: auto;">
-                            <div v-if="availableCalendars.length === 0" class="text-muted small">読み込み中...</div>
-                            <div v-for="cal in availableCalendars" :key="cal.id" class="form-check">
-                                <input class="form-check-input" type="checkbox" :value="cal.id" v-model="settings.calendarIds" @change="hasSettingsChanged=true">
-                                <label class="form-check-label small d-flex align-items-center"><span :style="{color: cal.color, fontSize:'20px', lineHeight:0}" class="me-2">●</span> {{ cal.name }}</label>
-                            </div>
-                        </div>
-                        <h6 class="fw-bold text-secondary">GitHub連携</h6>
-                        <div class="mb-2"><input type="password" v-model="settings.token" class="form-control" placeholder="Token" @input="hasSettingsChanged=true"></div>
-                        <div class="row g-2 mb-2">
-                            <div class="col-6"><input type="text" v-model="settings.owner" class="form-control" placeholder="Owner" @input="hasSettingsChanged=true"></div>
-                            <div class="col-6"><input type="text" v-model="settings.repo" class="form-control" placeholder="Repo" @input="hasSettingsChanged=true"></div>
-                        </div>
-                        <input type="text" v-model="settings.path" class="form-control mb-3" placeholder="Path (e.g. Tasks.md)" @input="hasSettingsChanged=true">
-                        <button class="btn btn-primary w-100 mb-4" @click="saveSettings" :disabled="!hasSettingsChanged">設定を保存</button>
-                        <h6 class="fw-bold text-secondary">データ管理</h6>
-                        <input type="text" v-model="settings.archivePath" class="form-control mb-2" placeholder="Archive Path">
-                        <button class="btn btn-outline-warning w-100 btn-sm" @click="runArchiveProcess">完了タスクをアーカイブ</button>
-                    </div>
+                <div v-if="currentTab !== 'settings'" class="d-flex justify-content-end mb-3">
+                    <select class="form-select form-select-sm" v-model="filterTag" style="width: auto; max-width: 200px; border-radius: 20px;">
+                        <option value="">🏷️ すべてのタグ</option>
+                        <option v-for="tag in allTagsList" :key="tag" :value="tag">#{{ tag.replace(/^#/, '') }}</option>
+                    </select>
                 </div>
 
-                <div v-else-if="currentTab === 'active'" key="active">
-                    <div v-if="groupedActiveTasks.length === 0" class="text-center py-5 text-muted"><span class="material-icons-round" style="font-size: 48px; opacity: 0.5;">task_alt</span><p class="mt-2">タスクはありません</p></div>
-                    <div v-for="group in groupedActiveTasks" :key="group.title" class="mb-4">
-                        <h6 class="fw-bold text-secondary small mb-2 ms-1">{{ group.title }}</h6>
-                        <div v-for="task in group.tasks" :key="task.lineIndex" class="task-card" :class="'priority-'+task.priority" @click="openEditPanel(task)">
-                            <div class="custom-checkbox" @click.stop="toggleTask(task)"><span class="material-icons-round">check</span></div>
-                            <div class="task-content">
-                                <div class="task-title" v-html="renderDesc(task.desc)"></div>
-                                <div class="task-meta">
-                                    <span v-for="tag in task.tags" class="badge-base tag-badge">#{{ tag.replace(/^#/, '') }}</span>
-                                    <span v-if="task.due" class="badge-base"><span class="material-icons-round" style="font-size:12px">event</span> {{ task.due }}</span>
-                                    <span v-if="task.recurrence" class="badge-base">🔁 {{ task.recurrence }}</span>
+                <transition name="fade" mode="out-in">
+                    <div v-if="currentTab === 'settings'" key="settings">
+                        <div class="app-card p-4">
+                            <h5 class="fw-bold mb-4">設定</h5>
+                            <h6 class="fw-bold text-secondary">Googleカレンダー表示</h6>
+                            <div class="border rounded p-3 mb-4" style="max-height: 200px; overflow-y: auto;">
+                                <div v-if="availableCalendars.length === 0" class="text-muted small">読み込み中...</div>
+                                <div v-for="cal in availableCalendars" :key="cal.id" class="form-check">
+                                    <input class="form-check-input" type="checkbox" :value="cal.id" v-model="settings.calendarIds" @change="hasSettingsChanged=true">
+                                    <label class="form-check-label small d-flex align-items-center"><span :style="{color: cal.color, fontSize:'20px', lineHeight:0}" class="me-2">●</span> {{ cal.name }}</label>
+                                </div>
+                            </div>
+                            <h6 class="fw-bold text-secondary">GitHub連携</h6>
+                            <div class="mb-2"><input type="password" v-model="settings.token" class="form-control" placeholder="Token" @input="hasSettingsChanged=true"></div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-6"><input type="text" v-model="settings.owner" class="form-control" placeholder="Owner" @input="hasSettingsChanged=true"></div>
+                                <div class="col-6"><input type="text" v-model="settings.repo" class="form-control" placeholder="Repo" @input="hasSettingsChanged=true"></div>
+                            </div>
+                            <input type="text" v-model="settings.path" class="form-control mb-3" placeholder="Path (e.g. Tasks.md)" @input="hasSettingsChanged=true">
+                            <button class="btn btn-primary w-100 mb-4" @click="saveSettings" :disabled="!hasSettingsChanged">設定を保存</button>
+                            <h6 class="fw-bold text-secondary">データ管理</h6>
+                            <input type="text" v-model="settings.archivePath" class="form-control mb-2" placeholder="Archive Path">
+                            <button class="btn btn-outline-warning w-100 btn-sm" @click="runArchiveProcess">完了タスクをアーカイブ</button>
+                        </div>
+                    </div>
+
+                    <div v-else-if="currentTab === 'active'" key="active">
+                        <div v-if="groupedActiveTasks.length === 0" class="text-center py-5 text-muted"><span class="material-icons-round" style="font-size: 48px; opacity: 0.5;">task_alt</span><p class="mt-2">タスクはありません</p></div>
+                        <div v-for="group in groupedActiveTasks" :key="group.title" class="mb-4">
+                            <h6 class="fw-bold text-secondary small mb-2 ms-1">{{ group.title }}</h6>
+                            <div v-for="task in group.tasks" :key="task.lineIndex" class="task-card" :class="'priority-'+task.priority" @click="openEditPanel(task)">
+                                <div class="custom-checkbox" @click.stop="toggleTask(task)"><span class="material-icons-round">check</span></div>
+                                <div class="task-content">
+                                    <div class="task-title" v-html="renderDesc(task.desc)"></div>
+                                    <div class="task-meta">
+                                        <span v-for="tag in task.tags" class="badge-base tag-badge">#{{ tag.replace(/^#/, '') }}</span>
+                                        <span v-if="task.due" class="badge-base"><span class="material-icons-round" style="font-size:12px">event</span> {{ task.due }}</span>
+                                        <span v-if="task.recurrence" class="badge-base">🔁 {{ task.recurrence }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div v-else-if="currentTab === 'completed'" key="completed">
-                    <div v-if="displayCompletedTasks.length === 0" class="text-center py-5 text-muted"><p>完了済みタスクはありません</p></div>
-                    <div v-for="task in displayCompletedTasks" :key="task.uniqueId" class="task-card opacity-75">
-                        <div class="custom-checkbox checked" @click.stop="confirmRestore(task)"><span class="material-icons-round">check</span></div>
-                        <div class="task-content text-decoration-line-through">
-                            <div class="task-title" v-html="renderDesc(task.desc)"></div>
-                            <div class="task-meta">
-                                <span v-if="task.isArchived" class="badge bg-secondary text-white" style="font-size:0.6rem">Archived</span>
-                                <span v-for="tag in task.tags" class="badge-base tag-badge">#{{ tag.replace(/^#/, '') }}</span>
-                                Done: {{ task.doneDate }}
+                    <div v-else-if="currentTab === 'completed'" key="completed">
+                        <div v-if="displayCompletedTasks.length === 0" class="text-center py-5 text-muted"><p>完了済みタスクはありません</p></div>
+                        <div v-for="task in displayCompletedTasks" :key="task.uniqueId" class="task-card opacity-75">
+                            <div class="custom-checkbox checked" @click.stop="confirmRestore(task)"><span class="material-icons-round">check</span></div>
+                            <div class="task-content text-decoration-line-through">
+                                <div class="task-title" v-html="renderDesc(task.desc)"></div>
+                                <div class="task-meta">
+                                    <span v-if="task.isArchived" class="badge bg-secondary text-white" style="font-size:0.6rem">Archived</span>
+                                    <span v-for="tag in task.tags" class="badge-base tag-badge">#{{ tag.replace(/^#/, '') }}</span>
+                                    Done: {{ task.doneDate }}
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn-restore" @click.stop="confirmRestore(task)"><span class="material-icons-round" style="font-size:16px">undo</span></button>
+                                <button class="btn-delete p-1 rounded" @click.stop="confirmDelete(task)"><span class="material-icons-round" style="font-size:20px">delete</span></button>
                             </div>
                         </div>
-                        <div class="d-flex gap-2">
-                            <button class="btn-restore" @click.stop="confirmRestore(task)"><span class="material-icons-round" style="font-size:16px">undo</span></button>
-                            <button class="btn-delete p-1 rounded" @click.stop="confirmDelete(task)"><span class="material-icons-round" style="font-size:20px">delete</span></button>
-                        </div>
+                        <div v-if="displayCompletedTasks.length < allCompletedTasks.length" class="text-center mt-3"><button class="btn btn-sm btn-outline-secondary" @click="loadMoreCompleted">もっと見る</button></div>
                     </div>
-                    <div v-if="displayCompletedTasks.length < allCompletedTasks.length" class="text-center mt-3"><button class="btn btn-sm btn-outline-secondary" @click="loadMoreCompleted">もっと見る</button></div>
-                </div>
-            </transition>
-        </div>
+                </transition>
+            </div>
 
-        <div class="view-secondary" v-if="currentTab === 'calendar' || isPC">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="btn-group shadow-sm">
-                    <button class="btn btn-sm btn-light border" :class="{active: calendarMode==='week'}" @click="calendarMode='week'">週</button>
-                    <button class="btn btn-sm btn-light border" :class="{active: calendarMode==='month'}" @click="calendarMode='month'">月</button>
+            <div class="view-secondary" v-if="currentTab === 'calendar' || isPC">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="btn-group shadow-sm">
+                        <button class="btn btn-sm btn-light border" :class="{active: calendarMode==='week'}" @click="calendarMode='week'">週</button>
+                        <button class="btn btn-sm btn-light border" :class="{active: calendarMode==='month'}" @click="calendarMode='month'">月</button>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 bg-white rounded shadow-sm px-2 py-1 border" style="background-color: var(--bg-card) !important; border-color: var(--border-color) !important;">
+                        <button class="btn btn-sm btn-light" @click="changeDateRange(-1)">◀</button><span class="fw-bold small px-2">{{ calendarTitle }}</span><button class="btn btn-sm btn-light" @click="changeDateRange(1)">▶</button>
+                    </div>
                 </div>
-                <div class="d-flex align-items-center gap-2 bg-white rounded shadow-sm px-2 py-1 border" style="background-color: var(--bg-card) !important; border-color: var(--border-color) !important;">
-                    <button class="btn btn-sm btn-light" @click="changeDateRange(-1)">◀</button><span class="fw-bold small px-2">{{ calendarTitle }}</span><button class="btn btn-sm btn-light" @click="changeDateRange(1)">▶</button>
-                </div>
-            </div>
-            <div class="calendar-wrapper">
-                <div class="calendar-grid">
-                    <div v-for="d in ['日','月','火','水','木','金','土']" class="calendar-header-cell" :class="{'header-sun':d=='日','header-sat':d=='土'}">{{ d }}</div>
-                    <div v-for="(day, idx) in calendarDays" :key="idx" class="calendar-cell" :class="[{'selected': day.date === selectedDate}]" :style="{ minHeight: calendarMode === 'month' ? '80px' : '150px' }" @click="selectDate(day.date)">
-                        <div class="date-num" :class="{today: day.isToday}">{{ day.dayNum }}</div>
-                        <div v-if="calendarMode === 'week'">
-                            <div v-for="item in day.items" class="cal-item" :class="{'is-gcal': item.isGCal, 'completed': item.completed}" :style="item.isGCal ? {background: item.color} : {borderLeftColor: getPriorityColor(item.priority)}">{{ item.desc }}</div>
-                        </div>
-                        <div v-else class="dot-container">
-                            <div v-for="item in day.items" class="dot" :style="item.isGCal ? {background: item.color, width:'7px', height:'7px'} : {background: getPriorityColor(item.priority)}"></div>
+                <div class="calendar-wrapper">
+                    <div class="calendar-grid">
+                        <div v-for="d in ['日','月','火','水','木','金','土']" class="calendar-header-cell" :class="{'header-sun':d=='日','header-sat':d=='土'}">{{ d }}</div>
+                        <div v-for="(day, idx) in calendarDays" :key="idx" class="calendar-cell" :class="[{'selected': day.date === selectedDate}]" :style="{ minHeight: calendarMode === 'month' ? '80px' : '150px' }" @click="selectDate(day.date)">
+                            <div class="date-num" :class="{today: day.isToday}">{{ day.dayNum }}</div>
+                            <div v-if="calendarMode === 'week'">
+                                <div v-for="item in day.items" class="cal-item" :class="{'is-gcal': item.isGCal, 'completed': item.completed}" :style="item.isGCal ? {background: item.color} : {borderLeftColor: getPriorityColor(item.priority)}">{{ item.desc }}</div>
+                            </div>
+                            <div v-else class="dot-container">
+                                <div v-for="item in day.items" class="dot" :style="item.isGCal ? {background: item.color, width:'7px', height:'7px'} : {background: getPriorityColor(item.priority)}"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="app-card p-0" v-if="selectedDate">
-                <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background-color: var(--hover-bg);"><h6 class="m-0 fw-bold">{{ selectedDateDisplay }}</h6><div class="d-flex gap-2"><button class="btn btn-sm btn-outline-primary" @click="openAddGCalPanel(selectedDate)">+ 予定</button><button class="btn btn-sm btn-primary" @click="openAddPanelWithDate(selectedDate)">+ タスク</button></div></div>
-                <div class="p-2">
-                    <div v-if="selectedDateItems.length === 0" class="text-center py-4 text-muted small">予定はありません</div>
-                    <div v-for="item in selectedDateItems" :key="item.uniqueId" class="task-card border-0 mb-1" :style="item.isGCal ? {background: 'var(--hover-bg)'} : {}" @click="openEditPanel(item)">
-                        <div v-if="item.isGCal" class="me-2"><span class="material-icons-round" :style="{color: item.color}">event</span></div>
-                        <div v-else class="custom-checkbox me-2" :class="{checked: item.completed}" @click.stop="toggleTask(item)"><span class="material-icons-round">check</span></div>
-                        <div class="task-content">
-                            <div class="task-title" :class="{'text-decoration-line-through text-muted': item.completed}" v-html="renderDesc(item.isGCal ? item.title : item.desc)"></div>
-                            <div class="task-meta">
-                                <span v-if="item.isGCal" class="badge-base" :style="{background: item.color, color:'white'}">{{ item.calendarName }}</span>
-                                <span v-if="item.isGCal">{{ item.isAllDay ? '終日' : item.timeStr }}</span>
-                                <span v-if="!item.isGCal && item.priority!='none'" class="fw-bold" :style="{color: getPriorityColor(item.priority)}">Prior: {{ item.priority }}</span>
-                                <span v-if="!item.isGCal" v-for="tag in item.tags" class="badge-base tag-badge">#{{ tag.replace(/^#/, '') }}</span>
+                <div class="app-card p-0" v-if="selectedDate">
+                    <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background-color: var(--hover-bg);"><h6 class="m-0 fw-bold">{{ selectedDateDisplay }}</h6><div class="d-flex gap-2"><button class="btn btn-sm btn-outline-primary" @click="openAddGCalPanel(selectedDate)">+ 予定</button><button class="btn btn-sm btn-primary" @click="openAddPanelWithDate(selectedDate)">+ タスク</button></div></div>
+                    <div class="p-2">
+                        <div v-if="selectedDateItems.length === 0" class="text-center py-4 text-muted small">予定はありません</div>
+                        <div v-for="item in selectedDateItems" :key="item.uniqueId" class="task-card border-0 mb-1" :style="item.isGCal ? {background: 'var(--hover-bg)'} : {}" @click="openEditPanel(item)">
+                            <div v-if="item.isGCal" class="me-2"><span class="material-icons-round" :style="{color: item.color}">event</span></div>
+                            <div v-else class="custom-checkbox me-2" :class="{checked: item.completed}" @click.stop="toggleTask(item)"><span class="material-icons-round">check</span></div>
+                            <div class="task-content">
+                                <div class="task-title" :class="{'text-decoration-line-through text-muted': item.completed}" v-html="renderDesc(item.isGCal ? item.title : item.desc)"></div>
+                                <div class="task-meta">
+                                    <span v-if="item.isGCal" class="badge-base" :style="{background: item.color, color:'white'}">{{ item.calendarName }}</span>
+                                    <span v-if="item.isGCal">{{ item.isAllDay ? '終日' : item.timeStr }}</span>
+                                    <span v-if="!item.isGCal && item.priority!='none'" class="fw-bold" :style="{color: getPriorityColor(item.priority)}">Prior: {{ item.priority }}</span>
+                                    <span v-if="!item.isGCal" v-for="tag in item.tags" class="badge-base tag-badge">#{{ tag.replace(/^#/, '') }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -501,7 +540,7 @@ createApp({
       const dayTasks = this.tasks.filter(t => t.due === dateStr && (!this.filterTag || t.tags.includes(this.filterTag)))
                                  .map(t => ({...t, isGCal: false, uniqueId: 'task-'+t.lineIndex}));
       const dayGcals = this.gcalEvents.filter(e => this.convertIsoToYMD(e.start) === dateStr)
-                                    .map(e => ({...e, isGCal: true, uniqueId: 'gcal-'+e.id, desc: e.desc, timeStr: this.formatTimeRange(e)}));
+                                    .map(e => ({...e, isGCal: true, uniqueId: 'gcal-'+e.id, desc: e.desc, title: e.title, timeStr: this.formatTimeRange(e)}));
       return [...dayGcals, ...dayTasks].sort((a, b) => {
           if (a.isGCal && !b.isGCal) return -1; 
           if (!a.isGCal && b.isGCal) return 1;
@@ -624,7 +663,6 @@ createApp({
           const recurrence = (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1] ? (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1].trim() : '';
           let priority = 'none'; if(body.includes('⏫')) priority='high'; else if(body.includes('🔼')) priority='medium'; else if(body.includes('🔽')) priority='low';
           const tags = [];
-          // Link remove logic improved
           let tempBody = body.replace(/\[.*?\]\(.*?\)/g, '').replace(/https?:\/\/\S+/g, '');
           (tempBody.match(/#[^\s#]+/g) || []).forEach(t => {
               let tag = t.replace(/[.,!?:;)}\]]+$/, '');
