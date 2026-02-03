@@ -526,7 +526,6 @@ createApp({
         this.loadArchiveData();
       }
     },
-    // ★★★ Added parseContent function (Revived) ★★★
     parseContent(text) {
       this.lines = text.split('\n'); this.tasks = []; const foundTags = new Set(); 
       this.lines.forEach((line, index) => {
@@ -553,7 +552,6 @@ createApp({
       });
       this.allTagsList = Array.from(foundTags).sort();
     },
-    // ★★★ Added toggleDarkMode function (Revived) ★★★
     toggleDarkMode() { 
         if(this.darkMode) { document.body.classList.add('dark-mode'); localStorage.setItem('obsidian_tasks_theme', 'dark'); } 
         else { document.body.classList.remove('dark-mode'); localStorage.setItem('obsidian_tasks_theme', 'light'); } 
@@ -578,6 +576,32 @@ createApp({
       } catch(e) {
           this.showInfo('Error', e.toString()); this.loading = false;
       }
+    },
+    // ★★★ Added loadArchiveData function (Revived) ★★★
+    async loadArchiveData() {
+        if(!this.settings.archivePath) return;
+        try {
+            const res = await callGAS('getFileContent', { ...this.settings, path: this.settings.archivePath });
+            if(!res.content) return;
+            const lines = res.content.split('\n');
+            this.archiveTasks = [];
+            lines.forEach((l, i) => {
+                const m = l.match(/^[-*]\s*\[([xX])\]\s*(.*)/);
+                if(m) {
+                    let body = m[2];
+                    const doneDate = (body.match(/✅\s*(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
+                    const tags = []; 
+                    (body.match(/#[^\s]+/g)||[]).forEach(t => {
+                        let tag = t.replace(/[.,!?:;)}\]]+$/, '');
+                        if(tag.toLowerCase()!=='#todo' && !tag.includes('=') && tag.length>1) tags.push(tag);
+                    });
+                    let desc = body.replace(/📅\s*\d{4}-\d{2}-\d{2}|✅\s*\d{4}-\d{2}-\d{2}|🔁\s*[^✅➕📅#\n\r]+|➕\s*\d{4}-\d{2}-\d{2}|⏫|🔼|🔽/g, '');
+                    tags.forEach(t => desc = desc.replace(new RegExp(`(^|\\s)${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\s|$)`, 'g'), ' '));
+                    desc = desc.replace(/#todo/gi, '').trim();
+                    this.archiveTasks.push({ desc: desc.trim(), doneDate, completed: true, tags, originalLine: l });
+                }
+            });
+        } catch(e) { console.error('Archive Load Error:', e); }
     },
     async fetchGCal() {
        if(!this.settings.calendarIds || this.settings.calendarIds.length === 0) return;
