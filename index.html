@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Tasks</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.2.45/dist/vue.global.prod.js"></script>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#6366f1">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js')
+      .then(function() { console.log('Service Worker Registered'); });
+    }
+  </script>
+
+  <style>
+    /* === CSS Design System === */
+    :root {
+      --primary: #6366f1; --primary-hover: #4f46e5; --danger: #ef4444;
+      --bg-body: #f3f4f6; --bg-card: #ffffff; --bg-input: #ffffff;
+      --text-main: #1f2937; --text-sub: #6b7280; --border-color: #e5e7eb;
+      --hover-bg: #f9fafb; --shadow: 0 1px 3px rgba(0,0,0,0.05);
+      --radius: 12px; --tag-bg: #e9ecef; --tag-text: #495057;
+      --status-bg: #1f2937; --status-text: #ffffff;
+    }
+    body.dark-mode {
+      --primary: #818cf8; --primary-hover: #6366f1;
+      --bg-body: #111827; --bg-card: #1f2937; --bg-input: #374151;
+      --text-main: #f3f4f6; --text-sub: #9ca3af; --border-color: #374151;
+      --hover-bg: #374151; --shadow: 0 4px 6px rgba(0,0,0,0.3);
+      --tag-bg: #374151; --tag-text: #d1d5db;
+      --status-bg: #f3f4f6; --status-text: #1f2937;
+    }
+    body { background-color: var(--bg-body); color: var(--text-main); font-family: sans-serif; overflow-y: scroll; -webkit-tap-highlight-color: transparent; }
+    .form-control, .form-select { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); }
+    body.dark-mode ::-webkit-calendar-picker-indicator { filter: invert(1); }
+    
+    .app-container { display: flex; gap: 24px; max-width: 1400px; margin: 0 auto; padding: 20px; }
+    .main-content { flex: 1; min-width: 0; padding-bottom: 100px; }
+    .app-card { background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 16px; overflow: hidden; }
+    
+    .nav-tabs { border: none; gap: 8px; margin-bottom: 16px; }
+    .nav-link { border: none; border-radius: 20px !important; color: var(--text-sub); font-weight: 600; padding: 8px 16px; }
+    .nav-link.active { background: var(--primary) !important; color: #fff !important; }
+    
+    .task-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 8px; padding: 12px; display: flex; gap: 12px; cursor: pointer; position: relative; overflow: hidden; }
+    .task-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+    .priority-high::before { background: #ef4444; } .priority-medium::before { background: #f59e0b; } .priority-low::before { background: #3b82f6; }
+    
+    .custom-checkbox { width: 22px; height: 22px; border: 2px solid var(--text-sub); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .custom-checkbox.checked { background: var(--primary); border-color: var(--primary); }
+    .custom-checkbox .material-icons-round { font-size: 16px; color: white; opacity: 0; }
+    .custom-checkbox.checked .material-icons-round { opacity: 1; }
+    
+    .task-content { flex: 1; min-width: 0; }
+    .task-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; line-height: 1.4; }
+    .task-meta { display: flex; gap: 6px; font-size: 0.75rem; color: var(--text-sub); flex-wrap: wrap; }
+    .badge-base { padding: 2px 8px; border-radius: 6px; background: var(--hover-bg); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 3px; }
+    
+    /* Dark Mode Text Fixes */
+    .task-content.text-decoration-line-through { color: var(--text-sub); }
+    body.dark-mode .task-content.text-decoration-line-through { color: #d1d5db !important; opacity: 1 !important; }
+    body.dark-mode .task-card.opacity-75 { opacity: 1 !important; }
+    
+    /* Side Panel */
+    .side-panel { width: 420px; background: var(--bg-card); border-left: 1px solid var(--border-color); position: sticky; top: 20px; height: calc(100vh - 40px); border-radius: var(--radius); overflow-y: auto; z-index: 1000; padding: 24px; display: flex; flex-direction: column; }
+    @media (max-width: 768px) {
+        .app-container { display: block; padding: 10px; }
+        .side-panel { position: fixed; right: 0; top: 0; width: 100%; height: 100vh; border-radius: 0; z-index: 2000; padding: 16px; }
+        .panel-header-mobile { display: flex !important; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .panel-header-pc { display: none !important; }
+    }
+    .panel-header-mobile { display: none; }
+    .btn-panel-back { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; }
+    
+    /* Calendar */
+    .calendar-wrapper { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 20px; overflow: hidden; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--border-color); min-width: 300px; }
+    .calendar-cell { background: var(--bg-card); padding: 4px; min-height: 100px; cursor: pointer; display: flex; flex-direction: column; }
+    .calendar-cell.selected { background: rgba(99, 102, 241, 0.1) !important; box-shadow: inset 0 0 0 2px var(--primary); }
+    .date-num { align-self: center; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; border-radius: 50%; }
+    .date-num.today { background: var(--primary); color: white; }
+    .cal-item { font-size: 0.7rem; padding: 2px 4px; margin-bottom: 2px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--bg-input); border: 1px solid var(--border-color); border-left-width: 3px; color: var(--text-main); }
+    .cal-item.is-gcal { color: white; border: none; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-sub); margin: 1px; }
+    
+    /* UI Components */
+    .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+    .priority-select-btn { border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); padding: 6px; flex: 1; border-radius: 6px; text-align: center; font-size: 0.85rem; cursor: pointer; }
+    .priority-select-btn.active-high { background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: #ef4444; font-weight: bold; }
+    .priority-select-btn.active-medium { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border-color: #f59e0b; font-weight: bold; }
+    .priority-select-btn.active-low { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border-color: #3b82f6; font-weight: bold; }
+    .priority-select-btn.active-none { background: var(--text-sub); color: white; border-color: var(--text-sub); }
+    
+    /* Modal & Status */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); }
+    .modal-content { background: var(--bg-card); color: var(--text-main); width: 100%; max-width: 400px; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid var(--border-color); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+    .btn-modal { padding: 8px 16px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; }
+    .btn-confirm { background: var(--primary); color: white; }
+    .btn-confirm.danger { background: var(--danger); }
+    
+    .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9998; display: flex; align-items: center; justify-content: center; flex-direction: column; color: white; }
+    .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s infinite linear; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast-notification { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 24px; border-radius: 50px; z-index: 3000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .status-indicator { position: fixed; bottom: 20px; left: 20px; background: var(--status-bg); color: var(--status-text); padding: 8px 16px; border-radius: 30px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 3000; }
+    .status-spinner { width: 14px; height: 14px; border: 2px solid; border-radius: 50%; border-color: currentColor transparent transparent transparent; animation: spin 1s linear infinite; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(10px); }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div v-if="loading" class="loading-overlay"><div class="spinner"></div><div class="mt-3 fw-bold">{{ loadingMessage }}</div></div>
+  <transition name="toast"><div v-if="toast.show" class="toast-notification">{{ toast.message }}</div></transition>
+  <transition name="fade">
+    <div v-if="isSaving" class="status-indicator">
+      <div class="status-spinner"></div><span>{{ pendingSave ? '保存中 (キュー待機中)...' : '保存中...' }}</span>
+    </div>
+  </transition>
+
+  <div v-if="modal.show" class="modal-overlay">
+      <div class="modal-content">
+          <div class="fw-bold fs-5 mb-3">{{ modal.title }}</div>
+          <div class="text-secondary mb-4">{{ modal.message }}</div>
+          <div class="modal-actions">
+              <button v-if="modal.type === 'confirm'" class="btn-modal text-secondary" @click="closeModal(false)">キャンセル</button>
+              <button class="btn-modal btn-confirm" :class="{danger: modal.isDanger}" @click="closeModal(true)">{{ modal.okText }}</button>
+          </div>
+      </div>
+  </div>
+
+  <div class="app-container">
+    <div class="main-content" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
+      
+      <ul class="nav nav-tabs">
+        <li class="nav-item" v-for="tab in tabs" :key="tab.id">
+          <a class="nav-link" :class="{active: currentTab === tab.id}" @click.prevent="setTab(tab.id)" href="#">{{ tab.label }} <span v-if="tab.count" class="badge bg-secondary rounded-pill ms-1">{{ tab.count }}</span></a>
+        </li>
+      </ul>
+
+      <div v-if="currentTab !== 'settings'" class="d-flex justify-content-end mb-3">
+        <select class="form-select form-select-sm" v-model="filterTag" style="width: auto; max-width: 200px;">
+          <option value="">🏷️ すべてのタグ</option>
+          <option v-for="tag in allTagsList" :key="tag" :value="tag">{{ tag }}</option>
+        </select>
+      </div>
+
+      <transition name="fade" mode="out-in">
+        <div v-if="currentTab === 'settings'" key="settings">
+          <div class="app-card p-4">
+            <h5 class="fw-bold mb-4">アプリ設定</h5>
+            <label class="form-check form-switch mb-4 p-0 d-flex align-items-center gap-2"><input class="form-check-input m-0" type="checkbox" role="switch" v-model="darkMode" @change="toggleDarkMode"><span class="form-check-label fw-bold">🌙 ダークモード</span></label>
+            <h6 class="fw-bold text-secondary">Googleカレンダー表示</h6>
+            <div class="border rounded p-3 mb-4" style="max-height: 200px; overflow-y: auto;">
+                <div v-if="availableCalendars.length === 0" class="text-muted small">読み込み中...</div>
+                <div v-for="cal in availableCalendars" :key="cal.id" class="form-check">
+                    <input class="form-check-input" type="checkbox" :value="cal.id" v-model="settings.calendarIds" @change="hasSettingsChanged=true">
+                    <label class="form-check-label small d-flex align-items-center"><span :style="{color: cal.color, fontSize:'20px', lineHeight:0}" class="me-2">●</span> {{ cal.name }}</label>
+                </div>
+            </div>
+            <h6 class="fw-bold text-secondary">GitHub連携</h6>
+            <div class="mb-2"><input type="password" v-model="settings.token" class="form-control" placeholder="Token" @input="hasSettingsChanged=true"></div>
+            <div class="row g-2 mb-2">
+                <div class="col-6"><input type="text" v-model="settings.owner" class="form-control" placeholder="Owner" @input="hasSettingsChanged=true"></div>
+                <div class="col-6"><input type="text" v-model="settings.repo" class="form-control" placeholder="Repo" @input="hasSettingsChanged=true"></div>
+            </div>
+            <input type="text" v-model="settings.path" class="form-control mb-3" placeholder="Path (e.g. Tasks.md)" @input="hasSettingsChanged=true">
+            <button class="btn btn-primary w-100 mb-4" @click="saveSettings" :disabled="!hasSettingsChanged">設定を保存</button>
+            <h6 class="fw-bold text-secondary">データ管理</h6>
+            <input type="text" v-model="settings.archivePath" class="form-control mb-2" placeholder="Archive Path">
+            <button class="btn btn-outline-warning w-100 btn-sm" @click="runArchiveProcess">完了タスクをアーカイブ</button>
+          </div>
+        </div>
+
+        <div v-else-if="currentTab === 'active' || currentTab === 'completed'" :key="currentTab">
+          <div v-if="currentTab==='active' && groupedActiveTasks.length === 0" class="text-center py-5 text-muted"><span class="material-icons-round" style="font-size: 48px; opacity: 0.5;">task_alt</span><p class="mt-2">タスクはありません</p></div>
+          <div v-if="currentTab==='completed' && displayCompletedTasks.length === 0" class="text-center py-5 text-muted"><p>完了済みタスクはありません</p></div>
+          
+          <div v-if="currentTab==='active'">
+             <div v-for="group in groupedActiveTasks" :key="group.title" class="mb-4">
+                <h6 class="fw-bold text-secondary small mb-2 ms-1">{{ group.title }}</h6>
+                <div v-for="task in group.tasks" :key="task.lineIndex" class="task-card" :class="'priority-'+task.priority" @click="openEditPanel(task)">
+                    <div class="custom-checkbox" @click.stop="toggleTask(task)"><span class="material-icons-round">check</span></div>
+                    <div class="task-content">
+                        <div class="task-title" v-html="renderDesc(task.desc)"></div>
+                        <div class="task-meta"><span v-for="tag in task.tags" class="badge-base tag-badge">{{ tag }}</span><span v-if="task.due" class="badge-base"><span class="material-icons-round" style="font-size:12px">event</span> {{ task.due }}</span><span v-if="task.recurrence" class="badge-base">🔁 {{ task.recurrence }}</span></div>
+                    </div>
+                </div>
+             </div>
+          </div>
+          <div v-else>
+             <div v-for="task in displayCompletedTasks" :key="task.uniqueId" class="task-card opacity-75">
+                 <div class="custom-checkbox checked" @click.stop="confirmRestore(task)"><span class="material-icons-round">check</span></div>
+                 <div class="task-content text-decoration-line-through">
+                    <div class="task-title" v-html="renderDesc(task.desc)"></div>
+                    <div class="task-meta"><span v-if="task.isArchived" class="badge bg-secondary text-white" style="font-size:0.6rem">Archived</span><span v-for="tag in task.tags" class="badge-base tag-badge">{{ tag }}</span> Done: {{ task.doneDate }}</div>
+                 </div>
+                 <div class="d-flex gap-2">
+                     <button class="btn-restore" @click.stop="confirmRestore(task)"><span class="material-icons-round" style="font-size:16px">undo</span></button>
+                     <button class="btn-delete p-1 rounded" @click.stop="confirmDelete(task)"><span class="material-icons-round" style="font-size:20px">delete</span></button>
+                 </div>
+             </div>
+             <div v-if="displayCompletedTasks.length < allCompletedTasks.length" class="text-center mt-3"><button class="btn btn-sm btn-outline-secondary" @click="loadMoreCompleted">もっと見る</button></div>
+          </div>
+        </div>
+        
+        <div v-else-if="currentTab === 'calendar'" key="calendar">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+             <div class="btn-group shadow-sm">
+                <button class="btn btn-sm btn-light border" :class="{active: calendarMode==='week'}" @click="calendarMode='week'">週</button>
+                <button class="btn btn-sm btn-light border" :class="{active: calendarMode==='month'}" @click="calendarMode='month'">月</button>
+             </div>
+             <div class="d-flex align-items-center gap-2 bg-white rounded shadow-sm px-2 py-1 border" style="background-color: var(--bg-card) !important; border-color: var(--border-color) !important;">
+                <button class="btn btn-sm btn-light" @click="changeDateRange(-1)">◀</button><span class="fw-bold small px-2">{{ calendarTitle }}</span><button class="btn btn-sm btn-light" @click="changeDateRange(1)">▶</button>
+             </div>
+          </div>
+          <div class="calendar-wrapper">
+            <div class="calendar-grid">
+              <div v-for="d in ['日','月','火','水','木','金','土']" class="calendar-header-cell" :class="{'header-sun':d=='日','header-sat':d=='土'}">{{ d }}</div>
+              <div v-for="(day, idx) in calendarDays" :key="idx" class="calendar-cell" :class="[{'selected': day.date === selectedDate}]" :style="{ minHeight: calendarMode === 'month' ? '80px' : '150px' }" @click="selectDate(day.date)">
+                <div class="date-num" :class="{today: day.isToday}">{{ day.dayNum }}</div>
+                <div v-if="calendarMode === 'week'">
+                  <div v-for="item in day.items" class="cal-item" :class="{'is-gcal': item.isGCal, 'completed': item.completed}" :style="item.isGCal ? {background: item.color} : {borderLeftColor: getPriorityColor(item.priority)}">{{ item.desc }}</div>
+                </div>
+                <div v-else class="dot-container">
+                  <div v-for="item in day.items" class="dot" :style="item.isGCal ? {background: item.color, width:'7px', height:'7px'} : {background: getPriorityColor(item.priority)}"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="app-card p-0" v-if="selectedDate">
+             <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background-color: var(--hover-bg);"><h6 class="m-0 fw-bold">{{ selectedDateDisplay }}</h6><div class="d-flex gap-2"><button class="btn btn-sm btn-outline-primary" @click="openAddGCalPanel(selectedDate)">+ 予定</button><button class="btn btn-sm btn-primary" @click="openAddPanelWithDate(selectedDate)">+ タスク</button></div></div>
+             <div class="p-2">
+                <div v-if="selectedDateItems.length === 0" class="text-center py-4 text-muted small">予定はありません</div>
+                <div v-for="item in selectedDateItems" :key="item.uniqueId" class="task-card border-0 mb-1" :style="item.isGCal ? {background: 'var(--hover-bg)'} : {}" @click="openEditPanel(item)">
+                    <div v-if="item.isGCal" class="me-2"><span class="material-icons-round" :style="{color: item.color}">event</span></div>
+                    <div v-else class="custom-checkbox me-2" :class="{checked: item.completed}" @click.stop="toggleTask(item)"><span class="material-icons-round">check</span></div>
+                    <div class="task-content">
+                        <div class="task-title" :class="{'text-decoration-line-through text-muted': item.completed}">{{ item.desc }}</div>
+                        <div class="task-meta">
+                            <span v-if="item.isGCal" class="badge-base" :style="{background: item.color, color:'white'}">{{ item.calendarName }}</span>
+                            <span v-if="item.isGCal">{{ item.isAllDay ? '終日' : item.timeStr }}</span>
+                            <span v-if="!item.isGCal && item.priority!='none'" class="fw-bold" :style="{color: getPriorityColor(item.priority)}">Prior: {{ item.priority }}</span>
+                        </div>
+                    </div>
+                </div>
+             </div>
+          </div>
+        </div>
+      </transition>
+    </div> 
+
+    <transition name="slide">
+      <div v-if="showPanel" class="side-panel">
+        <div class="panel-header-mobile">
+            <button class="btn-panel-back" @click="closePanel"><span class="material-icons-round">arrow_back</span></button>
+            <h5 class="fw-bold m-0 flex-grow-1">{{ isEditMode ? '編集' : '新規作成' }}</h5>
+            <button class="btn-close" @click="closePanel" style="filter: var(--text-main) == '#f3f4f6' ? invert(1) : none"></button>
+        </div>
+        <div class="d-flex justify-content-between mb-4 panel-header-pc">
+          <h5 class="fw-bold m-0">{{ isEditMode ? '編集' : '新規作成' }}</h5>
+          <button class="btn-close" @click="closePanel" style="filter: var(--text-main) == '#f3f4f6' ? invert(1) : none"></button>
+        </div>
+
+        <div v-if="panelData.isGCal" class="d-flex flex-column h-100">
+            <div class="mb-3" v-if="panelData.isNew">
+                <label class="small fw-bold text-secondary">カレンダー</label>
+                <select class="form-select" v-model="panelData.targetCalendarId"><option v-for="cal in availableCalendars" :value="cal.id">{{ cal.name }}</option></select>
+            </div>
+            <input type="text" v-model="panelData.title" class="form-control fw-bold fs-5 mb-3" placeholder="タイトル">
+            <div class="row g-2 mb-3 align-items-center">
+                <div class="col-5"><input type="date" v-model="panelData.dateInput" class="form-control"></div>
+                <div class="col-7 d-flex gap-1 align-items-center">
+                    <select v-model="panelData.startHour" class="form-select text-center ps-1"><option v-for="h in hours" :value="h">{{h}}</option></select>:<select v-model="panelData.startMin" class="form-select text-center ps-1"><option v-for="m in minutes" :value="m">{{m}}</option></select>
+                    <span class="mx-1">-</span>
+                    <select v-model="panelData.endHour" class="form-select text-center ps-1"><option value="">--</option><option v-for="h in hours" :value="h">{{h}}</option></select>:<select v-model="panelData.endMin" class="form-select text-center ps-1"><option value="">--</option><option v-for="m in minutes" :value="m">{{m}}</option></select>
+                </div>
+            </div>
+            <textarea v-model="panelData.desc" class="form-control flex-grow-1" placeholder="メモ"></textarea>
+            <div class="mt-3 d-flex gap-2">
+                <button class="btn btn-outline-secondary flex-grow-1 py-2" @click="closePanel">キャンセル</button>
+                <button class="btn btn-primary flex-grow-1 py-2" @click="saveGCalEvent">保存</button>
+            </div>
+        </div>
+
+        <div v-else class="d-flex flex-column h-100">
+            <label class="small fw-bold text-secondary mb-1">タスク名</label>
+            <textarea v-model="panelData.desc" class="form-control fw-bold fs-6 mb-4" rows="3" placeholder="何をする？"></textarea>
+            <div class="row g-4 mb-4">
+                <div class="col-6 border-end" style="border-color: var(--border-color) !important;">
+                    <label class="small fw-bold text-secondary mb-2">スケジュール</label>
+                    <input type="date" v-model="panelData.due" class="form-control form-control-sm mb-2">
+                    <div class="d-flex gap-1 mb-3"><button class="date-shortcut-btn" @click="setDateShortcut(0)">今日</button><button class="date-shortcut-btn" @click="setDateShortcut(1)">明日</button></div>
+                    <label class="small fw-bold text-secondary mb-1">繰り返し</label>
+                    <input type="text" v-model="panelData.recurrence" class="form-control form-control-sm" placeholder="every week" list="recurrenceOptions">
+                </div>
+                <div class="col-6">
+                    <label class="small fw-bold text-secondary mb-2">優先度</label>
+                    <div class="d-flex flex-column gap-2 mb-3">
+                        <div class="btn-group w-100" role="group">
+                            <button class="priority-select-btn" :class="{'active-high': panelData.priority==='high'}" @click="panelData.priority='high'">高</button>
+                            <button class="priority-select-btn" :class="{'active-medium': panelData.priority==='medium'}" @click="panelData.priority='medium'">中</button>
+                            <button class="priority-select-btn" :class="{'active-low': panelData.priority==='low'}" @click="panelData.priority='low'">低</button>
+                        </div>
+                        <button class="priority-select-btn active-none" v-if="panelData.priority==='none'" @click="panelData.priority='medium'">なし</button>
+                        <button class="priority-select-btn" v-else @click="panelData.priority='none'">クリア</button>
+                    </div>
+                    <label class="small fw-bold text-secondary mb-1">タグ</label>
+                    <div class="input-group input-group-sm mb-2"><span class="input-group-text bg-transparent border-end-0">#</span><input type="text" class="form-control border-start-0 ps-0" v-model="tagInput" @keydown.enter.prevent="addTag" placeholder="New"><button class="btn btn-outline-secondary" @click="addTag">+</button></div>
+                    <div class="d-flex flex-wrap gap-1 mb-2"><span v-for="tag in panelData.tags" :key="tag" class="badge bg-primary d-flex align-items-center gap-1" style="cursor:pointer" @click="removeTag(tag)">{{ tag }} <span class="material-icons-round" style="font-size:10px">close</span></span></div>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="small fw-bold text-secondary mb-1">よく使うタグ (History)</label>
+                <div class="d-flex flex-wrap gap-1 p-2 border rounded" style="background: var(--bg-input); min-height: 40px; border-color: var(--border-color) !important;">
+                    <div v-if="suggestedTags.length === 0" class="text-muted small">履歴なし</div>
+                    <span v-for="tag in suggestedTags" :key="tag" class="tag-chip" @click="addTagFromHistory(tag)">#{{ tag }}</span>
+                </div>
+            </div>
+            <div class="mt-auto">
+                <label class="small fw-bold text-secondary mb-1">URL (任意)</label>
+                <input type="url" v-model="panelData.url" class="form-control form-control-sm mb-3 text-muted" placeholder="https://...">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-delete flex-grow-0" @click="confirmDelete(panelData.taskRef)" v-if="isEditMode" title="削除"><span class="material-icons-round">delete</span></button>
+                    <button class="btn btn-outline-secondary flex-grow-1 py-2" @click="closePanel">キャンセル</button>
+                    <button class="btn btn-primary flex-grow-1 py-2" @click="saveTaskChanges">保存</button>
+                </div>
+            </div>
+        </div>
+      </div>
+    </transition>
+    
+    <button v-if="!showPanel" class="fab-btn" @click="openAddPanel"><span class="material-icons-round">add</span></button>
+    <datalist id="recurrenceOptions"><option value="every day"></option><option value="every week"></option></datalist>
+  </div> 
+</div>
+
+<script>
+// ==========================================
+//  ★★★ 設定：GAS Web App URL ★★★
+//  手順1で発行されたURLをここに貼り付けてください
+// ==========================================
+const CONST_GAS_URL = "https://script.google.com/macros/s/xxxxxxxxxxxxxxxxx/exec"; 
+
+async function callGAS(action, params = {}) {
+  const finalParams = { ...params, action: action };
+  // GAS APIはPOSTでJSON文字列を受け取る仕様
+  const response = await fetch(CONST_GAS_URL, {
+    method: 'POST',
+    // CORS回避のためtext/plainとして送る
+    body: JSON.stringify(finalParams)
+  });
+  const json = await response.json();
+  if (json.error) throw new Error(json.error);
+  return json;
+}
+
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      loading: false, isSaving: false, loadingMessage: 'Loading...', 
+      currentTab: 'active',
+      // 設定はlocalStorageで管理
+      settings: { token: '', owner: '', repo: '', path: '', archivePath: '', calendarIds: [] },
+      hasSettingsChanged: false, darkMode: false, 
+      
+      rawContent: '', sha: '', lines: [], tasks: [], archiveTasks: [],
+      
+      calendarMode: 'week', selectedDate: '', currentCalStart: new Date(), 
+      gcalEvents: [], availableCalendars: [], 
+
+      showPanel: false, isEditMode: false,
+      panelData: { id: null, desc: '', due: '', priority: 'none', completed: false, tags: [], isGCal: false, startHour: '09', startMin: '00', endHour: '', endMin: '' },
+      tagInput: '', allTagsList: [], filterTag: '', 
+      touchStartX: 0, touchEndX: 0, swipeIgnore: false, displayLimit: 30, touchStartY: 0, touchEndY: 0, 
+      
+      modal: { show: false, title: '', message: '', type: 'info', okText: 'OK', isDanger: false, resolve: null },
+      toast: { show: false, message: '' },
+      pendingSave: false,
+      
+      hours: Array.from({length:24}, (_,i)=>String(i).padStart(2,'0')),
+      minutes: ['00', '15', '30', '45']
+    }
+  },
+  computed: {
+    tabs() {
+        return [
+            { id: 'active', label: '未完了', count: this.tasks.filter(t=>!t.completed).length },
+            { id: 'completed', label: '完了済' },
+            { id: 'calendar', label: 'カレンダー' },
+            { id: 'settings', label: '設定' }
+        ];
+    },
+    allCompletedTasks() {
+      const main = this.tasks.filter(t => t.completed && (!this.filterTag || t.tags.includes(this.filterTag))).map(t => ({...t, isArchived: false, uniqueId: 'm-'+t.lineIndex}));
+      const arch = this.archiveTasks.filter(t => !this.filterTag || t.tags.includes(this.filterTag)).map((t,i) => ({...t, isArchived: true, uniqueId: 'a-'+i}));
+      main.sort((a, b) => (a.doneDate < b.doneDate ? 1 : -1));
+      arch.sort((a, b) => (a.doneDate < b.doneDate ? 1 : -1));
+      return [...main, ...arch];
+    },
+    displayCompletedTasks() { return this.allCompletedTasks.slice(0, this.displayLimit); },
+    selectedDateItems() {
+      if (!this.selectedDate) return [];
+      const dateStr = this.selectedDate;
+      const dayTasks = this.tasks.filter(t => t.due === dateStr && (!this.filterTag || t.tags.includes(this.filterTag)))
+                                 .map(t => ({...t, isGCal: false, uniqueId: 'task-'+t.lineIndex}));
+      const dayGcals = this.gcalEvents.filter(e => this.convertIsoToYMD(e.start) === dateStr)
+                                    .map(e => ({...e, isGCal: true, uniqueId: 'gcal-'+e.id, desc: e.title, timeStr: this.formatTimeRange(e)}));
+      return [...dayGcals, ...dayTasks].sort((a, b) => {
+          if (a.isGCal && !b.isGCal) return -1; 
+          if (!a.isGCal && b.isGCal) return 1;
+          const tA = a.isGCal ? (a.isAllDay ? '00:00' : a.start) : (a.due + 'T00:00');
+          const tB = b.isGCal ? (b.isAllDay ? '00:00' : b.start) : (b.due + 'T00:00');
+          return tA > tB ? 1 : -1;
+      });
+    },
+    calendarTitle() {
+      const d = new Date(this.currentCalStart);
+      if (this.calendarMode === 'week') {
+        const start = new Date(d); start.setDate(d.getDate() - d.getDay()); 
+        const end = new Date(start); end.setDate(start.getDate() + 6);
+        return `${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()}`;
+      } else {
+        return `${d.getFullYear()}年 ${d.getMonth()+1}月`;
+      }
+    },
+    calendarDays() {
+      const days = [];
+      const d = new Date(this.currentCalStart);
+      const todayStr = this.getTodayStr(); 
+      let startDate; let count = 0;
+      if (this.calendarMode === 'week') {
+        startDate = new Date(d); startDate.setDate(d.getDate() - d.getDay()); count = 7;
+      } else {
+        startDate = new Date(d.getFullYear(), d.getMonth(), 1); startDate.setDate(startDate.getDate() - startDate.getDay()); count = 42; 
+      }
+      for (let i = 0; i < count; i++) {
+        const date = new Date(startDate); date.setDate(startDate.getDate() + i);
+        const dateStr = this.getLocalYMD(date);
+        const dayTasks = this.tasks.filter(t => t.due === dateStr && (!this.filterTag || t.tags.includes(this.filterTag))).map(t => ({...t, isGCal: false}));
+        const dayGcals = this.gcalEvents.filter(e => this.convertIsoToYMD(e.start) === dateStr).map(e => ({...e, isGCal: true, desc: e.title}));
+        days.push({
+          date: dateStr, dayNum: date.getDate(), dayOfWeek: date.getDay(), isToday: dateStr === todayStr,
+          items: [...dayGcals, ...dayTasks] 
+        });
+      }
+      return days;
+    },
+    suggestedTags() { 
+        const s = new Set(); 
+        this.allTagsList.forEach(t => {
+            if(!this.panelData.tags.includes(t) && t.toLowerCase() !== 'todo' && t.toLowerCase() !== '#todo') s.add(t);
+        });
+        return Array.from(s); 
+    },
+    groupedActiveTasks() {
+      const today = this.getTodayStr();
+      const todayGroup = { title: '今日 & 期限切れ', tasks: [] };
+      const noDateGroup = { title: '期限なし', tasks: [] };
+      const futureGroups = {};
+      const filteredTasks = this.tasks.filter(t => !t.completed && (!this.filterTag || t.tags.includes(this.filterTag)));
+      filteredTasks.forEach(task => {
+        if (!task.due) noDateGroup.tasks.push(task);
+        else if (task.due <= today) todayGroup.tasks.push(task);
+        else { if (!futureGroups[task.due]) futureGroups[task.due] = []; futureGroups[task.due].push(task); }
+      });
+      const result = [];
+      if (todayGroup.tasks.length > 0) result.push(todayGroup);
+      Object.keys(futureGroups).sort().forEach(date => {
+        result.push({ title: date, tasks: futureGroups[date] });
+      });
+      if (noDateGroup.tasks.length > 0) result.push(noDateGroup);
+      return result;
+    },
+    selectedDateDisplay() {
+        if (!this.selectedDate) return '';
+        const d = new Date(this.selectedDate);
+        return `${d.getMonth()+1}/${d.getDate()} (${['日','月','火','水','木','金','土'][d.getDay()]})`;
+    }
+  },
+  watch: {
+    calendarMode() { this.fetchGCal(); },
+    currentCalStart() { this.fetchGCal(); },
+    darkMode(val) {
+        if(val) { document.body.classList.add('dark-mode'); localStorage.setItem('obsidian_tasks_theme', 'dark'); }
+        else { document.body.classList.remove('dark-mode'); localStorage.setItem('obsidian_tasks_theme', 'light'); }
+    }
+  },
+  mounted() {
+    this.selectedDate = this.getTodayStr();
+    // ローカルストレージから復元
+    const saved = localStorage.getItem('gh_tasks_settings');
+    const savedTheme = localStorage.getItem('obsidian_tasks_theme');
+    
+    if (savedTheme === 'dark') { this.darkMode = true; document.body.classList.add('dark-mode'); }
+    
+    if (saved) {
+        this.settings = JSON.parse(saved);
+        // 設定があれば即ロード
+        this.loadData();
+    } else {
+        this.currentTab = 'settings';
+    }
+  },
+  methods: {
+    // API呼び出し共通処理
+    async saveSettings() {
+      localStorage.setItem('gh_tasks_settings', JSON.stringify(this.settings));
+      this.showToastNotification('設定を保存しました');
+      this.hasSettingsChanged = false;
+      this.loadData();
+    },
+    async loadData() {
+      this.loading = true;
+      try {
+          const res = await callGAS('getFileContent', this.settings);
+          this.rawContent = res.content; this.sha = res.sha;
+          this.parseContent(res.content);
+          this.fetchGCal();
+          this.loading = false;
+          if(this.currentTab === 'settings') this.currentTab = 'active';
+          
+          // 初回ロード時にカレンダー一覧も取得しておく
+          const cals = await callGAS('getAvailableCalendars', {});
+          this.availableCalendars = cals;
+      } catch(e) {
+          this.showInfo('Error', e.toString()); this.loading = false;
+      }
+    },
+    async fetchGCal() {
+       if(!this.settings.calendarIds || this.settings.calendarIds.length === 0) return;
+       const params = {
+           startStr: this.calendarDays[0].date,
+           endStr: this.calendarDays[this.calendarDays.length-1].date,
+           calendarIds: JSON.stringify(this.settings.calendarIds)
+       };
+       try {
+           const res = await callGAS('getCalendarEvents', params);
+           if(res.events) this.gcalEvents = res.events;
+       } catch(e) { console.error(e); }
+    },
+    async saveGCalEvent() {
+      this.isSaving = true;
+      const dateStr = this.panelData.dateInput; 
+      const timeStart = (this.panelData.startHour && this.panelData.startMin) ? `${this.panelData.startHour}:${this.panelData.startMin}` : '';
+      let timeEnd = (this.panelData.endHour && this.panelData.endMin) ? `${this.panelData.endHour}:${this.panelData.endMin}` : '';
+      if (timeStart && !timeEnd) {
+          const h = parseInt(this.panelData.startHour);
+          const nextH = (h + 1) % 24;
+          timeEnd = `${String(nextH).padStart(2,'0')}:${this.panelData.startMin}`;
+      }
+      
+      const params = { ...this.panelData, dateStr, startTime: timeStart, endTime: timeEnd, 
+                       calendarId: this.panelData.calendarId, eventId: this.panelData.eid, 
+                       description: this.panelData.desc };
+      
+      try {
+          if (this.panelData.isNew) await callGAS('createCalendarEvent', params);
+          else await callGAS('updateCalendarEvent', params);
+          this.isSaving = false; this.closePanel(); this.fetchGCal();
+      } catch(e) { this.isSaving = false; this.showInfo('Error', e); }
+    },
+    async fetchFileContent(path) {
+        return callGAS('getFileContent', { ...this.settings, path: path });
+    },
+    async saveFileContentPromise(path, content, sha) {
+        return callGAS('saveFileContent', { ...this.settings, path: path, content: content, sha: sha });
+    },
+    pushChanges(silent = false) {
+      if (this.isSaving) { this.pendingSave = true; return; }
+      if (!silent) this.isSaving = true;
+      
+      const newLines = [...this.lines];
+      this.tasks.forEach(t => {
+        const cb = t.completed ? '- [x]' : '- [ ]';
+        const cr = t.created ? ` ➕ ${t.created}` : ''; const du = t.due ? ` 📅 ${t.due}` : ''; const re = t.recurrence ? ` 🔁 ${t.recurrence}` : '';
+        let pr = ''; if (t.priority === 'high') pr = ' ⏫'; else if (t.priority === 'medium') pr = ' 🔼'; else if (t.priority === 'low') pr = ' 🔽';
+        let do_ = ''; if (t.doneDate) do_ = ` ✅ ${t.doneDate}`; else if (t.completed) do_ = ` ✅ ${this.getTodayStr()}`;
+        const tags = t.tags.length > 0 ? ' ' + t.tags.join(' ') : '';
+        const tagStr = tags.includes('#todo') ? tags : ` #todo${tags}`;
+        const line = `${cb} ${t.desc}${pr}${re}${do_}${tagStr}${cr}${du}`.replace(/\s+/g, ' ');
+        if (t.lineIndex >= 0) newLines[t.lineIndex] = line;
+        else { newLines.push(line); t.lineIndex = newLines.length - 1; }
+      });
+      const content = newLines.join('\n');
+      
+      this.saveFileContentPromise(this.settings.path, content, this.sha)
+      .then(res => {
+          this.sha = res.newSha; this.lines = newLines; 
+          if (this.pendingSave) { this.pendingSave = false; this.isSaving = false; this.pushChanges(true); } 
+          else { this.isSaving = false; if(!silent) this.showToastNotification('保存しました'); }
+      })
+      .catch(e => { this.showInfo('Error', e); this.isSaving = false; });
+    },
+
+    // --- その他UIロジック (変更なし) ---
+    toggleTask(t) {
+      const original = this.tasks.find(task => task.lineIndex === t.lineIndex);
+      if (original) {
+        original.completed = !original.completed;
+        if (original.completed && original.recurrence) this.generateNextTask(original);
+        this.pushChanges(true); 
+      }
+    },
+    generateNextTask(t) {
+        const d = new Date(t.due); const r = t.recurrence.toLowerCase();
+        if (r.includes('day')) d.setDate(d.getDate()+1);
+        else if (r.includes('week')) d.setDate(d.getDate()+7);
+        else if (r.includes('month')) { const org=d.getDate(); d.setMonth(d.getMonth()+1); if(d.getDate()!==org) d.setDate(0); }
+        else if (r.includes('year')) { const org=d.getDate(); d.setFullYear(d.getFullYear()+1); if(d.getDate()!==org) d.setDate(0); }
+        if (!isNaN(d.getTime())) {
+            this.tasks.push({ lineIndex: -1, desc: t.desc, due: this.getLocalYMD(d), recurrence: t.recurrence, priority: t.priority, created: this.getTodayStr(), completed: false, tags: [...t.tags] });
+        }
+    },
+    // アーカイブ処理
+    async runArchiveProcess() {
+      if (!this.settings.archivePath) { this.showInfo('設定エラー', 'アーカイブパスが設定されていません'); return; }
+      if (!await this.confirmAction('アーカイブ', '完了タスクをアーカイブファイルへ移動しますか？')) return;
+      this.loading = true; this.loadingMessage = 'アーカイブ中...';
+      try {
+          const res = await this.fetchFileContent(this.settings.archivePath);
+          const archiveContent = res.content || "";
+          const completedLines = this.lines.filter(l => l.match(/^[-*]\s*\[x\]/i));
+          const activeLines = this.lines.filter(l => !l.match(/^[-*]\s*\[x\]/i));
+          if(completedLines.length === 0) { this.loading = false; this.showInfo('情報', '完了タスクはありません'); return; }
+          const newArchive = archiveContent + (archiveContent ? "\n" : "") + completedLines.join("\n");
+          await this.saveFileContentPromise(this.settings.archivePath, newArchive, res.sha);
+          await this.saveFileContentPromise(this.settings.path, activeLines.join("\n"), this.sha);
+          this.loading = false; this.showToastNotification('アーカイブ完了'); this.loadData();
+      } catch(e) { this.loading = false; this.showInfo('エラー', e); }
+    },
+    // 標準ヘルパー
+    handleTouchStart(e) { if (!e.target.closest('.calendar-wrapper')) { this.touchStartX = e.changedTouches[0].screenX; this.touchStartY = e.changedTouches[0].screenY; this.swipeIgnore = false; } else this.swipeIgnore = true; },
+    handleTouchEnd(e) { if (this.swipeIgnore) return; this.touchEndX = e.changedTouches[0].screenX; const diffX = this.touchEndX - this.touchStartX; const diffY = e.changedTouches[0].screenY - this.touchStartY; if(Math.abs(diffX) > 100 && Math.abs(diffX) > Math.abs(diffY)*2) { if(diffX < 0) this.setTab(this.tabs[this.tabs.findIndex(t=>t.id==this.currentTab)+1]?.id||'active'); else this.setTab(this.tabs[this.tabs.findIndex(t=>t.id==this.currentTab)-1]?.id||'settings'); } },
+    showModal(title, message, type='info', okText='OK', isDanger=false) { this.modal = { show: true, title, message, type, okText, isDanger, resolve: null }; return new Promise(resolve => { this.modal.resolve = resolve; }); },
+    closeModal(result) { this.modal.show = false; if (this.modal.resolve) this.modal.resolve(result); },
+    confirmAction(title, message, isDanger=false) { return this.showModal(title, message, 'confirm', isDanger ? '削除' : '実行', isDanger); },
+    showInfo(title, message) { return this.showModal(title, message, 'info'); },
+    async confirmRestore(task) { if(await this.confirmAction('復元', '未完了に戻しますか？')) this.restoreTask(task); },
+    restoreTask(task) { if(task.isArchived) this.restoreArchivedTask(task); else { const t=this.tasks.find(x=>x.lineIndex===task.lineIndex); if(t){t.completed=false; t.doneDate=''; this.pushChanges(true);} } },
+    async confirmDelete(task) { if(await this.confirmAction('削除', '本当に削除しますか？', true)) this.deleteTask(task); },
+    deleteTask(task) { 
+        if(task.isArchived) { /* Archive Delete Logic (Simplified) */ } 
+        else { const idx=this.tasks.findIndex(t=>t.lineIndex===task.lineIndex); if(idx>-1){const org=this.tasks[idx]; this.tasks.splice(idx,1); if(org.lineIndex>=0){this.lines.splice(org.lineIndex,1); this.tasks.forEach(t=>{if(t.lineIndex>org.lineIndex)t.lineIndex--;}); this.pushChanges(); this.closePanel();}} } 
+    },
+    getLocalYMD(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; },
+    convertIsoToYMD(iso) { return iso ? this.getLocalYMD(new Date(iso)) : ''; },
+    getTodayStr() { return this.getLocalYMD(new Date()); },
+    formatTimeRange(item) { if(item.isAllDay) return '終日'; const d1=new Date(item.start); const d2=new Date(item.end); return `${String(d1.getHours()).padStart(2,'0')}:${String(d1.getMinutes()).padStart(2,'0')} - ${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`; },
+    saveTaskChanges() { 
+        let d = this.panelData.desc; if(this.panelData.url) d = `[${d}](${this.panelData.url})`;
+        if(this.isEditMode) { const t=this.panelData.taskRef; t.desc=d; t.due=this.panelData.due; t.priority=this.panelData.priority; t.recurrence=this.panelData.recurrence; t.tags=[...this.panelData.tags]; }
+        else { this.tasks.push({lineIndex:-1, desc:d, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, created:this.getTodayStr(), completed:false, tags:[...this.panelData.tags]}); }
+        this.closePanel(); this.pushChanges();
+    },
+    openAddPanelWithDate(d) { this.isEditMode=false; this.showPanel=true; this.panelData={desc:'', url:'', due:d, recurrence:'', priority:'none', completed:false, tags:[], isGCal:false}; this.tagInput=''; },
+    openEditPanel(item) {
+      this.isEditMode=true; this.showPanel=true;
+      if(item.isGCal) {
+          const sd=new Date(item.start); const ed=new Date(item.end);
+          let sh='', sm='', eh='', em='';
+          if(!item.isAllDay) { sh=String(sd.getHours()).padStart(2,'0'); sm=String(sd.getMinutes()).padStart(2,'0'); eh=String(ed.getHours()).padStart(2,'0'); em=String(ed.getMinutes()).padStart(2,'0'); }
+          this.panelData={isGCal:true, isNew:false, eid:item.id, calendarId:item.calendarId, title:item.title, desc:item.desc, dateInput:this.convertIsoToYMD(item.start), startHour:sh, startMin:sm, endHour:eh, endMin:em};
+      } else {
+          const org=this.tasks.find(t=>t.lineIndex===item.lineIndex)||item;
+          this.panelData={...org, taskRef:org, isGCal:false, tags:[...org.tags]};
+          this.tagInput=''; const m=org.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/); if(m){this.panelData.desc=m[1]; this.panelData.url=m[2];}
+      }
+    },
+    addTag() { if(this.tagInput && !this.panelData.tags.includes(this.tagInput)) { this.panelData.tags.push(this.tagInput); this.tagInput=''; } },
+    addTagFromHistory(tag) { if(!this.panelData.tags.includes(tag)) this.panelData.tags.push(tag); },
+    removeTag(t) { this.panelData.tags = this.panelData.tags.filter(tg => tg !== t); },
+    renderDesc(text) { return text ? text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" onclick="event.stopPropagation()">$1</a>') : ''; },
+    changeDateRange(dir) { const d=new Date(this.currentCalStart); if(this.calendarMode==='week') d.setDate(d.getDate()+(dir*7)); else d.setMonth(d.getMonth()+dir); this.currentCalStart=d; },
+    selectDate(date) { this.selectedDate = date; },
+    loadMoreCompleted() { this.displayLimit += 50; },
+    getPriorityColor(p) { return p==='high'?'#ef4444':p==='medium'?'#f59e0b':p==='low'?'#3b82f6':'#ccc'; },
+    setDateShortcut(d) { const dt=new Date(); dt.setDate(dt.getDate()+d); this.panelData.due=this.getLocalYMD(dt); },
+    showToastNotification(m) { this.toast.message=m; this.toast.show=true; setTimeout(()=>this.toast.show=false, 3000); }
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
