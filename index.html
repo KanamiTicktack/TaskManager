@@ -21,7 +21,7 @@
   </script>
 
   <style>
-    /* === CSS Design System === */
+    /* === Design System === */
     :root {
       --primary: #6366f1; --primary-hover: #4f46e5; --danger: #ef4444;
       --bg-body: #f3f4f6; --bg-card: #ffffff; --bg-input: #ffffff;
@@ -39,33 +39,20 @@
       --status-bg: #f3f4f6; --status-text: #1f2937;
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-y: scroll; -webkit-tap-highlight-color: transparent; }
-    
-    /* Prevent Zoom on inputs for iOS */
-    .form-control, .form-select, input, textarea { 
-        background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; 
-    }
+    .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
     body.dark-mode ::-webkit-calendar-picker-indicator { filter: invert(1); }
     
-    /* Layout Structure */
+    /* Layout */
     .app-container { 
-        display: block; 
+        display: flex; flex-direction: column; gap: 16px; 
         max-width: 1600px; margin: 0 auto; padding: 16px; min-height: 100vh; position: relative;
     }
-    
-    /* Split View Logic */
-    .split-layout { display: block; } 
-    
+    .split-layout { display: block; }
     @media (min-width: 992px) {
-        .split-layout {
-            display: grid;
-            grid-template-columns: 1fr 1fr; 
-            gap: 24px;
-            align-items: start;
-        }
+        .split-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
         .view-primary { min-width: 0; }
-        .view-secondary { min-width: 0; display: block !important; } 
+        .view-secondary { min-width: 0; display: block !important; }
     }
-
     .app-card { background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 16px; overflow: hidden; }
     
     /* Header */
@@ -110,12 +97,9 @@
         box-shadow: -10px 0 30px rgba(0,0,0,0.1); 
         padding: 20px; overflow-y: auto;
     }
-    
-    /* Mobile Transition */
     .slide-enter-active, .slide-leave-active { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
     .slide-enter-from, .slide-leave-to { transform: translateX(100%); }
     
-    /* PC Layout Override */
     @media (min-width: 992px) {
         .side-panel { 
             position: fixed; top: 20px; right: 20px; width: 400px; height: calc(100vh - 40px); 
@@ -128,7 +112,6 @@
         .panel-header-pc { display: flex !important; }
     }
 
-    /* Panel Headers */
     .panel-header-mobile { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
     .panel-header-pc { display: none !important; align-items: center; justify-content: space-between; margin-bottom: 24px; }
     .btn-panel-back { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; cursor: pointer; margin-left: -8px; }
@@ -217,18 +200,10 @@
         
         <div class="view-primary">
             <ul class="nav nav-tabs">
-                <li class="nav-item">
-                    <a class="nav-link" :class="{active: currentTab === 'active'}" @click.prevent="setTab('active')" href="#">未完了 <span v-if="activeCount" class="badge bg-secondary rounded-pill ms-1">{{ activeCount }}</span></a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" :class="{active: currentTab === 'completed'}" @click.prevent="setTab('completed')" href="#">完了済</a>
-                </li>
-                <li class="nav-item" v-if="!isPC">
-                    <a class="nav-link" :class="{active: currentTab === 'calendar'}" @click.prevent="setTab('calendar')" href="#">カレンダー</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" :class="{active: currentTab === 'settings'}" @click.prevent="setTab('settings')" href="#">設定</a>
-                </li>
+                <li class="nav-item"><a class="nav-link" :class="{active: currentTab === 'active'}" @click.prevent="setTab('active')" href="#">未完了 <span v-if="activeCount" class="badge bg-secondary rounded-pill ms-1">{{ activeCount }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active: currentTab === 'completed'}" @click.prevent="setTab('completed')" href="#">完了済</a></li>
+                <li class="nav-item" v-if="!isPC"><a class="nav-link" :class="{active: currentTab === 'calendar'}" @click.prevent="setTab('calendar')" href="#">カレンダー</a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active: currentTab === 'settings'}" @click.prevent="setTab('settings')" href="#">設定</a></li>
             </ul>
 
             <div v-if="currentTab !== 'settings'" class="d-flex justify-content-end mb-3">
@@ -336,7 +311,7 @@
                         <div v-if="item.isGCal" class="me-2"><span class="material-icons-round" :style="{color: item.color}">event</span></div>
                         <div v-else class="custom-checkbox me-2" :class="{checked: item.completed}" @click.stop="toggleTask(item)"><span class="material-icons-round">check</span></div>
                         <div class="task-content">
-                            <div class="task-title" :class="{'text-decoration-line-through text-muted': item.completed}" v-html="renderDesc(item.desc)"></div>
+                            <div class="task-title" :class="{'text-decoration-line-through text-muted': item.completed}" v-html="renderDesc(item.isGCal ? item.title : item.desc)"></div>
                             <div class="task-meta">
                                 <span v-if="item.isGCal" class="badge-base" :style="{background: item.color, color:'white'}">{{ item.calendarName }}</span>
                                 <span v-if="item.isGCal">{{ item.isAllDay ? '終日' : item.timeStr }}</span>
@@ -511,9 +486,7 @@ createApp({
             { id: 'settings', label: '設定' }
         ];
     },
-    activeCount() {
-        return this.tasks.filter(t => !t.completed).length;
-    },
+    activeCount() { return this.tasks.filter(t => !t.completed).length; },
     allCompletedTasks() {
       const main = this.tasks.filter(t => t.completed && (!this.filterTag || t.tags.includes(this.filterTag))).map(t => ({...t, isArchived: false, uniqueId: 'm-'+t.lineIndex}));
       const arch = this.archiveTasks.filter(t => !this.filterTag || t.tags.includes(this.filterTag)).map((t,i) => ({...t, isArchived: true, uniqueId: 'a-'+i}));
@@ -528,7 +501,7 @@ createApp({
       const dayTasks = this.tasks.filter(t => t.due === dateStr && (!this.filterTag || t.tags.includes(this.filterTag)))
                                  .map(t => ({...t, isGCal: false, uniqueId: 'task-'+t.lineIndex}));
       const dayGcals = this.gcalEvents.filter(e => this.convertIsoToYMD(e.start) === dateStr)
-                                    .map(e => ({...e, isGCal: true, uniqueId: 'gcal-'+e.id, desc: e.title, timeStr: this.formatTimeRange(e)}));
+                                    .map(e => ({...e, isGCal: true, uniqueId: 'gcal-'+e.id, desc: e.desc, timeStr: this.formatTimeRange(e)}));
       return [...dayGcals, ...dayTasks].sort((a, b) => {
           if (a.isGCal && !b.isGCal) return -1; 
           if (!a.isGCal && b.isGCal) return 1;
@@ -757,7 +730,6 @@ createApp({
           timeEnd = `${String(nextH).padStart(2,'0')}:${this.panelData.startMin}`;
       }
       
-      // Merge meeting URL into description
       let finalDesc = this.panelData.desc || '';
       if (this.panelData.meetingUrl && this.panelData.meetingUrl.trim()) {
           finalDesc = "【会議URL】: " + this.panelData.meetingUrl + "\n\n" + finalDesc;
@@ -766,8 +738,8 @@ createApp({
       const params = { 
           ...this.panelData, dateStr, startTime: timeStart, endTime: timeEnd, 
           calendarId: this.panelData.calendarId, eventId: this.panelData.eid, 
-          description: finalDesc, // for GAS that expects description
-          desc: finalDesc         // for GAS that expects desc
+          description: finalDesc, 
+          desc: finalDesc 
       };
       
       try {
@@ -887,7 +859,23 @@ createApp({
               const sd=new Date(item.start); const ed=new Date(item.end);
               let sh='', sm='', eh='', em='';
               if(!item.isAllDay) { sh=String(sd.getHours()).padStart(2,'0'); sm=String(sd.getMinutes()).padStart(2,'0'); eh=String(ed.getHours()).padStart(2,'0'); em=String(ed.getMinutes()).padStart(2,'0'); }
-              this.panelData={isGCal:true, isNew:false, eid:item.id, calendarId:item.calendarId, title:item.title, desc:item.desc, dateInput:this.convertIsoToYMD(item.start), startHour:sh, startMin:sm, endHour:eh, endMin:em, meetingUrl: ''};
+              
+              // ★ URL抽出ロジックの追加 ★
+              let d = item.desc || '';
+              let url = '';
+              const urlMatch = d.match(/^【会議URL】:\s*(\S+)(\n\n)?/);
+              if (urlMatch) {
+                  url = urlMatch[1];
+                  d = d.replace(urlMatch[0], ''); // メモからURL部分を削除して表示
+              } else if (item.location && item.location.match(/^https?:\/\//)) {
+                  url = item.location; // ロケーションがURLならそれを使う
+              }
+
+              this.panelData={
+                  isGCal:true, isNew:false, eid:item.id, calendarId:item.calendarId, 
+                  title:item.title, desc: d, meetingUrl: url,
+                  dateInput:this.convertIsoToYMD(item.start), startHour:sh, startMin:sm, endHour:eh, endMin:em
+              };
           } else {
               const org=this.tasks.find(t=>t.lineIndex===item.lineIndex)||item;
               // ★Safe handling for crash protection★
