@@ -520,12 +520,43 @@ createApp({
     }
   },
   methods: {
-    // ★★★ Added setTab function ★★★
     setTab(id) {
       this.currentTab = id;
       if (id === 'completed' && this.archiveTasks.length === 0 && this.settings.archivePath) {
         this.loadArchiveData();
       }
+    },
+    // ★★★ Added parseContent function (Revived) ★★★
+    parseContent(text) {
+      this.lines = text.split('\n'); this.tasks = []; const foundTags = new Set(); 
+      this.lines.forEach((line, index) => {
+        const match = line.match(/^[-*]\s*\[([xX ])\]\s*(.*)/);
+        if (match) {
+          let body = match[2];
+          const completed = match[1].toLowerCase() === 'x';
+          const due = (body.match(/📅\s*(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
+          const created = (body.match(/➕\s*(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
+          const recurrence = (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1] ? (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1].trim() : '';
+          let priority = 'none'; if(body.includes('⏫')) priority='high'; else if(body.includes('🔼')) priority='medium'; else if(body.includes('🔽')) priority='low';
+          const tags = []; 
+          (body.match(/#[^\s]+/g)||[]).forEach(t => {
+              let tag = t.replace(/[.,!?:;)}\]]+$/, '');
+              if(tag.toLowerCase() !== '#todo' && !tag.includes('=') && tag.length > 1) {
+                tags.push(tag); foundTags.add(tag);
+              }
+          });
+          let desc = body.replace(/📅\s*\d{4}-\d{2}-\d{2}|✅\s*\d{4}-\d{2}-\d{2}|🔁\s*[^✅➕📅#\n\r]+|➕\s*\d{4}-\d{2}-\d{2}|⏫|🔼|🔽/g, '');
+          tags.forEach(t => desc = desc.replace(new RegExp(`(^|\\s)${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\s|$)`, 'g'), ' '));
+          desc = desc.replace(/#todo/gi, '').trim();
+          this.tasks.push({ lineIndex: index, originalLine: line, desc, due, recurrence, priority, created, completed, tags });
+        }
+      });
+      this.allTagsList = Array.from(foundTags).sort();
+    },
+    // ★★★ Added toggleDarkMode function (Revived) ★★★
+    toggleDarkMode() { 
+        if(this.darkMode) { document.body.classList.add('dark-mode'); localStorage.setItem('obsidian_tasks_theme', 'dark'); } 
+        else { document.body.classList.remove('dark-mode'); localStorage.setItem('obsidian_tasks_theme', 'light'); } 
     },
     async saveSettings() {
       localStorage.setItem('gh_tasks_settings', JSON.stringify(this.settings));
