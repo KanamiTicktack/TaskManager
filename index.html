@@ -15,7 +15,8 @@
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js')
-      .then(function() { console.log('Service Worker Registered'); });
+      .then(function() { console.log('Service Worker Registered'); })
+      .catch(function(err) { console.log('SW Registration Failed: ', err); });
     }
   </script>
 
@@ -46,7 +47,8 @@
     .app-card { background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 16px; overflow: hidden; }
     
     .nav-tabs { border: none; gap: 8px; margin-bottom: 16px; }
-    .nav-link { border: none; border-radius: 20px !important; color: var(--text-sub); font-weight: 600; padding: 8px 16px; }
+    .nav-link { border: none; border-radius: 20px !important; color: var(--text-sub); font-weight: 600; padding: 8px 16px; cursor: pointer; }
+    .nav-link:hover { background: var(--hover-bg); }
     .nav-link.active { background: var(--primary) !important; color: #fff !important; }
     
     .task-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 8px; padding: 12px; display: flex; gap: 12px; cursor: pointer; position: relative; overflow: hidden; }
@@ -63,12 +65,10 @@
     .task-meta { display: flex; gap: 6px; font-size: 0.75rem; color: var(--text-sub); flex-wrap: wrap; }
     .badge-base { padding: 2px 8px; border-radius: 6px; background: var(--hover-bg); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 3px; }
     
-    /* Dark Mode Text Fixes */
     .task-content.text-decoration-line-through { color: var(--text-sub); }
     body.dark-mode .task-content.text-decoration-line-through { color: #d1d5db !important; opacity: 1 !important; }
     body.dark-mode .task-card.opacity-75 { opacity: 1 !important; }
     
-    /* Side Panel */
     .side-panel { width: 420px; background: var(--bg-card); border-left: 1px solid var(--border-color); position: sticky; top: 20px; height: calc(100vh - 40px); border-radius: var(--radius); overflow-y: auto; z-index: 1000; padding: 24px; display: flex; flex-direction: column; }
     @media (max-width: 768px) {
         .app-container { display: block; padding: 10px; }
@@ -77,7 +77,7 @@
         .panel-header-pc { display: none !important; }
     }
     .panel-header-mobile { display: none; }
-    .btn-panel-back { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; }
+    .btn-panel-back { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; cursor: pointer; }
     
     /* Calendar */
     .calendar-wrapper { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 20px; overflow: hidden; }
@@ -91,14 +91,13 @@
     .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-sub); margin: 1px; }
     
     /* UI Components */
-    .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+    .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); display: flex; justify-content: center; align-items: center; z-index: 2000; cursor: pointer; }
     .priority-select-btn { border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); padding: 6px; flex: 1; border-radius: 6px; text-align: center; font-size: 0.85rem; cursor: pointer; }
     .priority-select-btn.active-high { background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: #ef4444; font-weight: bold; }
     .priority-select-btn.active-medium { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border-color: #f59e0b; font-weight: bold; }
     .priority-select-btn.active-low { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border-color: #3b82f6; font-weight: bold; }
     .priority-select-btn.active-none { background: var(--text-sub); color: white; border-color: var(--text-sub); }
     
-    /* Modal & Status */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); }
     .modal-content { background: var(--bg-card); color: var(--text-main); width: 100%; max-width: 400px; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid var(--border-color); }
     .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
@@ -120,9 +119,7 @@
   <div v-if="loading" class="loading-overlay"><div class="spinner"></div><div class="mt-3 fw-bold">{{ loadingMessage }}</div></div>
   <transition name="toast"><div v-if="toast.show" class="toast-notification">{{ toast.message }}</div></transition>
   <transition name="fade">
-    <div v-if="isSaving" class="status-indicator">
-      <div class="status-spinner"></div><span>{{ pendingSave ? '保存中 (キュー待機中)...' : '保存中...' }}</span>
-    </div>
+    <div v-if="isSaving" class="status-indicator"><div class="status-spinner"></div><span>{{ pendingSave ? '保存中 (キュー待機中)...' : '保存中...' }}</span></div>
   </transition>
 
   <div v-if="modal.show" class="modal-overlay">
@@ -345,16 +342,13 @@
 <script>
 // ==========================================
 //  ★★★ 設定：GAS Web App URL ★★★
-//  手順1で発行されたURLをここに貼り付けてください
 // ==========================================
 const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycby_0qwb2_HImaa1fb7-rhPRY2FT-f4fHv4_U4YnO8LrMK-msrVMXvTb_12QYeyxdWmIwg/exec"; 
 
 async function callGAS(action, params = {}) {
   const finalParams = { ...params, action: action };
-  // GAS APIはPOSTでJSON文字列を受け取る仕様
   const response = await fetch(CONST_GAS_URL, {
     method: 'POST',
-    // CORS回避のためtext/plainとして送る
     body: JSON.stringify(finalParams)
   });
   const json = await response.json();
@@ -369,7 +363,6 @@ createApp({
     return {
       loading: false, isSaving: false, loadingMessage: 'Loading...', 
       currentTab: 'active',
-      // 設定はlocalStorageで管理
       settings: { token: '', owner: '', repo: '', path: '', archivePath: '', calendarIds: [] },
       hasSettingsChanged: false, darkMode: false, 
       
@@ -379,7 +372,8 @@ createApp({
       gcalEvents: [], availableCalendars: [], 
 
       showPanel: false, isEditMode: false,
-      panelData: { id: null, desc: '', due: '', priority: 'none', completed: false, tags: [], isGCal: false, startHour: '09', startMin: '00', endHour: '', endMin: '' },
+      panelData: { id: null, desc: '', due: '', priority: 'none', completed: false, tags: [], isGCal: false, 
+                   startHour: '09', startMin: '00', endHour: '', endMin: '' },
       tagInput: '', allTagsList: [], filterTag: '', 
       touchStartX: 0, touchEndX: 0, swipeIgnore: false, displayLimit: 30, touchStartY: 0, touchEndY: 0, 
       
@@ -497,22 +491,25 @@ createApp({
   },
   mounted() {
     this.selectedDate = this.getTodayStr();
-    // ローカルストレージから復元
     const saved = localStorage.getItem('gh_tasks_settings');
     const savedTheme = localStorage.getItem('obsidian_tasks_theme');
-    
     if (savedTheme === 'dark') { this.darkMode = true; document.body.classList.add('dark-mode'); }
-    
     if (saved) {
         this.settings = JSON.parse(saved);
-        // 設定があれば即ロード
         this.loadData();
     } else {
         this.currentTab = 'settings';
     }
   },
   methods: {
-    // API呼び出し共通処理
+    // ★★★ Added setTab function ★★★
+    setTab(id) {
+      this.currentTab = id;
+      // If switching to completed tab and archive path is set, load archive data
+      if (id === 'completed' && this.archiveTasks.length === 0 && this.settings.archivePath) {
+        this.loadArchiveData();
+      }
+    },
     async saveSettings() {
       localStorage.setItem('gh_tasks_settings', JSON.stringify(this.settings));
       this.showToastNotification('設定を保存しました');
@@ -528,8 +525,6 @@ createApp({
           this.fetchGCal();
           this.loading = false;
           if(this.currentTab === 'settings') this.currentTab = 'active';
-          
-          // 初回ロード時にカレンダー一覧も取得しておく
           const cals = await callGAS('getAvailableCalendars', {});
           this.availableCalendars = cals;
       } catch(e) {
@@ -558,11 +553,9 @@ createApp({
           const nextH = (h + 1) % 24;
           timeEnd = `${String(nextH).padStart(2,'0')}:${this.panelData.startMin}`;
       }
-      
       const params = { ...this.panelData, dateStr, startTime: timeStart, endTime: timeEnd, 
                        calendarId: this.panelData.calendarId, eventId: this.panelData.eid, 
                        description: this.panelData.desc };
-      
       try {
           if (this.panelData.isNew) await callGAS('createCalendarEvent', params);
           else await callGAS('updateCalendarEvent', params);
@@ -601,8 +594,6 @@ createApp({
       })
       .catch(e => { this.showInfo('Error', e); this.isSaving = false; });
     },
-
-    // --- その他UIロジック (変更なし) ---
     toggleTask(t) {
       const original = this.tasks.find(task => task.lineIndex === t.lineIndex);
       if (original) {
@@ -621,7 +612,6 @@ createApp({
             this.tasks.push({ lineIndex: -1, desc: t.desc, due: this.getLocalYMD(d), recurrence: t.recurrence, priority: t.priority, created: this.getTodayStr(), completed: false, tags: [...t.tags] });
         }
     },
-    // アーカイブ処理
     async runArchiveProcess() {
       if (!this.settings.archivePath) { this.showInfo('設定エラー', 'アーカイブパスが設定されていません'); return; }
       if (!await this.confirmAction('アーカイブ', '完了タスクをアーカイブファイルへ移動しますか？')) return;
@@ -638,7 +628,6 @@ createApp({
           this.loading = false; this.showToastNotification('アーカイブ完了'); this.loadData();
       } catch(e) { this.loading = false; this.showInfo('エラー', e); }
     },
-    // 標準ヘルパー
     handleTouchStart(e) { if (!e.target.closest('.calendar-wrapper')) { this.touchStartX = e.changedTouches[0].screenX; this.touchStartY = e.changedTouches[0].screenY; this.swipeIgnore = false; } else this.swipeIgnore = true; },
     handleTouchEnd(e) { if (this.swipeIgnore) return; this.touchEndX = e.changedTouches[0].screenX; const diffX = this.touchEndX - this.touchStartX; const diffY = e.changedTouches[0].screenY - this.touchStartY; if(Math.abs(diffX) > 100 && Math.abs(diffX) > Math.abs(diffY)*2) { if(diffX < 0) this.setTab(this.tabs[this.tabs.findIndex(t=>t.id==this.currentTab)+1]?.id||'active'); else this.setTab(this.tabs[this.tabs.findIndex(t=>t.id==this.currentTab)-1]?.id||'settings'); } },
     showModal(title, message, type='info', okText='OK', isDanger=false) { this.modal = { show: true, title, message, type, okText, isDanger, resolve: null }; return new Promise(resolve => { this.modal.resolve = resolve; }); },
