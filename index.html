@@ -58,6 +58,7 @@
     .nav-link:hover { background: var(--hover-bg); color: var(--text-main); }
     .nav-link.active { background: var(--primary) !important; color: #fff !important; }
     
+    /* Tasks */
     .task-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 8px; padding: 12px; display: flex; gap: 12px; cursor: pointer; position: relative; overflow: hidden; transition: 0.1s; }
     .task-card:active { transform: scale(0.99); }
     .task-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
@@ -75,27 +76,26 @@
     .tag-badge { background-color: var(--tag-bg); color: var(--tag-text); }
     .gcal-badge { background: #e0e7ff; color: #4338ca; border: none; }
     body.dark-mode .gcal-badge { background: #312e81; color: #e0e7ff; }
-    
     .task-content.text-decoration-line-through { color: var(--text-sub); }
     body.dark-mode .task-content.text-decoration-line-through { color: #d1d5db !important; opacity: 1 !important; }
     body.dark-mode .task-card.opacity-75 { opacity: 1 !important; }
     
+    /* PC Layout */
     .side-panel { width: 100%; max-width: 500px; background: var(--bg-card); border-left: 1px solid var(--border-color); position: fixed; right: 0; top: 0; height: 100vh; overflow-y: auto; z-index: 2000; padding: 20px; display: flex; flex-direction: column; box-shadow: -5px 0 25px rgba(0,0,0,0.2); transition: transform 0.3s ease; }
     .slide-enter-active, .slide-leave-active { transition: transform 0.3s ease; }
     .slide-enter-from, .slide-leave-to { transform: translateX(100%); }
     
-    /* PC Layout override */
     @media (min-width: 992px) {
         .app-container { flex-direction: row; max-width: 1400px; align-items: flex-start; }
         .main-content { flex: 1; }
         .side-panel { position: sticky; top: 20px; height: calc(100vh - 40px); border-radius: var(--radius); box-shadow: var(--shadow); z-index: 100; transform: none !important; border: 1px solid var(--border-color); }
-        .app-header { margin-bottom: 20px; }
     }
 
     .panel-header-mobile { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
     .btn-panel-back { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; cursor: pointer; }
     .btn-panel-back:hover { background: var(--hover-bg); }
     
+    /* Calendar */
     .calendar-wrapper { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 20px; overflow: hidden; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--border-color); min-width: 300px; }
     .calendar-header-cell { padding: 8px 4px; text-align: center; font-size: 0.75rem; font-weight: 700; background: var(--hover-bg); color: var(--text-sub); }
@@ -110,6 +110,7 @@
     .cal-item.completed { text-decoration: line-through; opacity: 0.6; }
     .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-sub); margin: 1px; }
     
+    /* Buttons & Inputs */
     .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); display: flex; justify-content: center; align-items: center; z-index: 1000; cursor: pointer; transition: 0.2s; }
     .fab-btn:hover { transform: scale(1.05); }
     .fab-btn:active { transform: scale(0.95); }
@@ -131,6 +132,7 @@
     .btn-restore { color: var(--primary); border: 1px solid var(--primary); background: transparent; border-radius: 6px; padding: 4px 10px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 4px; transition: 0.2s; cursor: pointer; }
     .btn-restore:active { background: rgba(99, 102, 241, 0.1); }
     
+    /* Modal & Status */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); transition: opacity 0.3s; }
     .modal-content { background: var(--bg-card); color: var(--text-main); width: 100%; max-width: 400px; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid var(--border-color); transform: scale(0.95); animation: modalPop 0.2s forwards; }
     @keyframes modalPop { to { transform: scale(1); } }
@@ -173,15 +175,15 @@
   </div>
 
   <div class="app-container">
-    <div class="app-header">
-        <h1 class="app-title">Tasks</h1>
-        <button class="btn-theme-toggle" @click="toggleDarkMode" title="Switch Theme">
-            <span class="material-icons-round">{{ darkMode ? 'light_mode' : 'dark_mode' }}</span>
-        </button>
-    </div>
-
     <div class="main-content" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
       
+      <div class="app-header">
+          <h1 class="app-title">TASKS ☀️</h1>
+          <button class="btn-theme-toggle" @click="toggleDarkMode" title="Switch Theme">
+              <span class="material-icons-round">{{ darkMode ? 'light_mode' : 'dark_mode' }}</span>
+          </button>
+      </div>
+
       <ul class="nav nav-tabs">
         <li class="nav-item" v-for="tab in tabs" :key="tab.id">
           <a class="nav-link" :class="{active: currentTab === tab.id}" @click.prevent="setTab(tab.id)" href="#">{{ tab.label }} <span v-if="tab.count" class="badge bg-secondary rounded-pill ms-1">{{ tab.count }}</span></a>
@@ -556,7 +558,6 @@ createApp({
     }
   },
   methods: {
-    // 修正: addTagで # を自動付与
     addTag() { 
         let val = this.tagInput.trim();
         if(!val) return;
@@ -566,8 +567,6 @@ createApp({
             this.tagInput = ''; 
         } 
     },
-    
-    // 修正: タグ抽出ロジックでURLを除外
     parseContent(text) {
       this.lines = text.split('\n'); this.tasks = []; const foundTags = new Set(); 
       this.lines.forEach((line, index) => {
@@ -579,35 +578,22 @@ createApp({
           const created = (body.match(/➕\s*(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
           const recurrence = (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1] ? (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1].trim() : '';
           let priority = 'none'; if(body.includes('⏫')) priority='high'; else if(body.includes('🔼')) priority='medium'; else if(body.includes('🔽')) priority='low';
-          
           const tags = [];
-          
-          // URL内の#をタグとして誤認識しないための処理
-          // 1. Markdownリンク [..](..) を除去した一時文字列を作成
-          let tempBody = body.replace(/\[.*?\]\((.*?)\)/g, '');
-          // 2. 生のURL (http...) を除去
-          tempBody = tempBody.replace(/https?:\/\/[^\s]+/g, '');
-          
-          // 残った文字列からタグを抽出
+          let tempBody = body.replace(/\[.*?\]\((.*?)\)/g, '').replace(/https?:\/\/[^\s]+/g, '');
           (tempBody.match(/#[^\s#]+/g) || []).forEach(t => {
-              // 末尾の記号除去
               let tag = t.replace(/[.,!?:;)}\]]+$/, '');
               if(tag.toLowerCase() !== '#todo' && !tag.includes('=') && tag.length > 1) {
                 tags.push(tag); foundTags.add(tag);
               }
           });
-
-          // 表示用desc生成
           let desc = body.replace(/📅\s*\d{4}-\d{2}-\d{2}|✅\s*\d{4}-\d{2}-\d{2}|🔁\s*[^✅➕📅#\n\r]+|➕\s*\d{4}-\d{2}-\d{2}|⏫|🔼|🔽/g, '');
           tags.forEach(t => desc = desc.replace(new RegExp(`(^|\\s)${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\s|$)`, 'g'), ' '));
           desc = desc.replace(/#todo/gi, '').trim();
-          
           this.tasks.push({ lineIndex: index, originalLine: line, desc, due, recurrence, priority, created, completed, tags });
         }
       });
       this.allTagsList = Array.from(foundTags).sort();
     },
-
     openAddPanel() { this.openAddPanelWithDate(this.getTodayStr()); },
     closePanel() { this.showPanel = false; },
     openAddGCalPanel(d) { 
@@ -780,7 +766,17 @@ createApp({
     restoreTask(task) { if(task.isArchived) this.restoreArchivedTask(task); else { const t=this.tasks.find(x=>x.lineIndex===task.lineIndex); if(t){t.completed=false; t.doneDate=''; this.pushChanges(true);} } },
     async confirmDelete(task) { if(await this.confirmAction('削除', '本当に削除しますか？', true)) this.deleteTask(task); },
     deleteTask(task) { 
-        if(task.isArchived) { /* Archive Delete Logic (Simplified) */ } 
+        if(task.isArchived) {
+            if(!this.settings.archivePath) return;
+            this.loading = true; this.loadingMessage = '削除中...';
+            this.fetchFileContent(this.settings.archivePath).then(res => {
+                const lines = (res.content || '').split('\n');
+                const newLines = lines.filter(l => l !== task.originalLine);
+                this.saveFileContentPromise(this.settings.archivePath, newLines.join('\n'), res.sha)
+                    .then(() => { this.loading = false; this.showToastNotification('削除しました'); this.loadArchiveData(); })
+                    .catch(e => { this.loading = false; this.showInfo('Error', e); });
+            });
+        } 
         else { const idx=this.tasks.findIndex(t=>t.lineIndex===task.lineIndex); if(idx>-1){const org=this.tasks[idx]; this.tasks.splice(idx,1); if(org.lineIndex>=0){this.lines.splice(org.lineIndex,1); this.tasks.forEach(t=>{if(t.lineIndex>org.lineIndex)t.lineIndex--;}); this.pushChanges(); this.closePanel();}} } 
     },
     addTagFromHistory(tag) { if(!this.panelData.tags.includes(tag)) this.panelData.tags.push(tag); },
@@ -798,6 +794,26 @@ createApp({
     convertIsoToYMD(iso) { return iso ? this.getLocalYMD(new Date(iso)) : ''; },
     getTodayStr() { return this.getLocalYMD(new Date()); },
     formatTimeRange(item) { if(item.isAllDay) return '終日'; const d1=new Date(item.start); const d2=new Date(item.end); return `${String(d1.getHours()).padStart(2,'0')}:${String(d1.getMinutes()).padStart(2,'0')} - ${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`; },
+    saveTaskChanges() { 
+        let d = this.panelData.desc; if(this.panelData.url) d = `[${d}](${this.panelData.url})`;
+        if(this.isEditMode) { const t=this.panelData.taskRef; t.desc=d; t.due=this.panelData.due; t.priority=this.panelData.priority; t.recurrence=this.panelData.recurrence; t.tags=[...this.panelData.tags]; }
+        else { this.tasks.push({lineIndex:-1, desc:d, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, created:this.getTodayStr(), completed:false, tags:[...this.panelData.tags]}); }
+        this.closePanel(); this.pushChanges();
+    },
+    openAddPanelWithDate(d) { this.isEditMode=false; this.showPanel=true; this.panelData={desc:'', url:'', due:d, recurrence:'', priority:'none', completed:false, tags:[], isGCal:false}; this.tagInput=''; },
+    openEditPanel(item) {
+      this.isEditMode=true; this.showPanel=true;
+      if(item.isGCal) {
+          const sd=new Date(item.start); const ed=new Date(item.end);
+          let sh='', sm='', eh='', em='';
+          if(!item.isAllDay) { sh=String(sd.getHours()).padStart(2,'0'); sm=String(sd.getMinutes()).padStart(2,'0'); eh=String(ed.getHours()).padStart(2,'0'); em=String(ed.getMinutes()).padStart(2,'0'); }
+          this.panelData={isGCal:true, isNew:false, eid:item.id, calendarId:item.calendarId, title:item.title, desc:item.desc, dateInput:this.convertIsoToYMD(item.start), startHour:sh, startMin:sm, endHour:eh, endMin:em};
+      } else {
+          const org=this.tasks.find(t=>t.lineIndex===item.lineIndex)||item;
+          this.panelData={...org, taskRef:org, isGCal:false, tags:[...org.tags]};
+          this.tagInput=''; const m=org.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/); if(m){this.panelData.desc=m[1]; this.panelData.url=m[2];}
+      }
+    }
   }
 }).mount('#app');
 </script>
