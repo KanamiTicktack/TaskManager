@@ -48,23 +48,22 @@
     
     /* Layout Structure */
     .app-container { 
-        display: flex; flex-direction: column; gap: 16px; 
-        max-width: 1600px; /* Expanded for PC split view */
-        margin: 0 auto; padding: 16px; min-height: 100vh; position: relative;
+        display: block; 
+        max-width: 1600px; margin: 0 auto; padding: 16px; min-height: 100vh; position: relative;
     }
     
     /* Split View Logic */
-    .split-layout { display: block; } /* Mobile Default */
+    .split-layout { display: block; } 
     
     @media (min-width: 992px) {
         .split-layout {
             display: grid;
-            grid-template-columns: 1fr 1fr; /* 50% 50% split */
+            grid-template-columns: 1fr 1fr; 
             gap: 24px;
             align-items: start;
         }
         .view-primary { min-width: 0; }
-        .view-secondary { min-width: 0; display: block !important; } /* Always show right col on PC */
+        .view-secondary { min-width: 0; display: block !important; } 
     }
 
     .app-card { background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 16px; overflow: hidden; }
@@ -123,10 +122,8 @@
             border-radius: var(--radius); border: 1px solid var(--border-color); 
             z-index: 4000;
         }
-        /* PC Transition (Fade instead of slide to prevent bugs) */
         .slide-enter-active, .slide-leave-active { transition: opacity 0.2s ease; transform: none; }
         .slide-enter-from, .slide-leave-to { opacity: 0; transform: none; }
-        
         .panel-header-mobile { display: none !important; }
         .panel-header-pc { display: flex !important; }
     }
@@ -394,6 +391,11 @@
                 </div>
             </div>
             
+            <div class="mb-3">
+                <label class="small fw-bold text-secondary mb-1">会議URL</label>
+                <input type="url" v-model="panelData.meetingUrl" class="form-control" placeholder="https://...">
+            </div>
+
             <textarea v-model="panelData.desc" class="form-control flex-grow-1" placeholder="メモ"></textarea>
             <div class="mt-3 d-flex gap-2">
                 <button class="btn btn-outline-secondary flex-grow-1 py-2" @click="closePanel">キャンセル</button>
@@ -488,7 +490,7 @@ createApp({
 
       showPanel: false, isEditMode: false,
       panelData: { id: null, desc: '', due: '', priority: 'none', completed: false, tags: [], isGCal: false, 
-                   startHour: '09', startMin: '00', endHour: '', endMin: '' },
+                   startHour: '09', startMin: '00', endHour: '', endMin: '', meetingUrl: '' },
       tagInput: '', allTagsList: [], filterTag: '', 
       touchStartX: 0, touchEndX: 0, swipeIgnore: false, displayLimit: 30, touchStartY: 0, touchEndY: 0, 
       
@@ -649,6 +651,7 @@ createApp({
           const recurrence = (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1] ? (body.match(/🔁\s*([^✅➕📅#\n\r]+)/) || [])[1].trim() : '';
           let priority = 'none'; if(body.includes('⏫')) priority='high'; else if(body.includes('🔼')) priority='medium'; else if(body.includes('🔽')) priority='low';
           const tags = [];
+          // Link remove logic improved
           let tempBody = body.replace(/\[.*?\]\(.*?\)/g, '').replace(/https?:\/\/\S+/g, '');
           (tempBody.match(/#[^\s#]+/g) || []).forEach(t => {
               let tag = t.replace(/[.,!?:;)}\]]+$/, '');
@@ -671,7 +674,7 @@ createApp({
             this.isEditMode = false; this.showPanel = true; 
             const now = new Date();
             const curH = String(now.getHours()).padStart(2,'0');
-            this.panelData = { isGCal: true, isNew: true, title: '', desc: '', dateInput: d, startHour: curH, startMin: '00', endHour: '', endMin: '', targetCalendarId: this.settings.calendarIds[0]||'' }; 
+            this.panelData = { isGCal: true, isNew: true, title: '', desc: '', dateInput: d, startHour: curH, startMin: '00', endHour: '', endMin: '', targetCalendarId: this.settings.calendarIds[0]||'', meetingUrl: '' }; 
         } catch(e) { console.error(e); }
     },
     setTab(id) {
@@ -753,9 +756,20 @@ createApp({
           const nextH = (h + 1) % 24;
           timeEnd = `${String(nextH).padStart(2,'0')}:${this.panelData.startMin}`;
       }
-      const params = { ...this.panelData, dateStr, startTime: timeStart, endTime: timeEnd, 
-                       calendarId: this.panelData.calendarId, eventId: this.panelData.eid, 
-                       description: this.panelData.desc };
+      
+      // Merge meeting URL into description
+      let finalDesc = this.panelData.desc || '';
+      if (this.panelData.meetingUrl && this.panelData.meetingUrl.trim()) {
+          finalDesc = "【会議URL】: " + this.panelData.meetingUrl + "\n\n" + finalDesc;
+      }
+
+      const params = { 
+          ...this.panelData, dateStr, startTime: timeStart, endTime: timeEnd, 
+          calendarId: this.panelData.calendarId, eventId: this.panelData.eid, 
+          description: finalDesc, // for GAS that expects description
+          desc: finalDesc         // for GAS that expects desc
+      };
+      
       try {
           if (this.panelData.isNew) await callGAS('createCalendarEvent', params);
           else await callGAS('updateCalendarEvent', params);
@@ -866,13 +880,6 @@ createApp({
     convertIsoToYMD(iso) { return iso ? this.getLocalYMD(new Date(iso)) : ''; },
     getTodayStr() { return this.getLocalYMD(new Date()); },
     formatTimeRange(item) { if(item.isAllDay) return '終日'; const d1=new Date(item.start); const d2=new Date(item.end); return `${String(d1.getHours()).padStart(2,'0')}:${String(d1.getMinutes()).padStart(2,'0')} - ${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`; },
-    saveTaskChanges() { 
-        let d = this.panelData.desc; if(this.panelData.url) d = `[${d}](${this.panelData.url})`;
-        if(this.isEditMode) { const t=this.panelData.taskRef; t.desc=d; t.due=this.panelData.due; t.priority=this.panelData.priority; t.recurrence=this.panelData.recurrence; t.tags=[...this.panelData.tags]; }
-        else { this.tasks.push({lineIndex:-1, desc:d, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, created:this.getTodayStr(), completed:false, tags:[...this.panelData.tags]}); }
-        this.closePanel(); this.pushChanges();
-    },
-    openAddPanelWithDate(d) { this.isEditMode=false; this.showPanel=true; this.panelData={desc:'', url:'', due:d, recurrence:'', priority:'none', completed:false, tags:[], isGCal:false}; this.tagInput=''; },
     openEditPanel(item) {
       try {
           this.isEditMode=true; this.showPanel=true;
@@ -880,7 +887,7 @@ createApp({
               const sd=new Date(item.start); const ed=new Date(item.end);
               let sh='', sm='', eh='', em='';
               if(!item.isAllDay) { sh=String(sd.getHours()).padStart(2,'0'); sm=String(sd.getMinutes()).padStart(2,'0'); eh=String(ed.getHours()).padStart(2,'0'); em=String(ed.getMinutes()).padStart(2,'0'); }
-              this.panelData={isGCal:true, isNew:false, eid:item.id, calendarId:item.calendarId, title:item.title, desc:item.desc, dateInput:this.convertIsoToYMD(item.start), startHour:sh, startMin:sm, endHour:eh, endMin:em};
+              this.panelData={isGCal:true, isNew:false, eid:item.id, calendarId:item.calendarId, title:item.title, desc:item.desc, dateInput:this.convertIsoToYMD(item.start), startHour:sh, startMin:sm, endHour:eh, endMin:em, meetingUrl: ''};
           } else {
               const org=this.tasks.find(t=>t.lineIndex===item.lineIndex)||item;
               // ★Safe handling for crash protection★
