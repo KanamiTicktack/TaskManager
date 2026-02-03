@@ -324,7 +324,7 @@
                     <div v-if="item.isGCal" class="me-2"><span class="material-icons-round" :style="{color: item.color}">event</span></div>
                     <div v-else class="custom-checkbox me-2" :class="{checked: item.completed}" @click.stop="toggleTask(item)"><span class="material-icons-round">check</span></div>
                     <div class="task-content">
-                        <div class="task-title" :class="{'text-decoration-line-through text-muted': item.completed}">{{ item.desc }}</div>
+                        <div class="task-title" :class="{'text-decoration-line-through text-muted': item.completed}" v-html="renderDesc(item.desc)"></div>
                         <div class="task-meta">
                             <span v-if="item.isGCal" class="badge-base" :style="{background: item.color, color:'white'}">{{ item.calendarName }}</span>
                             <span v-if="item.isGCal">{{ item.isAllDay ? '終日' : item.timeStr }}</span>
