@@ -64,6 +64,9 @@
     .task-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; line-height: 1.4; }
     .task-meta { display: flex; gap: 6px; font-size: 0.75rem; color: var(--text-sub); flex-wrap: wrap; }
     .badge-base { padding: 2px 8px; border-radius: 6px; background: var(--hover-bg); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 3px; }
+    .tag-badge { background-color: var(--tag-bg); color: var(--tag-text); }
+    .gcal-badge { background: #e0e7ff; color: #4338ca; border: none; }
+    body.dark-mode .gcal-badge { background: #312e81; color: #e0e7ff; }
     
     .task-content.text-decoration-line-through { color: var(--text-sub); }
     body.dark-mode .task-content.text-decoration-line-through { color: #d1d5db !important; opacity: 1 !important; }
@@ -79,37 +82,52 @@
     .panel-header-mobile { display: none; }
     .btn-panel-back { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; cursor: pointer; }
     
-    /* Calendar */
     .calendar-wrapper { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 20px; overflow: hidden; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--border-color); min-width: 300px; }
-    .calendar-cell { background: var(--bg-card); padding: 4px; min-height: 100px; cursor: pointer; display: flex; flex-direction: column; }
+    .calendar-header-cell { padding: 8px 4px; text-align: center; font-size: 0.75rem; font-weight: 700; background: var(--hover-bg); color: var(--text-sub); }
+    .header-sun { color: #ef4444; } .header-sat { color: #3b82f6; }
+    .calendar-cell { background: var(--bg-card); padding: 4px; min-height: 100px; cursor: pointer; display: flex; flex-direction: column; transition: 0.2s; }
+    .calendar-cell:hover { background: var(--hover-bg); }
     .calendar-cell.selected { background: rgba(99, 102, 241, 0.1) !important; box-shadow: inset 0 0 0 2px var(--primary); }
     .date-num { align-self: center; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; border-radius: 50%; }
     .date-num.today { background: var(--primary); color: white; }
     .cal-item { font-size: 0.7rem; padding: 2px 4px; margin-bottom: 2px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--bg-input); border: 1px solid var(--border-color); border-left-width: 3px; color: var(--text-main); }
     .cal-item.is-gcal { color: white; border: none; }
+    .cal-item.completed { text-decoration: line-through; opacity: 0.6; }
     .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-sub); margin: 1px; }
     
-    /* UI Components */
-    .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); display: flex; justify-content: center; align-items: center; z-index: 2000; cursor: pointer; }
+    .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); display: flex; justify-content: center; align-items: center; z-index: 2000; cursor: pointer; transition: 0.2s; }
+    .fab-btn:hover { transform: scale(1.05); }
+    .date-shortcut-btn { font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); margin-right: 4px; transition: 0.2s; }
+    .date-shortcut-btn:hover { background: var(--hover-bg); }
     .priority-select-btn { border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); padding: 6px; flex: 1; border-radius: 6px; text-align: center; font-size: 0.85rem; cursor: pointer; }
     .priority-select-btn.active-high { background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: #ef4444; font-weight: bold; }
     .priority-select-btn.active-medium { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border-color: #f59e0b; font-weight: bold; }
     .priority-select-btn.active-low { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border-color: #3b82f6; font-weight: bold; }
     .priority-select-btn.active-none { background: var(--text-sub); color: white; border-color: var(--text-sub); }
+    .btn-delete { color: var(--danger); border: 1px solid transparent; background: transparent; transition: 0.2s; padding: 8px 12px; border-radius: 8px; }
+    .btn-delete:hover { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); }
+    .btn-restore { color: var(--primary); border: 1px solid var(--primary); background: transparent; border-radius: 6px; padding: 4px 8px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 4px; transition: 0.2s; }
+    .btn-restore:hover { background: rgba(99, 102, 241, 0.1); }
     
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); }
-    .modal-content { background: var(--bg-card); color: var(--text-main); width: 100%; max-width: 400px; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid var(--border-color); }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); transition: opacity 0.3s; }
+    .modal-content { background: var(--bg-card); color: var(--text-main); width: 100%; max-width: 400px; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid var(--border-color); transform: scale(0.95); animation: modalPop 0.2s forwards; }
+    @keyframes modalPop { to { transform: scale(1); } }
+    .modal-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 12px; }
+    .modal-body { font-size: 0.95rem; color: var(--text-sub); margin-bottom: 24px; line-height: 1.5; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
-    .btn-modal { padding: 8px 16px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; }
+    .btn-modal { padding: 8px 16px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-cancel { background: transparent; color: var(--text-sub); }
+    .btn-cancel:hover { background: var(--hover-bg); color: var(--text-main); }
     .btn-confirm { background: var(--primary); color: white; }
+    .btn-confirm:hover { background: var(--primary-hover); }
     .btn-confirm.danger { background: var(--danger); }
     
     .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9998; display: flex; align-items: center; justify-content: center; flex-direction: column; color: white; }
     .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s infinite linear; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .toast-notification { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 24px; border-radius: 50px; z-index: 3000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-    .status-indicator { position: fixed; bottom: 20px; left: 20px; background: var(--status-bg); color: var(--status-text); padding: 8px 16px; border-radius: 30px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 3000; }
+    .status-indicator { position: fixed; bottom: 20px; left: 20px; background: var(--status-bg); color: var(--status-text); padding: 8px 16px; border-radius: 30px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 3000; transition: opacity 0.3s, transform 0.3s; }
     .status-spinner { width: 14px; height: 14px; border: 2px solid; border-radius: 50%; border-color: currentColor transparent transparent transparent; animation: spin 1s linear infinite; }
     .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(10px); }
   </style>
@@ -124,10 +142,10 @@
 
   <div v-if="modal.show" class="modal-overlay">
       <div class="modal-content">
-          <div class="fw-bold fs-5 mb-3">{{ modal.title }}</div>
-          <div class="text-secondary mb-4">{{ modal.message }}</div>
+          <div class="modal-title">{{ modal.title }}</div>
+          <div class="modal-body">{{ modal.message }}</div>
           <div class="modal-actions">
-              <button v-if="modal.type === 'confirm'" class="btn-modal text-secondary" @click="closeModal(false)">キャンセル</button>
+              <button v-if="modal.type === 'confirm'" class="btn-modal btn-cancel" @click="closeModal(false)">キャンセル</button>
               <button class="btn-modal btn-confirm" :class="{danger: modal.isDanger}" @click="closeModal(true)">{{ modal.okText }}</button>
           </div>
       </div>
@@ -343,7 +361,7 @@
 // ==========================================
 //  ★★★ 設定：GAS Web App URL ★★★
 // ==========================================
-const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycby_0qwb2_HImaa1fb7-rhPRY2FT-f4fHv4_U4YnO8LrMK-msrVMXvTb_12QYeyxdWmIwg/exec"; 
+const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycbyTKhDX5wDsK9VKgJZJvUMWdHrC1TAj29P6teHtE2928p72LzixOASn4PiwyDuPOXtuyg/exec"; 
 
 async function callGAS(action, params = {}) {
   const finalParams = { ...params, action: action };
@@ -505,7 +523,6 @@ createApp({
     // ★★★ Added setTab function ★★★
     setTab(id) {
       this.currentTab = id;
-      // If switching to completed tab and archive path is set, load archive data
       if (id === 'completed' && this.archiveTasks.length === 0 && this.settings.archivePath) {
         this.loadArchiveData();
       }
