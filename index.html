@@ -38,7 +38,7 @@
       --tag-bg: #374151; --tag-text: #d1d5db;
       --status-bg: #f3f4f6; --status-text: #1f2937;
     }
-    body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-y: hidden; /* Prevent body scroll */ }
+    body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-y: hidden; }
     .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
     
     /* Scrollbar */
@@ -51,7 +51,7 @@
     .app-container { 
         display: flex; flex-direction: column; gap: 16px; 
         max-width: 1600px; margin: 0 auto; padding: 16px; 
-        height: 100vh; overflow: hidden; /* Fix height */
+        height: 100vh; overflow: hidden;
     }
     .app-header { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 0 4px; }
     .app-title { font-weight: 800; font-size: 1.5rem; margin: 0; }
@@ -60,25 +60,16 @@
     .main-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     
     /* Split Layout */
-    .split-layout { 
-        display: flex; flex-direction: column; height: 100%; gap: 16px; overflow: hidden; 
-    }
+    .split-layout { display: flex; flex-direction: column; height: 100%; gap: 16px; overflow: hidden; }
     @media (min-width: 992px) {
-        .split-layout { 
-            display: grid; grid-template-columns: 1fr 1fr; gap: 24px; 
-        }
+        .split-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
     }
-    
-    .view-primary, .view-secondary { 
-        display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; 
-    }
-    
-    /* Scrollable Areas inside Views */
+    .view-primary, .view-secondary { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
     .scrollable-content { flex: 1; overflow-y: auto; padding-right: 4px; padding-bottom: 80px; }
 
     .app-card { background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 16px; overflow: hidden; }
 
-    /* Tasks Style (Ver 6.x Restore) */
+    /* Tasks Style */
     .task-card { 
         background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 8px; padding: 12px; 
         display: flex; gap: 12px; cursor: pointer; position: relative; transition: 0.1s; align-items: flex-start; 
@@ -87,44 +78,29 @@
     .priority-high::before { background: #ef4444; } .priority-medium::before { background: #f59e0b; } .priority-low::before { background: #3b82f6; }
     .custom-checkbox { width: 22px; height: 22px; border: 2px solid var(--text-sub); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
     .custom-checkbox.checked { background: var(--primary); border-color: var(--primary); }
+    .custom-checkbox .material-icons-round { font-size: 16px; color: white; opacity: 0; transition: 0.2s; }
+    .custom-checkbox.checked .material-icons-round { opacity: 1; }
+    .task-content { flex: 1; min-width: 0; }
     .task-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; line-height: 1.4; }
     .task-meta { display: flex; gap: 6px; font-size: 0.75rem; color: var(--text-sub); flex-wrap: wrap; align-items: center; }
     .badge-base { padding: 2px 8px; border-radius: 6px; background: var(--hover-bg); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 3px; }
     .tag-badge { background-color: var(--tag-bg); color: var(--tag-text); }
+    .gcal-badge { background: #e0e7ff; color: #4338ca; border: none; }
+    body.dark-mode .gcal-badge { background: #312e81; color: #e0e7ff; }
     .text-decoration-line-through { color: var(--text-sub); opacity: 0.6; }
 
     /* Calendar & Timeline */
-    .calendar-wrapper { 
-        flex: 1; display: flex; flex-direction: column; 
-        background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); 
-        overflow: hidden; min-height: 0; /* Important for flex child */
-    }
-    
-    /* Timeline Header */
-    .timeline-header { 
-        display: grid; grid-template-columns: 50px repeat(7, 1fr); 
-        border-bottom: 1px solid var(--border-color); background: var(--hover-bg);
-        padding-right: var(--scrollbar-width); /* Align with scrollbar */
-        flex-shrink: 0;
-    }
+    .calendar-wrapper { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); overflow: hidden; min-height: 0; }
+    .timeline-header { display: grid; grid-template-columns: 50px repeat(7, 1fr); border-bottom: 1px solid var(--border-color); background: var(--hover-bg); padding-right: var(--scrollbar-width); flex-shrink: 0; }
     .timeline-day-header { padding: 8px 4px; text-align: center; border-right: 1px solid var(--border-color); font-size: 0.8rem; font-weight: bold; color: var(--text-sub); }
     .header-sun { color: #ef4444; } .header-sat { color: #3b82f6; }
 
-    /* All Day Row */
-    .allday-row { 
-        display: grid; grid-template-columns: 50px repeat(7, 1fr); 
-        border-bottom: 2px solid var(--border-color); min-height: 40px; 
-        padding-right: var(--scrollbar-width);
-        flex-shrink: 0;
-    }
+    .allday-row { display: grid; grid-template-columns: 50px repeat(7, 1fr); border-bottom: 2px solid var(--border-color); min-height: 40px; padding-right: var(--scrollbar-width); flex-shrink: 0; }
     .allday-label { display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: var(--text-sub); border-right: 1px solid var(--border-color); background: var(--hover-bg); }
     .allday-cell { border-right: 1px solid var(--border-color); padding: 2px; }
     .allday-item { font-size: 0.7rem; background: var(--primary); color: white; padding: 2px 4px; border-radius: 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; cursor: grab; }
 
-    /* Timeline Body (Scrollable) */
-    .timeline-body { 
-        flex: 1; overflow-y: auto; display: grid; grid-template-columns: 50px repeat(7, 1fr); position: relative; 
-    }
+    .timeline-body { flex: 1; overflow-y: auto; display: grid; grid-template-columns: 50px repeat(7, 1fr); position: relative; }
     .time-labels { border-right: 1px solid var(--border-color); background: var(--hover-bg); }
     .time-label { height: var(--time-slot-height); border-bottom: 1px solid var(--border-color); font-size: 0.75rem; color: var(--text-sub); text-align: center; position: relative; top: -10px; }
     .day-column { border-right: 1px solid var(--border-color); position: relative; }
@@ -150,15 +126,22 @@
     }
     .panel-header-mobile { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
     .panel-header-pc { display: none; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .btn-panel-back { background: transparent; border: none; padding: 8px; }
+    .btn-close { background: transparent; border: none; font-size: 1.5rem; }
 
     /* Common */
     .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 20px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); display: flex; justify-content: center; align-items: center; z-index: 2000; }
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
     .modal-content { background: var(--bg-card); width: 90%; max-width: 400px; padding: 24px; border-radius: 16px; }
     .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9998; display: flex; align-items: center; justify-content: center; flex-direction: column; color: white; }
-    .toast-notification { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 24px; border-radius: 50px; z-index: 3000; }
-    
-    /* Tabs Style */
+    .toast-notification { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 24px; border-radius: 50px; z-index: 3000; font-weight: 500; }
+    .date-shortcut-btn { font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); margin-right: 4px; }
+    .priority-select-btn { border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); padding: 8px; flex: 1; border-radius: 8px; text-align: center; font-size: 0.85rem; cursor: pointer; }
+    .priority-select-btn.active-high { background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: #ef4444; font-weight: bold; }
+    .priority-select-btn.active-medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border-color: #f59e0b; font-weight: bold; }
+    .priority-select-btn.active-low { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border-color: #3b82f6; font-weight: bold; }
+    .priority-select-btn.active-none { background: var(--text-sub); color: white; border-color: var(--text-sub); }
+    .tag-chip { font-size: 0.8rem; padding: 4px 10px; border-radius: 16px; background-color: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--border-color); cursor: pointer; display: inline-block; margin-right: 4px; }
     .nav-tabs { border: none; gap: 8px; margin-bottom: 12px; flex-shrink: 0; }
     .nav-link { border: none; border-radius: 20px !important; color: var(--text-sub); font-weight: 600; padding: 6px 16px; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
     .nav-link.active { background: var(--primary) !important; color: #fff !important; }
@@ -218,7 +201,7 @@
                         <div v-for="group in groupedActiveTasks" :key="group.title" class="mb-4">
                             <h6 class="fw-bold text-secondary small mb-2 ms-1">{{ group.title }}</h6>
                             <div v-for="task in group.tasks" :key="task.lineIndex" class="task-card" :class="'priority-'+task.priority" @click="openEditPanel(task)">
-                                <div class="custom-checkbox" @click.stop="toggleTask(task)"><span class="material-icons-round">check</span></div>
+                                <div class="custom-checkbox" :class="{checked: task.completed}" @click.stop="toggleTask(task)"><span class="material-icons-round">check</span></div>
                                 <div class="task-content">
                                     <div class="task-title" v-html="renderDesc(task.desc)"></div>
                                     <div class="task-meta">
@@ -274,18 +257,14 @@
                         <div class="allday-row">
                             <div class="allday-label">終日</div>
                             <div v-for="day in calendarDays" :key="'ad-'+day.date" class="allday-cell" @dragover.prevent @drop="onDrop($event, day.date, null)">
-                                <div v-for="item in day.items.filter(i=>i.isGCal && i.isAllDay)" class="allday-item" :style="{background: item.color}" draggable="true" @dragstart="dragStart($event, item)" @click.stop="openEditPanel(item)">
-                                    {{ item.title }}
-                                </div>
+                                <div v-for="item in day.items.filter(i=>i.isGCal && i.isAllDay)" class="allday-item" :style="{background: item.color}" draggable="true" @dragstart="dragStart($event, item)" @click.stop="openEditPanel(item)">{{ item.title }}</div>
                             </div>
                         </div>
                         <div class="timeline-body">
                             <div class="time-labels"><div v-for="h in timelineHours" :key="h" class="time-label">{{ h }}:00</div></div>
                             <div v-for="day in calendarDays" :key="'b-'+day.date" class="day-column" @dragover.prevent @drop="onDrop($event, day.date)">
                                  <div v-for="h in timelineHours" :key="'slot-'+h" class="time-slot" @drop.stop="onDrop($event, day.date, h)"></div>
-                                 <div v-for="item in day.items.filter(i=>!i.isAllDay && i.isGCal && getEventStyle(i))" class="event-chip" :style="getEventStyle(item)" draggable="true" @dragstart="dragStart($event, item)" @click.stop="openEditPanel(item)">
-                                     {{ item.title }}
-                                 </div>
+                                 <div v-for="item in day.items.filter(i=>!i.isAllDay && i.isGCal && getEventStyle(i))" class="event-chip" :style="getEventStyle(item)" draggable="true" @dragstart="dragStart($event, item)" @click.stop="openEditPanel(item)">{{ item.title }}</div>
                             </div>
                         </div>
                     </div>
@@ -315,6 +294,7 @@
                                     <div class="task-meta">
                                         <span v-if="item.isGCal" class="badge-base" :style="{background: item.color, color:'white'}">{{ item.calendarName }}</span>
                                         <span v-if="item.isGCal">{{ item.isAllDay ? '終日' : item.timeStr }}</span>
+                                        <span v-if="!item.isGCal && item.priority!='none'" class="fw-bold" :style="{color: getPriorityColor(item.priority)}">Prior: {{ item.priority }}</span>
                                         <span v-if="!item.isGCal" v-for="tag in item.tags" class="badge-base tag-badge">#{{ tag.replace(/^#/, '') }}</span>
                                     </div>
                                 </div>
@@ -354,7 +334,7 @@
             <label class="small fw-bold text-secondary mb-1">タスク名</label>
             <textarea v-model="panelData.desc" class="form-control fw-bold fs-6 mb-4" rows="3" placeholder="何をする？"></textarea>
             <div class="row g-4 mb-4">
-                <div class="col-12 col-sm-6">
+                <div class="col-12 col-sm-6 border-end-sm">
                     <label class="small fw-bold text-secondary mb-2">スケジュール</label>
                     <input type="date" v-model="panelData.due" class="form-control form-control-sm mb-2">
                     <div class="d-flex gap-1 mb-3"><button class="date-shortcut-btn" @click="setDateShortcut(0)">今日</button><button class="date-shortcut-btn" @click="setDateShortcut(1)">明日</button></div>
@@ -474,11 +454,10 @@ createApp({
         else { start.setDate(1); start.setDate(start.getDate() - start.getDay()); }
         const count = this.calendarMode==='week' ? 7 : 42;
         for(let i=0; i<count; i++) {
-            const date = new Date(start); date.setDate(startDate.getDate() + i);
+            const date = new Date(start); date.setDate(start.getDate() + i);
             const dateStr = this.getLocalYMD(date);
             const dayEvents = this.gcalEvents.filter(e => this.convertIsoToYMD(e.start) === dateStr);
             const dayTasks = this.tasks.filter(t => t.due === dateStr);
-            // ★ Ver 9.0 Fix: Timeline view only needs Events. Tasks are in bottom list.
             const items = [...dayTasks.map(t=>({...t, isGCal:false})), ...dayEvents.map(e=>({...e, isGCal:true}))];
             days.push({ date: dateStr, dayNum: date.getDate(), dayOfWeek: date.getDay(), isToday: dateStr === this.getTodayStr(), items });
         }
