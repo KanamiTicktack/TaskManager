@@ -26,9 +26,10 @@
       --radius: 12px;
       /* Calendar Metrics */
       --time-col-width: 50px;
-      --header-height: 44px; /* Slightly taller for clear date */
+      --header-height: 44px;
       --allday-min-height: 40px;
-      --slot-height: 60px; /* ★ Expanded height */
+      --slot-height: 60px;
+      --scrollbar-width: 0px;
     }
     body.dark-mode {
       --primary: #818cf8; --primary-light: #312e81;
@@ -37,7 +38,7 @@
       --hover-bg: #374151;
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; }
-    .form-control, .form-select { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); }
+    .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .scroll-y:hover::-webkit-scrollbar-thumb { background: #94a3b8; }
@@ -45,8 +46,9 @@
     /* Layout */
     .app-container { display: flex; flex-direction: column; height: 100vh; max-width: 1800px; margin: 0 auto; padding: 12px; gap: 12px; }
     .app-header { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
-    .app-title { font-weight: 800; font-size: 1.5rem; margin: 0; }
-    .btn-icon { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; }
+    .app-title { font-weight: 800; font-size: 1.5rem; margin: 0; letter-spacing: -0.5px; }
+    .btn-icon { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; align-items: center; cursor: pointer; }
+    .btn-icon:active { background: var(--hover-bg); }
 
     .main-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     
@@ -77,24 +79,20 @@
     .task-title { font-weight: 600; font-size: 0.95rem; line-height: 1.4; margin-bottom: 4px; }
     .task-meta { font-size: 0.75rem; color: var(--text-sub); display: flex; gap: 6px; flex-wrap: wrap; }
     .tag-badge { background: var(--border-color); padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; }
+    .due-badge { display: flex; align-items: center; gap: 2px; background: var(--hover-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); }
     .text-done { text-decoration: line-through; opacity: 0.6; }
 
-    /* ★ UNIFIED TIMELINE GRID (The Ultimate Fix) ★ */
+    /* Timeline Calendar */
     .calendar-container {
-        flex: 1; overflow-y: auto; /* Single Scroll Container for everything */
-        background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px;
-        position: relative; display: block; /* Important for grid inside */
+        flex: 1; display: flex; flex-direction: column; background: var(--bg-card); 
+        border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; position: relative;
     }
     
-    /* One Grid to Rule Them All */
     .tl-unified-grid {
-        display: grid;
-        grid-template-columns: var(--time-col-width) repeat(7, 1fr);
-        width: 100%;
-        /* Borders handled by cells */
+        display: grid; grid-template-columns: var(--time-col-width) repeat(7, 1fr); width: 100%;
     }
 
-    /* Sticky Header (Row 1) */
+    /* Sticky Header */
     .tl-cell-header {
         position: sticky; top: 0; z-index: 50;
         background: var(--hover-bg); border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);
@@ -102,31 +100,25 @@
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         font-size: 0.8rem; font-weight: bold; color: var(--text-sub);
     }
-    /* Sticky All Day (Row 2) */
+    /* Sticky All Day */
     .tl-cell-allday {
         position: sticky; top: var(--header-height); z-index: 40;
         background: var(--bg-card); border-bottom: 2px solid var(--border-color); border-right: 1px solid var(--border-color);
         min-height: var(--allday-min-height); padding: 2px;
     }
-    /* Sticky Time Label (Col 1) */
+    /* Sticky Time Label */
     .tl-cell-time {
         position: sticky; left: 0; z-index: 30;
         background: var(--hover-bg); border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);
         height: var(--slot-height); font-size: 0.7rem; color: var(--text-sub);
         display: flex; justify-content: center; padding-top: 4px;
     }
-    /* Standard Slot (Body) */
     .tl-cell-slot {
         background: var(--bg-card); border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);
         height: var(--slot-height); position: relative;
     }
+    .tl-cell-header:nth-child(8n), .tl-cell-allday:nth-child(8n), .tl-cell-slot:nth-child(8n) { border-right: none; }
 
-    /* Clean Borders (Remove right border on last column) */
-    .tl-cell-header:nth-child(8n), 
-    .tl-cell-allday:nth-child(8n), 
-    .tl-cell-slot:nth-child(8n) { border-right: none; }
-
-    /* Content Styling */
     .sun { color: #ef4444; } .sat { color: #3b82f6; }
     .ad-item { background: var(--primary); color: white; font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .event-block {
@@ -243,7 +235,7 @@
                                          <div class="task-title" v-html="renderTaskTitle(task.desc)"></div>
                                          <div class="task-meta">
                                              <span v-for="tag in task.tags" class="tag-badge">#{{tag.replace('#','')}}</span>
-                                             <span v-if="task.due" class="due-badge"><span class="material-icons-round" style="font-size:12px">event</span>{{task.due}}</span>
+                                             <span v-if="task.recurrence" class="due-badge"><span class="material-icons-round" style="font-size:12px">repeat</span>{{task.recurrence}}</span>
                                          </div>
                                      </div>
                                  </div>
@@ -383,7 +375,8 @@ createApp({
       showPanel: false, isEditMode: false, panelData: {}, tagInput: '', allTagsList: [], filterTag: '',
       modal: { show: false }, toast: { show: false },
       timelineHours: [9,10,11,12,13,14,15,16,17,18,19,20],
-      hours: Array.from({length:24},(_,i)=>String(i).padStart(2,'0')), minutes: ['00','15','30','45']
+      hours: Array.from({length:24},(_,i)=>String(i).padStart(2,'0')), minutes: ['00','15','30','45'],
+      scrollbarWidth: 0
   }},
   computed: {
     activeCount() { return this.tasks.filter(t=>!t.completed).length; },
@@ -393,14 +386,25 @@ createApp({
         return [...m, ...a].sort((a,b)=>a.doneDate<b.doneDate?1:-1);
     },
     displayCompletedTasks() { return this.allCompletedTasks.slice(0, 50); },
+    // ★ FIX 3: Grouping Logic Update (Today+Overdue Group)
     groupedActiveTasks() {
-        const groups = {}; const noDate = [];
+        const today = this.getTodayStr();
+        const todayGroup = { title: '今日 & 期限切れ', tasks: [] };
+        const futureGroups = {};
+        const noDateGroup = { title: '期限なし', tasks: [] };
+
         this.tasks.filter(t=>!t.completed && (!this.filterTag || t.tags.includes(this.filterTag))).forEach(t=>{
-            if(!t.due) noDate.push(t);
-            else { if(!groups[t.due]) groups[t.due]=[]; groups[t.due].push(t); }
+            if(!t.due) noDateGroup.tasks.push(t);
+            else if(t.due <= today) todayGroup.tasks.push(t); // Overdue & Today
+            else { 
+                if(!futureGroups[t.due]) futureGroups[t.due]=[]; 
+                futureGroups[t.due].push(t); 
+            }
         });
-        const res = Object.keys(groups).sort().map(d=>({title:d, tasks:groups[d]}));
-        if(noDate.length) res.push({title:'No Date', tasks:noDate});
+        const res = [];
+        if(todayGroup.tasks.length>0) res.push(todayGroup);
+        Object.keys(futureGroups).sort().map(d=>res.push({title:d, tasks:futureGroups[d]}));
+        if(noDateGroup.tasks.length>0) res.push(noDateGroup);
         return res;
     },
     suggestedTags() { return this.allTagsList.filter(t=>!this.panelData.tags?.includes(t)); },
@@ -466,7 +470,11 @@ createApp({
                 const due=(d.match(/📅\s*(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
                 const rec=(d.match(/🔁\s*([^✅➕📅#]+)/) || [])[1]?.trim() || '';
                 let pri='none'; if(d.includes('⏫'))pri='high'; else if(d.includes('🔼'))pri='medium'; else if(d.includes('🔽'))pri='low';
-                const tks=[]; (d.match(/#[^\s#]+/g)||[]).forEach(t=>{ if(t!=='#todo') {tks.push(t); tags.add(t);} });
+                // ★ FIX 4: URL safe tag extraction
+                let tempText = d.replace(/https?:\/\/[^\s]+/g, ''); 
+                const tks=[]; 
+                (tempText.match(/#[^\s#]+/g)||[]).forEach(t=>{ if(t!=='#todo') {tks.push(t); tags.add(t);} });
+                
                 this.tasks.push({lineIndex:i, desc:d.trim(), completed:comp, due, recurrence:rec, priority:pri, tags:tks});
             }
         });
@@ -494,7 +502,11 @@ createApp({
         this.isEditMode=true; this.showPanel=true;
         if(i.isGCal) {
             let d=i.desc||'', u=''; const m=d.match(/^【会議URL】:\s*(\S+)(\n\n)?/); if(m){u=m[1]; d=d.replace(m[0],'');}
-            this.panelData={isGCal:true, eid:i.id, calendarId:i.calendarId, title:i.title, desc:d, meetingUrl:u, dateInput:this.convertIsoToYMD(i.start), startHour:i.start.substring(11,13), startMin:i.start.substring(14,16), endHour:i.end.substring(11,13), endMin:i.end.substring(14,16)};
+            // ★ FIX 1: Timezone Safe Parsing
+            const s = new Date(i.start); const e = new Date(i.end);
+            this.panelData={isGCal:true, eid:i.id, calendarId:i.calendarId, title:i.title, desc:d, meetingUrl:u, dateInput:this.convertIsoToYMD(i.start), 
+                startHour:String(s.getHours()).padStart(2,'0'), startMin:String(s.getMinutes()).padStart(2,'0'), 
+                endHour:String(e.getHours()).padStart(2,'0'), endMin:String(e.getMinutes()).padStart(2,'0')};
         } else {
             const t=this.tasks.find(x=>x.lineIndex===i.lineIndex)||i; this.panelData={...t, taskRef:t, isGCal:false, tags:[...(t.tags||[])]};
             if(t.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/)) { const m=t.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/); this.panelData.desc=m[1]; this.panelData.url=m[2]; }
@@ -510,6 +522,7 @@ createApp({
         const height = ((Math.min(20, endH) - Math.max(9, startH)) * 60) + 'px';
         return { row, marginTop, height };
     },
+    // Persistence
     async saveGCalEvent() {
         this.isSaving=true; let d=this.panelData.desc||''; if(this.panelData.meetingUrl) d=`【会議URL】: ${this.panelData.meetingUrl}\n\n${d}`;
         try {
@@ -531,6 +544,7 @@ createApp({
         });
         callGAS('saveFileContent', {...this.settings, content:newLines.join('\n'), sha:this.sha}).then(r=>{this.sha=r.newSha; this.lines=newLines; this.showToastNotification('保存しました');}).catch(e=>console.error(e)).finally(()=>this.isSaving=false);
     },
+    // D&D
     dragStart(e, i) { if(!item.isGCal && !item.isAllDay) return; e.dataTransfer.setData('json', JSON.stringify(i)); },
     onDrop(e, date, hour) {
         const item = JSON.parse(e.dataTransfer.getData('json'));
@@ -540,6 +554,7 @@ createApp({
         callGAS('updateCalendarEvent', {calendarId:item.calendarId, eventId:item.id, dateStr:date, startTime:hour?String(hour).padStart(2,'0')+':00':null})
         .then(()=>{this.fetchGCal();}).finally(()=>this.loading=false);
     },
+    // Utils
     closePanel() { this.showPanel=false; },
     toggleTask(t) { t.completed=!t.completed; this.pushChanges(); },
     confirmDelete(t) { this.modal={show:true, title:'削除', message:'削除しますか？', type:'confirm', isDanger:true, okText:'削除', resolve:r=>{if(r)this.deleteTask(t)}}; },
