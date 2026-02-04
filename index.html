@@ -28,7 +28,7 @@
       --time-col-width: 50px;
       --header-height: 44px;
       --allday-min-height: 34px;
-      --slot-height: 60px; /* 1時間あたりの高さ */
+      --slot-height: 60px; /* 1 Hour Height */
     }
     body.dark-mode {
       --primary: #818cf8; --primary-light: #312e81;
@@ -37,7 +37,7 @@
       --hover-bg: #374151;
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; }
-    .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
+    .form-control, .form-select { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
     
     /* Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -80,7 +80,7 @@
     .due-badge { display: flex; align-items: center; gap: 2px; background: var(--hover-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); }
     .text-done { text-decoration: line-through; opacity: 0.6; }
 
-    /* === FLEX CALENDAR (Alignment Fix) === */
+    /* === TIMELINE CALENDAR (Ver 17.0 Fix) === */
     .calendar-container {
         flex: 1; /* Expand to fill height */
         display: flex; flex-direction: column; background: var(--bg-card); 
@@ -106,8 +106,9 @@
     .ad-event { background: var(--primary); color: white; font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* Body (Scrollable) */
-    .cal-body { flex: 1; overflow-y: scroll; position: relative; display: flex; flex-direction: column; }
-    .cal-body-content { display: flex; flex: 1; min-height: 0; position: relative; } /* Ensure min-height */
+    .cal-body { flex: 1; overflow-y: auto; position: relative; display: flex; flex-direction: column; }
+    /* ★ FIX: Do not use flex:1 here, allow it to grow with content to prevent cutting off */
+    .cal-body-content { display: flex; width: 100%; position: relative; } 
     
     .time-slot-label { height: var(--slot-height); border-bottom: 1px solid var(--border-color); font-size: 0.75rem; color: var(--text-sub); display: flex; justify-content: center; padding-top: 4px; }
     .time-slot { height: var(--slot-height); border-bottom: 1px solid var(--border-color); box-sizing: border-box; }
@@ -121,7 +122,7 @@
 
     /* Bottom List (Compact) */
     .bottom-list { 
-        flex: 0 0 25%; /* Limit height to give more space to timeline */
+        flex: 0 0 25%;
         display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; min-height: 120px; 
     }
 
@@ -270,7 +271,7 @@
                          </div>
                      </div>
                      
-                     <div class="cal-body" ref="calBody">
+                     <div class="cal-body">
                          <div class="cal-row cal-body-content">
                              <div class="cal-col-time">
                                  <div v-for="h in timelineHours" :key="'tl'+h" class="time-slot-label">{{h}}:00</div>
@@ -366,7 +367,8 @@ createApp({
       calendarMode: 'week', selectedDate: '', currentCalStart: new Date(), gcalEvents: [], availableCalendars: [],
       showPanel: false, isEditMode: false, panelData: {}, tagInput: '', allTagsList: [], filterTag: '',
       modal: { show: false }, toast: { show: false },
-      timelineHours: Array.from({length:24},(_,i)=>i), // 0-23 hours
+      // ★ FIX: Hours 9 to 20
+      timelineHours: [9,10,11,12,13,14,15,16,17,18,19,20],
       hours: Array.from({length:24},(_,i)=>String(i).padStart(2,'0')), minutes: ['00','15','30','45'],
       scrollbarWidth: 0
   }},
@@ -425,12 +427,6 @@ createApp({
       const s = localStorage.getItem('gh_tasks_settings');
       if(s) { this.settings=JSON.parse(s); this.loadData(); } else { this.currentTab='settings'; }
       if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode');
-      
-      // Auto-scroll to 9:00
-      this.$nextTick(() => {
-          const body = this.$refs.calBody;
-          if(body) body.scrollTop = 9 * 60; // 9 hours * 60px
-      });
   },
   methods: {
     measureScrollbar() { const el=document.createElement('div'); el.style.cssText='overflow:scroll;visibility:hidden;position:absolute;'; document.body.appendChild(el); this.scrollbarWidth=el.offsetWidth-el.clientWidth; el.remove(); },
@@ -505,16 +501,21 @@ createApp({
             if(t.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/)) { const m=t.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/); this.panelData.desc=m[1]; this.panelData.url=m[2]; }
         }
     },
+    // ★ FIX: Event Position Logic for 9:00 start
     getEventPos(i) { 
         const s=new Date(i.start); const e=new Date(i.end); 
         const startH = s.getHours() + s.getMinutes()/60;
         const endH = e.getHours() + e.getMinutes()/60;
-        if (endH <= 0 || startH >= 24) return null; 
-        const top = startH * 60; // 60px per hour
-        const height = (endH - startH) * 60;
+        
+        // Filter events completely outside 9-21
+        if (endH <= 9 || startH >= 21) return null; 
+        
+        // Calculate offset (9:00 is 0px)
+        const top = (Math.max(9, startH) - 9) * 60; 
+        const height = (Math.min(21, endH) - Math.max(9, startH)) * 60;
+        
         return { top: top+'px', height: height+'px' };
     },
-    // Persistence
     async saveGCalEvent() {
         this.isSaving=true; let d=this.panelData.desc||''; if(this.panelData.meetingUrl) d=`【会議URL】: ${this.panelData.meetingUrl}\n\n${d}`;
         try {
@@ -536,7 +537,6 @@ createApp({
         });
         callGAS('saveFileContent', {...this.settings, content:newLines.join('\n'), sha:this.sha}).then(r=>{this.sha=r.newSha; this.lines=newLines; this.showToastNotification('保存しました');}).catch(e=>console.error(e)).finally(()=>this.isSaving=false);
     },
-    // D&D
     dragStart(e, i) { if(!item.isGCal && !item.isAllDay) return; e.dataTransfer.setData('json', JSON.stringify(i)); },
     onDrop(e, date, hour) {
         const item = JSON.parse(e.dataTransfer.getData('json'));
@@ -546,7 +546,6 @@ createApp({
         callGAS('updateCalendarEvent', {calendarId:item.calendarId, eventId:item.id, dateStr:date, startTime:hour?String(hour).padStart(2,'0')+':00':null})
         .then(()=>{this.fetchGCal();}).finally(()=>this.loading=false);
     },
-    // Utils
     closePanel() { this.showPanel=false; },
     toggleTask(t) { t.completed=!t.completed; this.pushChanges(); },
     confirmDelete(t) { this.modal={show:true, title:'削除', message:'削除しますか？', type:'confirm', isDanger:true, okText:'削除', resolve:r=>{if(r)this.deleteTask(t)}}; },
