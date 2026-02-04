@@ -19,7 +19,7 @@
   </script>
 
   <style>
-    /* === Design System (Ver 6.x Base) === */
+    /* === Design System === */
     :root {
       --primary: #6366f1; --primary-hover: #4f46e5; --danger: #ef4444;
       --bg-body: #f3f4f6; --bg-card: #ffffff; --bg-input: #ffffff;
@@ -39,6 +39,7 @@
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-y: scroll; -webkit-tap-highlight-color: transparent; }
     .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
+    body.dark-mode ::-webkit-calendar-picker-indicator { filter: invert(1); }
     
     /* Layout */
     .app-container { 
@@ -73,7 +74,7 @@
     .nav-link:hover { background: var(--hover-bg); color: var(--text-main); }
     .nav-link.active { background: var(--primary) !important; color: #fff !important; }
     
-    /* Tasks (Restored Ver 6.x Design) */
+    /* Tasks */
     .task-card { 
         background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 8px; padding: 12px; 
         display: flex; gap: 12px; cursor: pointer; position: relative; overflow: hidden; transition: 0.1s; align-items: flex-start; 
@@ -99,7 +100,7 @@
     .text-decoration-line-through { color: var(--text-sub); opacity: 0.7; }
     body.dark-mode .text-decoration-line-through { color: #9ca3af !important; }
 
-    /* Timeline Calendar (Ver 7.0 Feature) */
+    /* Timeline Calendar */
     .timeline-container { display: flex; flex-direction: column; height: 600px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
     .timeline-header { display: grid; grid-template-columns: 50px repeat(7, 1fr); border-bottom: 1px solid var(--border-color); background: var(--hover-bg); }
     .timeline-corner { border-right: 1px solid var(--border-color); }
@@ -121,7 +122,7 @@
         position: absolute; left: 2px; right: 2px; background: var(--primary); color: white; border-radius: 4px; padding: 4px; font-size: 0.75rem; overflow: hidden; cursor: grab; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    /* Month Grid (Restored) */
+    /* Month Grid */
     .calendar-wrapper { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 16px; overflow: hidden; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--border-color); min-width: 300px; }
     .calendar-header-cell { padding: 8px 4px; text-align: center; font-size: 0.75rem; font-weight: 700; background: var(--hover-bg); color: var(--text-sub); }
@@ -228,6 +229,7 @@
                 </div>
 
                 <div v-else-if="currentTab === 'completed'">
+                    <div v-if="displayCompletedTasks.length === 0" class="text-center py-5 text-muted"><p>完了済みタスクはありません</p></div>
                     <div v-for="task in displayCompletedTasks" :key="task.uniqueId" class="task-card opacity-75">
                         <div class="custom-checkbox checked" @click.stop="confirmRestore(task)"><span class="material-icons-round">check</span></div>
                         <div class="task-content text-decoration-line-through">
@@ -435,7 +437,14 @@ createApp({
         if (noDateGroup.tasks.length > 0) result.push(noDateGroup);
         return result;
     },
-    displayCompletedTasks() { return this.tasks.filter(t=>t.completed).slice(0, 30); },
+    displayCompletedTasks() { return this.allCompletedTasks.slice(0, this.displayLimit); },
+    allCompletedTasks() {
+      const main = this.tasks.filter(t => t.completed && (!this.filterTag || t.tags.includes(this.filterTag))).map(t => ({...t, isArchived: false, uniqueId: 'm-'+t.lineIndex}));
+      const arch = this.archiveTasks.filter(t => !this.filterTag || t.tags.includes(this.filterTag)).map((t,i) => ({...t, isArchived: true, uniqueId: 'a-'+i}));
+      main.sort((a, b) => (a.doneDate < b.doneDate ? 1 : -1));
+      arch.sort((a, b) => (a.doneDate < b.doneDate ? 1 : -1));
+      return [...main, ...arch];
+    },
     selectedDateItems() {
       if (!this.selectedDate) return [];
       const dateStr = this.selectedDate;
@@ -459,10 +468,11 @@ createApp({
         else { start.setDate(1); start.setDate(start.getDate() - start.getDay()); }
         const count = this.calendarMode==='week' ? 7 : 42;
         for(let i=0; i<count; i++) {
-            const date = new Date(start); date.setDate(start.getDate() + i);
+            const date = new Date(start); date.setDate(startDate.getDate() + i);
             const dateStr = this.getLocalYMD(date);
             const dayEvents = this.gcalEvents.filter(e => this.convertIsoToYMD(e.start) === dateStr);
             const dayTasks = this.tasks.filter(t => t.due === dateStr);
+            // ★ Ver 8.0: Timeline only shows GCal events, but Task count is visible in Dot container logic
             const items = [...dayTasks.map(t=>({...t, isGCal:false})), ...dayEvents.map(e=>({...e, isGCal:true}))];
             days.push({ date: dateStr, dayNum: date.getDate(), dayOfWeek: date.getDay(), isToday: dateStr === this.getTodayStr(), items });
         }
@@ -479,7 +489,13 @@ createApp({
   beforeUnmount() { window.removeEventListener('resize', this.handleResize); },
   methods: {
     handleResize() { this.isPC = window.innerWidth >= 992; if(this.isPC && this.currentTab === 'calendar') this.currentTab = 'active'; },
-    setTab(t) { this.currentTab = t; },
+    setTab(id) { 
+        this.currentTab = id; 
+        // ★ Restore Archive Loading Logic ★
+        if (id === 'completed' && this.archiveTasks.length === 0 && this.settings.archivePath) {
+            this.loadArchiveData();
+        }
+    },
     toggleDarkMode() { this.darkMode=!this.darkMode; document.body.classList.toggle('dark-mode'); localStorage.setItem('obsidian_tasks_theme', this.darkMode?'dark':'light'); },
     addTag() { let v=this.tagInput.trim(); if(!v)return; if(!v.startsWith('#'))v='#'+v; if(!this.panelData.tags.includes(v))this.panelData.tags.push(v); this.tagInput=''; },
     parseContent(text) {
@@ -557,7 +573,7 @@ createApp({
         callGAS('saveFileContent', {...this.settings, content:newLines.join('\n'), sha:this.sha}).then(res=>{this.sha=res.newSha; this.lines=newLines; this.showToastNotification('保存しました');}).catch(e=>this.showInfo('Error',e)).finally(()=>this.isSaving=false);
     },
     // D&D
-    dragStart(e, item) { e.dataTransfer.setData('text/plain', JSON.stringify(item)); e.dataTransfer.effectAllowed='move'; },
+    dragStart(e, item) { if(!item.isGCal && !item.isAllDay) return; e.dataTransfer.setData('text/plain', JSON.stringify(item)); e.dataTransfer.effectAllowed='move'; },
     onDrop(e, dateStr, hour) {
         const item = JSON.parse(e.dataTransfer.getData('text/plain'));
         let start, end;
@@ -577,9 +593,24 @@ createApp({
     closePanel() { this.showPanel=false; },
     toggleTask(t) { const org=this.tasks.find(x=>x.lineIndex===t.lineIndex); if(org){org.completed=!org.completed; if(org.completed&&org.recurrence)this.generateNextTask(org); this.pushChanges();} },
     confirmDelete(t) { this.modal={show:true, title:'削除', message:'本当に削除しますか？', type:'confirm', isDanger:true, okText:'削除', resolve: r=>{this.modal.show=false; if(r)this.deleteTask(t);}}; },
-    deleteTask(t) { const idx=this.tasks.findIndex(x=>x.lineIndex===t.lineIndex); if(idx>-1){const org=this.tasks[idx]; this.tasks.splice(idx,1); if(org.lineIndex>=0){this.lines.splice(org.lineIndex,1); this.tasks.forEach(k=>{if(k.lineIndex>org.lineIndex)k.lineIndex--;}); this.pushChanges(); this.closePanel();}}},
+    // ★ Restore Archive Delete Logic ★
+    deleteTask(t) { 
+        if(t.isArchived) {
+             if(!this.settings.archivePath) return;
+             this.loading = true; 
+             this.fetchFileContent(this.settings.archivePath).then(res => {
+                 const lines = (res.content || '').split('\n');
+                 const newLines = lines.filter(l => l !== t.originalLine);
+                 this.saveFileContentPromise(this.settings.archivePath, newLines.join('\n'), res.sha)
+                 .then(() => { this.loading = false; this.showToastNotification('削除しました'); this.loadArchiveData(); })
+                 .catch(e => { this.loading = false; this.showInfo('Error', e); });
+             });
+        } else {
+            const idx=this.tasks.findIndex(x=>x.lineIndex===t.lineIndex); if(idx>-1){const org=this.tasks[idx]; this.tasks.splice(idx,1); if(org.lineIndex>=0){this.lines.splice(org.lineIndex,1); this.tasks.forEach(k=>{if(k.lineIndex>org.lineIndex)k.lineIndex--;}); this.pushChanges(); this.closePanel();}}
+        }
+    },
     confirmRestore(t) { this.modal={show:true, title:'復元', message:'未完了に戻しますか？', type:'confirm', okText:'復元', resolve: r=>{this.modal.show=false; if(r){const org=this.tasks.find(x=>x.lineIndex===t.lineIndex); if(org){org.completed=false; org.doneDate=''; this.pushChanges();}}}}; },
-    runArchiveProcess() { /* ...Same as previous... */ },
+    runArchiveProcess() { /* ... */ },
     // Utils
     getLocalYMD(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; },
     convertIsoToYMD(iso) { return iso ? this.getLocalYMD(new Date(iso)) : ''; },
