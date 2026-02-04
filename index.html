@@ -17,7 +17,7 @@
   </script>
 
   <style>
-    /* === 1. Design System === */
+    /* === Design System === */
     :root {
       --primary: #6366f1; --primary-light: #e0e7ff;
       --bg-body: #f3f4f6; --bg-card: #ffffff; --bg-input: #ffffff;
@@ -27,7 +27,8 @@
       /* Calendar Metrics */
       --time-col-width: 50px;
       --header-height: 40px;
-      --slot-height: 50px; /* 1 hour height */
+      --allday-min-height: 36px;
+      --slot-height: 60px; /* Increased height for better visibility */
       --scrollbar-width: 0px; /* Calculated via JS */
     }
     body.dark-mode {
@@ -45,7 +46,7 @@
     ::-webkit-scrollbar-track { background: transparent; }
     .scroll-y:hover::-webkit-scrollbar-thumb { background: #94a3b8; }
 
-    /* === 2. Layout Architecture === */
+    /* Layout Architecture */
     .app-container { display: flex; flex-direction: column; height: 100vh; max-width: 1800px; margin: 0 auto; padding: 12px; gap: 12px; }
     .app-header { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
     .app-title { font-weight: 800; font-size: 1.5rem; margin: 0; letter-spacing: -0.5px; }
@@ -63,11 +64,12 @@
     .view-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; position: relative; }
     .scroll-y { overflow-y: auto; flex: 1; padding-right: 2px; padding-bottom: 80px; }
 
-    /* === 3. Components: Tasks === */
+    /* Tabs */
     .nav-tabs { border-bottom: 1px solid var(--border-color); gap: 4px; flex-shrink: 0; margin-bottom: 12px; flex-wrap: nowrap; overflow-x: auto; }
     .nav-link { border: none; color: var(--text-sub); font-weight: 600; padding: 8px 16px; border-radius: 20px; white-space: nowrap; font-size: 0.9rem; }
     .nav-link.active { background: var(--primary) !important; color: white !important; }
 
+    /* Tasks */
     .task-card { 
         background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 8px; padding: 12px;
         display: flex; gap: 10px; align-items: flex-start; cursor: pointer; position: relative; transition: transform 0.1s;
@@ -88,60 +90,74 @@
     .due-badge { display: flex; align-items: center; gap: 2px; background: var(--hover-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); }
     .text-done { color: var(--text-sub); text-decoration: line-through; opacity: 0.7; }
 
-    /* === 4. Components: Timeline Calendar (Fixed Grid) === */
+    /* === TIMELINE CALENDAR (Ver 13.0 Fixed) === */
     .calendar-container {
         flex: 1; display: flex; flex-direction: column; background: var(--bg-card); 
         border: 1px solid var(--border-color); border-radius: var(--radius); overflow: hidden;
+        /* Ensure it takes full height */
+        min-height: 0;
     }
     
-    /* Common Grid */
-    .tl-grid { display: grid; grid-template-columns: var(--time-col-width) repeat(7, 1fr); width: 100%; }
+    /* Grid Definition - Shared across rows */
+    .tl-grid-row { 
+        display: grid; 
+        grid-template-columns: var(--time-col-width) repeat(7, 1fr); 
+        width: 100%;
+        /* Force padding-right via style binding to match scrollbar */
+    }
 
-    /* Header & All Day - ★ Padding-right is set via JS to match scrollbar width ★ */
-    .tl-header, .tl-allday {
-        background: var(--bg-card); flex-shrink: 0; 
-        border-bottom: 1px solid var(--border-color);
-        /* padding-right via style binding */
+    /* 1. Header (Sticky) */
+    .tl-header { 
+        background: var(--hover-bg); border-bottom: 1px solid var(--border-color); height: var(--header-height);
+        flex-shrink: 0; z-index: 30;
     }
-    .tl-header { height: var(--header-height); background: var(--hover-bg); }
-    .tl-allday { min-height: 40px; border-bottom: 2px solid var(--border-color); }
-    
-    /* Cells */
-    .tl-corner, .tl-ad-label, .tl-time-col { 
-        border-right: 1px solid var(--border-color); background: var(--hover-bg); 
-        display: flex; align-items: center; justify-content: center; 
-        font-size: 0.7rem; color: var(--text-sub);
-    }
+    .tl-corner { border-right: 1px solid var(--border-color); }
     .tl-day-head { 
-        text-align: center; border-right: 1px solid var(--border-color); 
-        font-size: 0.8rem; font-weight: bold; background: var(--hover-bg);
-        display: flex; align-items: center; justify-content: center; gap: 4px;
+        text-align: center; border-right: 1px solid var(--border-color); font-size: 0.8rem; font-weight: bold; 
+        display: flex; align-items: center; justify-content: center; gap: 4px; 
     }
     .tl-day-head:last-child { border-right: none; }
     .sun { color: #ef4444; } .sat { color: #3b82f6; }
 
+    /* 2. All Day (Sticky) */
+    .tl-allday {
+        background: var(--bg-card); border-bottom: 2px solid var(--border-color); min-height: var(--allday-min-height);
+        flex-shrink: 0; z-index: 20;
+    }
+    .tl-ad-label { 
+        border-right: 1px solid var(--border-color); font-size: 0.7rem; color: var(--text-sub); 
+        display: flex; align-items: center; justify-content: center; background: var(--hover-bg); 
+    }
     .tl-ad-cell { border-right: 1px solid var(--border-color); padding: 2px; }
     .tl-ad-cell:last-child { border-right: none; }
     .ad-item { background: var(--primary); color: white; font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; cursor: pointer; }
 
-    /* Body (Scrollable) */
+    /* 3. Body (Scrollable Area) */
     .tl-body-scroll { 
         flex: 1; overflow-y: scroll; position: relative; 
-        /* Ensure scrollbar always takes space to match header padding */
-        overflow-x: hidden;
+        overflow-x: hidden; /* Prevent horizontal scroll */
     }
     
-    .tl-time-col { border-right: 1px solid var(--border-color); background: var(--hover-bg); }
+    .tl-body-grid {
+        display: grid; grid-template-columns: var(--time-col-width) repeat(7, 1fr); 
+        position: relative; /* Context for absolute events */
+    }
+
+    .tl-time-col { 
+        border-right: 1px solid var(--border-color); background: var(--hover-bg); 
+        display: flex; flex-direction: column; /* Stack times vertically */
+    }
     .tl-time-label { 
         height: var(--slot-height); border-bottom: 1px solid var(--border-color); 
-        font-size: 0.75rem; color: var(--text-sub); text-align: center; line-height: var(--slot-height); 
-        margin-top: -10px; 
+        font-size: 0.75rem; color: var(--text-sub); 
+        display: flex; align-items: start; justify-content: center; /* Top align */
+        padding-top: 4px;
     }
+    
     .tl-day-col { border-right: 1px solid var(--border-color); position: relative; }
     .tl-day-col:last-child { border-right: none; }
     .tl-slot { height: var(--slot-height); border-bottom: 1px solid var(--border-color); box-sizing: border-box; }
     
-    /* Events Overlay */
     .event-block {
         position: absolute; left: 2px; right: 2px; background: var(--primary); color: white;
         border-radius: 4px; padding: 2px 4px; font-size: 0.75rem; overflow: hidden;
@@ -276,7 +292,6 @@
                                  </div>
                                  <button class="btn-icon text-danger" @click.stop="confirmDelete(task)"><span class="material-icons-round" style="font-size:18px">delete</span></button>
                              </div>
-                             <div v-if="displayCompletedTasks.length < allCompletedTasks.length" class="text-center mt-3"><button class="btn btn-sm btn-light text-muted" @click="loadMoreCompleted">もっと見る</button></div>
                         </div>
                     </div>
                 </div>
@@ -289,20 +304,23 @@
                  </div>
 
                  <div v-if="calendarMode==='week'" class="calendar-container">
-                     <div class="tl-header tl-grid" :style="{paddingRight: scrollbarWidth+'px'}">
+                     <div class="tl-header tl-grid-row" :style="{paddingRight: scrollbarWidth+'px'}">
                          <div class="tl-corner"></div>
                          <div v-for="day in calendarDays" :key="'h'+day.date" class="tl-day-head" :class="{sun:day.dayOfWeek==0, sat:day.dayOfWeek==6}"><div>{{['日','月','火','水','木','金','土'][day.dayOfWeek]}}</div><div>{{day.dayNum}}</div></div>
                      </div>
-                     <div class="tl-allday tl-grid" :style="{paddingRight: scrollbarWidth+'px'}">
+                     
+                     <div class="tl-allday tl-grid-row" :style="{paddingRight: scrollbarWidth+'px'}">
                          <div class="tl-ad-label">終日</div>
-                         <div v-for="day in calendarDays" :key="'ad'+day.date" class="tl-ad-cell" @dragover.prevent @drop="onDrop($event, day.date, null)">
+                         <div v-for="(day, i) in calendarDays" :key="'ad'+i" class="tl-ad-cell" @dragover.prevent @drop="onDrop($event, day.date, null)">
                              <div v-for="item in day.items.filter(x=>x.isGCal && x.isAllDay)" class="ad-item" :style="{background: item.color}" draggable="true" @dragstart="dragStart($event, item)" @click="openEditPanel(item)">{{item.title}}</div>
                          </div>
                      </div>
                      
                      <div class="tl-body-scroll">
-                         <div class="tl-grid">
-                            <div class="tl-time-col"><div v-for="h in timelineHours" :key="'tl'+h" class="tl-time-label">{{h}}:00</div></div>
+                         <div class="tl-body-grid">
+                            <div class="tl-time-col">
+                                <div v-for="h in timelineHours" :key="'tl'+h" class="tl-time-label">{{h}}:00</div>
+                            </div>
                             <div v-for="day in calendarDays" :key="'col'+day.date" class="tl-day-col" @dragover.prevent @drop="onDrop($event, day.date)">
                                 <div v-for="h in timelineHours" :key="'s'+h" class="tl-slot" @drop.stop="onDrop($event, day.date, h)"></div>
                                 <div v-for="item in day.items.filter(x=>!x.isAllDay && x.isGCal && getEventPos(x))" 
@@ -498,14 +516,13 @@ createApp({
                      .replace(/⏫|🔼|🔽/g, '')
                      .replace(/#todo/gi, '')
                      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" onclick="event.stopPropagation()">$1</a>');
-        // Remove duplicate tags from display
         const tags = (t.match(/#[^\s#]+/g)||[]);
         tags.forEach(tag => { if(tag!=='#todo') clean = clean.replace(tag, ''); });
         return clean.trim();
     },
     // Actions
     openAddPanel() { this.isPC || this.currentTab==='calendar' ? this.openAddGCalPanel(this.getTodayStr()) : this.openAddPanelWithDate(this.getTodayStr()); },
-    openAddPanelWithDate(d) { this.isEditMode=false; this.showPanel=true; this.panelData={desc:'', due:d, isGCal:false, tags:[], priority:'none', recurrence:''}; this.tagInput=''; },
+    openAddPanelWithDate(d) { this.isEditMode=false; this.showPanel=true; this.panelData={desc:'', due:d, isGCal:false, tags:[], priority:'none', recurrence:''}; },
     openAddGCalPanel(d) { this.isEditMode=false; this.showPanel=true; this.panelData={isGCal:true, isNew:true, dateInput:d, startHour:'09', startMin:'00', targetCalendarId:this.settings.calendarIds[0]}; },
     openEditPanel(i) {
         this.isEditMode=true; this.showPanel=true;
@@ -522,8 +539,8 @@ createApp({
         const startH = s.getHours() + s.getMinutes()/60;
         const endH = e.getHours() + e.getMinutes()/60;
         if (endH <= 9 || startH >= 20) return null; 
-        const top = (Math.max(9, startH) - 9) * 50; 
-        const height = (Math.min(20, endH) - Math.max(9, startH)) * 50;
+        const top = (Math.max(9, startH) - 9) * 60; // Use slot-height variable value
+        const height = (Math.min(20, endH) - Math.max(9, startH)) * 60;
         return { top: top+'px', height: height+'px' };
     },
     // Persistence
