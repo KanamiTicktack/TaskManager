@@ -28,6 +28,8 @@
       --radius: 12px; --tag-bg: #e9ecef; --tag-text: #495057;
       --status-bg: #1f2937; --status-text: #ffffff;
       --time-slot-height: 50px;
+      --time-col-width: 50px;
+      --scrollbar-width: 8px; /* Fixed Scrollbar Width */
     }
     body.dark-mode {
       --primary: #818cf8; --primary-hover: #6366f1;
@@ -39,28 +41,23 @@
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-y: scroll; -webkit-tap-highlight-color: transparent; }
     .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
-    body.dark-mode ::-webkit-calendar-picker-indicator { filter: invert(1); }
     
+    /* Scrollbar Styling for consistent alignment */
+    ::-webkit-scrollbar { width: var(--scrollbar-width); height: var(--scrollbar-width); }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+    body.dark-mode ::-webkit-scrollbar-thumb { background: #4b5563; }
+
     /* Layout */
-    .app-container { 
-        display: flex; flex-direction: column; gap: 16px; 
-        max-width: 1600px; margin: 0 auto; padding: 16px; min-height: 100vh; position: relative;
-    }
+    .app-container { display: flex; flex-direction: column; gap: 16px; max-width: 1600px; margin: 0 auto; padding: 16px; min-height: 100vh; position: relative; }
     
     /* PC Split View */
     @media (min-width: 992px) {
         .app-container { height: 100vh; overflow: hidden; padding-bottom: 0; }
         .app-header { flex-shrink: 0; }
         .main-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-        .split-layout { 
-            display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;
-            height: 100%; overflow: hidden;
-        }
-        .view-primary, .view-secondary { 
-            display: block !important; height: 100%; overflow-y: auto; padding-bottom: 100px; padding-right: 4px;
-            -ms-overflow-style: none; scrollbar-width: none; 
-        }
-        .view-primary::-webkit-scrollbar, .view-secondary::-webkit-scrollbar { display: none; }
+        .split-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; height: 100%; overflow: hidden; }
+        .view-primary, .view-secondary { display: block !important; height: 100%; overflow-y: auto; padding-bottom: 100px; padding-right: 4px; }
     }
 
     .app-card { background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 16px; overflow: hidden; }
@@ -71,56 +68,57 @@
     /* Tabs */
     .nav-tabs { border: none; gap: 8px; margin-bottom: 16px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
     .nav-link { border: none; border-radius: 20px !important; color: var(--text-sub); font-weight: 600; padding: 8px 16px; cursor: pointer; white-space: nowrap; transition: 0.2s; font-size: 0.9rem; }
-    .nav-link:hover { background: var(--hover-bg); color: var(--text-main); }
     .nav-link.active { background: var(--primary) !important; color: #fff !important; }
     
     /* Tasks */
-    .task-card { 
-        background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 8px; padding: 12px; 
-        display: flex; gap: 12px; cursor: pointer; position: relative; overflow: hidden; transition: 0.1s; align-items: flex-start; 
-    }
+    .task-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 8px; padding: 12px; display: flex; gap: 12px; cursor: pointer; position: relative; overflow: hidden; transition: 0.1s; align-items: flex-start; }
     .task-card:active { transform: scale(0.99); }
     .task-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
     .priority-high::before { background: #ef4444; } .priority-medium::before { background: #f59e0b; } .priority-low::before { background: #3b82f6; }
-    
     .custom-checkbox { width: 22px; height: 22px; border: 2px solid var(--text-sub); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
     .custom-checkbox.checked { background: var(--primary); border-color: var(--primary); }
     .custom-checkbox .material-icons-round { font-size: 16px; color: white; opacity: 0; }
     .custom-checkbox.checked .material-icons-round { opacity: 1; }
-    
     .task-content { flex: 1; min-width: 0; }
     .task-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; line-height: 1.4; }
     .task-meta { display: flex; gap: 6px; font-size: 0.75rem; color: var(--text-sub); flex-wrap: wrap; align-items: center; }
-    
     .badge-base { padding: 2px 8px; border-radius: 6px; background: var(--hover-bg); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 3px; }
     .tag-badge { background-color: var(--tag-bg); color: var(--tag-text); }
     .gcal-badge { background: #e0e7ff; color: #4338ca; border: none; }
     body.dark-mode .gcal-badge { background: #312e81; color: #e0e7ff; }
-    
     .text-decoration-line-through { color: var(--text-sub); opacity: 0.7; }
-    body.dark-mode .text-decoration-line-through { color: #9ca3af !important; }
 
-    /* Timeline Calendar */
+    /* ★ Timeline Calendar Fixed Alignment ★ */
     .timeline-container { display: flex; flex-direction: column; height: 600px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
-    .timeline-header { display: grid; grid-template-columns: 50px repeat(7, 1fr); border-bottom: 1px solid var(--border-color); background: var(--hover-bg); }
-    .timeline-corner { border-right: 1px solid var(--border-color); }
+    
+    /* Common Grid Template */
+    .timeline-grid-row { display: grid; grid-template-columns: var(--time-col-width) repeat(7, 1fr); }
+
+    /* Header & All Day (Add padding-right to match scrollbar width) */
+    .timeline-header, .allday-row { 
+        border-bottom: 1px solid var(--border-color); background: var(--hover-bg); 
+        padding-right: var(--scrollbar-width); /* ★KEY FIX★ */
+    }
+    
+    .timeline-corner, .allday-label { border-right: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: var(--text-sub); background: var(--hover-bg); }
     .timeline-day-header { padding: 8px 4px; text-align: center; border-right: 1px solid var(--border-color); font-size: 0.8rem; font-weight: bold; color: var(--text-sub); }
+    .timeline-day-header:last-child { border-right: none; } /* Remove right border of last cell */
     .header-sun { color: #ef4444; } .header-sat { color: #3b82f6; }
     
-    .allday-row { display: grid; grid-template-columns: 50px repeat(7, 1fr); border-bottom: 2px solid var(--border-color); min-height: 40px; }
-    .allday-label { font-size: 0.7rem; color: var(--text-sub); display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--border-color); background: var(--hover-bg); }
-    .allday-cell { border-right: 1px solid var(--border-color); padding: 2px; position: relative; }
+    .allday-row { min-height: 40px; border-bottom: 2px solid var(--border-color); }
+    .allday-cell { border-right: 1px solid var(--border-color); padding: 2px; position: relative; background: var(--bg-card); }
+    .allday-cell:last-child { border-right: none; }
     .allday-item { font-size: 0.7rem; background: var(--primary); color: white; padding: 2px 4px; border-radius: 4px; margin-bottom: 2px; cursor: grab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     
-    .timeline-body { flex: 1; overflow-y: auto; display: grid; grid-template-columns: 50px repeat(7, 1fr); position: relative; }
+    /* Body (Scrolls) */
+    .timeline-body { flex: 1; overflow-y: scroll; /* Always show scrollbar to match padding */ position: relative; }
     .time-labels { border-right: 1px solid var(--border-color); background: var(--hover-bg); }
     .time-label { height: var(--time-slot-height); border-bottom: 1px solid var(--border-color); font-size: 0.75rem; color: var(--text-sub); text-align: center; position: relative; top: -10px; }
     .day-column { border-right: 1px solid var(--border-color); position: relative; background: var(--bg-card); }
+    .day-column:last-child { border-right: none; }
     .time-slot { height: var(--time-slot-height); border-bottom: 1px solid var(--border-color); box-sizing: border-box; }
     
-    .event-chip { 
-        position: absolute; left: 2px; right: 2px; background: var(--primary); color: white; border-radius: 4px; padding: 4px; font-size: 0.75rem; overflow: hidden; cursor: grab; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
+    .event-chip { position: absolute; left: 2px; right: 2px; background: var(--primary); color: white; border-radius: 4px; padding: 4px; font-size: 0.75rem; overflow: hidden; cursor: grab; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     
     /* Month Grid */
     .calendar-wrapper { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 16px; overflow: hidden; }
@@ -132,7 +130,7 @@
     .date-num.today { background: var(--primary); color: white; }
     .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-sub); margin: 1px; }
 
-    /* Side Panel & Modal */
+    /* Side Panel */
     .side-panel { position: fixed; top: 0; right: 0; width: 100%; height: 100vh; background: var(--bg-card); z-index: 3000; display: flex; flex-direction: column; padding: 20px; overflow-y: auto; transition: transform 0.3s; transform: translateX(100%); box-shadow: -5px 0 25px rgba(0,0,0,0.2); }
     .side-panel.open { transform: translateX(0); }
     @media (min-width: 992px) { 
@@ -146,14 +144,12 @@
     .btn-panel-back { background: transparent; border: none; padding: 8px; }
     .btn-close { background: transparent; border: none; font-size: 1.5rem; }
 
-    /* Common Components */
+    /* Common */
     .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 20px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); display: flex; justify-content: center; align-items: center; z-index: 2000; }
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
     .modal-content { background: var(--bg-card); width: 90%; max-width: 400px; padding: 24px; border-radius: 16px; }
     .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9998; display: flex; align-items: center; justify-content: center; flex-direction: column; color: white; }
     .toast-notification { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 24px; border-radius: 50px; z-index: 3000; font-weight: 500; }
-    
-    /* Helper Classes */
     .date-shortcut-btn { font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); margin-right: 4px; }
     .priority-select-btn { border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-sub); padding: 8px; flex: 1; border-radius: 8px; text-align: center; font-size: 0.85rem; cursor: pointer; }
     .priority-select-btn.active-high { background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: #ef4444; font-weight: bold; }
@@ -261,7 +257,7 @@
                 </div>
 
                 <div v-if="calendarMode === 'week'" class="timeline-container">
-                    <div class="allday-row">
+                    <div class="allday-row timeline-grid-row">
                         <div class="allday-label">終日</div>
                         <div v-for="day in calendarDays" :key="'ad-'+day.date" class="allday-cell" @dragover.prevent @drop="onDrop($event, day.date, null)">
                             <div v-for="item in day.items.filter(i=>i.isGCal && i.isAllDay)" class="allday-item" :style="{background: item.color}" draggable="true" @dragstart="dragStart($event, item)" @click.stop="openEditPanel(item)">
@@ -269,14 +265,14 @@
                             </div>
                         </div>
                     </div>
-                    <div class="timeline-header">
+                    <div class="timeline-header timeline-grid-row">
                         <div class="timeline-corner"></div>
                         <div v-for="day in calendarDays" :key="'h-'+day.date" class="timeline-day-header" :class="{'header-sun':day.dayOfWeek==0,'header-sat':day.dayOfWeek==6}">
                             <div>{{ ['日','月','火','水','木','金','土'][day.dayOfWeek] }}</div>
                             <div style="font-size:1.1rem">{{ day.dayNum }}</div>
                         </div>
                     </div>
-                    <div class="timeline-body">
+                    <div class="timeline-body timeline-grid-row">
                         <div class="time-labels"><div v-for="h in timelineHours" :key="h" class="time-label">{{ h }}:00</div></div>
                         <div v-for="day in calendarDays" :key="'b-'+day.date" class="day-column" @dragover.prevent @drop="onDrop($event, day.date)">
                              <div v-for="h in timelineHours" :key="'slot-'+h" class="time-slot" @drop.stop="onDrop($event, day.date, h)"></div>
@@ -472,7 +468,6 @@ createApp({
             const dateStr = this.getLocalYMD(date);
             const dayEvents = this.gcalEvents.filter(e => this.convertIsoToYMD(e.start) === dateStr);
             const dayTasks = this.tasks.filter(t => t.due === dateStr);
-            // ★ Ver 8.0: Timeline only shows GCal events, but Task count is visible in Dot container logic
             const items = [...dayTasks.map(t=>({...t, isGCal:false})), ...dayEvents.map(e=>({...e, isGCal:true}))];
             days.push({ date: dateStr, dayNum: date.getDate(), dayOfWeek: date.getDay(), isToday: dateStr === this.getTodayStr(), items });
         }
@@ -491,7 +486,6 @@ createApp({
     handleResize() { this.isPC = window.innerWidth >= 992; if(this.isPC && this.currentTab === 'calendar') this.currentTab = 'active'; },
     setTab(id) { 
         this.currentTab = id; 
-        // ★ Restore Archive Loading Logic ★
         if (id === 'completed' && this.archiveTasks.length === 0 && this.settings.archivePath) {
             this.loadArchiveData();
         }
@@ -593,7 +587,6 @@ createApp({
     closePanel() { this.showPanel=false; },
     toggleTask(t) { const org=this.tasks.find(x=>x.lineIndex===t.lineIndex); if(org){org.completed=!org.completed; if(org.completed&&org.recurrence)this.generateNextTask(org); this.pushChanges();} },
     confirmDelete(t) { this.modal={show:true, title:'削除', message:'本当に削除しますか？', type:'confirm', isDanger:true, okText:'削除', resolve: r=>{this.modal.show=false; if(r)this.deleteTask(t);}}; },
-    // ★ Restore Archive Delete Logic ★
     deleteTask(t) { 
         if(t.isArchived) {
              if(!this.settings.archivePath) return;
