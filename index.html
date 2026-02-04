@@ -25,7 +25,8 @@
       --text-main: #1f2937; --text-sub: #6b7280; --border-color: #e5e7eb;
       --hover-bg: #f9fafb;
       --time-col-width: 50px;
-      --header-height: 36px; /* Date Header Height */
+      --header-height: 38px; /* Date Header Height */
+      --allday-height: 40px; /* Min AllDay Height */
       --slot-height: 50px;
     }
     body.dark-mode {
@@ -76,48 +77,52 @@
     .task-meta { font-size: 0.75rem; color: var(--text-sub); display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
     .badge-tag { background: var(--hover-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); }
     
-    /* ★ UNIFIED TIMELINE GRID (The Fix) ★ */
-    .timeline-container {
-        flex: 1; overflow-y: auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px;
-        display: block; position: relative;
+    /* ★ TIMELINE CALENDAR (STICKY HEADER FIX) ★ */
+    .calendar-wrapper {
+        flex: 1; overflow-y: auto; /* Single Scroll Container */
+        background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px;
+        position: relative;
     }
     
-    /* Grid Definition: Common for all rows */
-    .tl-grid { display: grid; grid-template-columns: var(--time-col-width) repeat(7, 1fr); width: 100%; }
-    
-    /* 1. Date Header (Sticky) */
+    /* Common Grid */
+    .tl-row { display: grid; grid-template-columns: var(--time-col-width) repeat(7, 1fr); width: 100%; }
+
+    /* Sticky Headers */
     .tl-header { 
-        position: sticky; top: 0; z-index: 30; background: var(--bg-card); 
-        border-bottom: 1px solid var(--border-color); height: var(--header-height);
+        position: sticky; top: 0; z-index: 30; 
+        background: var(--bg-card); border-bottom: 1px solid var(--border-color);
+        height: var(--header-height);
     }
-    .tl-corner { border-right: 1px solid var(--border-color); background: var(--hover-bg); }
+    .tl-allday {
+        position: sticky; top: var(--header-height); z-index: 29; 
+        background: var(--bg-card); border-bottom: 2px solid var(--border-color); 
+        min-height: var(--allday-height);
+    }
+
+    /* Cells */
+    .tl-corner, .tl-ad-label, .tl-time-col { 
+        border-right: 1px solid var(--border-color); background: var(--hover-bg); 
+        display: flex; align-items: center; justify-content: center; 
+        font-size: 0.7rem; color: var(--text-sub);
+    }
+    
     .tl-day-head { 
-        text-align: center; border-right: 1px solid var(--border-color); font-size: 0.8rem; font-weight: bold; 
-        display: flex; align-items: center; justify-content: center; gap: 4px; background: var(--hover-bg);
+        text-align: center; border-right: 1px solid var(--border-color); 
+        font-size: 0.8rem; font-weight: bold; background: var(--hover-bg);
+        display: flex; align-items: center; justify-content: center; gap: 4px;
     }
     .tl-day-head:last-child { border-right: none; }
     .sun { color: #ef4444; } .sat { color: #3b82f6; }
-    
-    /* 2. All Day Row (Sticky below Header) */
-    .tl-allday {
-        position: sticky; top: var(--header-height); z-index: 29; background: var(--bg-card);
-        border-bottom: 2px solid var(--border-color); min-height: 40px;
-    }
-    .tl-ad-label { 
-        border-right: 1px solid var(--border-color); font-size: 0.7rem; color: var(--text-sub); 
-        display: flex; align-items: center; justify-content: center; background: var(--hover-bg);
-    }
-    .tl-ad-cell { border-right: 1px solid var(--border-color); padding: 2px; }
+
+    .tl-ad-cell { border-right: 1px solid var(--border-color); padding: 2px; background: var(--bg-card); }
     .tl-ad-cell:last-child { border-right: none; }
     .ad-item { background: var(--primary); color: white; font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; cursor: pointer; }
 
-    /* 3. Time Body */
+    /* Time Body */
     .tl-body { position: relative; }
-    .tl-time-col { border-right: 1px solid var(--border-color); background: var(--hover-bg); }
     .tl-time-label { 
         height: var(--slot-height); border-bottom: 1px solid var(--border-color); 
-        font-size: 0.75rem; color: var(--text-sub); text-align: center; line-height: var(--slot-height); 
-        margin-top: -10px; /* Offset to center text on line */
+        font-size: 0.75rem; color: var(--text-sub); text-align: center; line-height: var(--slot-height); margin-top: -10px;
     }
     .tl-day-col { border-right: 1px solid var(--border-color); position: relative; }
     .tl-day-col:last-child { border-right: none; }
@@ -137,7 +142,7 @@
     .date-badge { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.8rem; font-weight: bold; }
     .date-badge.today { background: var(--primary); color: white; }
 
-    /* Side Panel */
+    /* Side Panel Inputs */
     .side-panel { 
         position: fixed; top: 0; right: 0; width: 100%; height: 100%; background: var(--bg-card); 
         z-index: 2000; box-shadow: -5px 0 20px rgba(0,0,0,0.2); padding: 20px;
@@ -152,6 +157,14 @@
         }
         .side-panel.open { opacity: 1; pointer-events: auto; }
     }
+    
+    /* Input Helpers */
+    .date-shortcut-btn { font-size: 0.75rem; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); cursor: pointer; margin-right: 4px; }
+    .priority-btn { flex: 1; padding: 8px; border: 1px solid var(--border-color); background: var(--bg-body); border-radius: 6px; cursor: pointer; font-size: 0.85rem; text-align: center; }
+    .priority-btn.active.high { background: #fee2e2; color: #ef4444; border-color: #ef4444; }
+    .priority-btn.active.medium { background: #fef3c7; color: #f59e0b; border-color: #f59e0b; }
+    .priority-btn.active.low { background: #dbeafe; color: #3b82f6; border-color: #3b82f6; }
+    .tag-chip { display: inline-block; padding: 4px 10px; border-radius: 16px; background: var(--border-color); font-size: 0.8rem; margin-right: 4px; margin-bottom: 4px; cursor: pointer; }
 
     /* Common */
     .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; }
@@ -219,6 +232,7 @@
                                          <div class="task-meta">
                                              <span v-for="tag in task.tags" class="badge-tag">#{{tag.replace('#','')}}</span>
                                              <span v-if="task.due" class="badge-tag">📅 {{task.due}}</span>
+                                             <span v-if="task.recurrence" class="badge-tag">🔁 {{ task.recurrence }}</span>
                                          </div>
                                      </div>
                                  </div>
@@ -234,6 +248,7 @@
                                  </div>
                                  <button class="btn btn-sm btn-light text-danger" @click.stop="confirmDelete(task)">削除</button>
                              </div>
+                             <div v-if="displayCompletedTasks.length < allCompletedTasks.length" class="text-center mt-3"><button class="btn btn-sm btn-outline-secondary" @click="loadMoreCompleted">もっと見る</button></div>
                         </div>
                     </div>
                 </div>
@@ -245,18 +260,18 @@
                      <div class="d-flex align-items-center gap-2 bg-white rounded shadow-sm px-2 py-1 border"><button class="btn btn-sm btn-light p-0 px-2" @click="changeDateRange(-1)">◀</button><span class="fw-bold small">{{ calendarTitle }}</span><button class="btn btn-sm btn-light p-0 px-2" @click="changeDateRange(1)">▶</button></div>
                  </div>
 
-                 <div v-if="calendarMode==='week'" class="timeline-container">
-                     <div class="tl-header tl-grid">
+                 <div v-if="calendarMode==='week'" class="calendar-wrapper">
+                     <div class="tl-header tl-row">
                          <div class="tl-corner"></div>
                          <div v-for="day in calendarDays" :key="'h'+day.date" class="tl-day-head" :class="{sun:day.dayOfWeek==0, sat:day.dayOfWeek==6}">{{['日','月','火','水','木','金','土'][day.dayOfWeek]}} {{day.dayNum}}</div>
                      </div>
-                     <div class="tl-allday tl-grid">
+                     <div class="tl-allday tl-row">
                          <div class="tl-ad-label">終日</div>
                          <div v-for="day in calendarDays" :key="'ad'+day.date" class="tl-ad-cell" @dragover.prevent @drop="onDrop($event, day.date, null)">
                              <div v-for="item in day.items.filter(i=>i.isGCal && i.isAllDay)" class="ad-item" :style="{background: item.color}" draggable="true" @dragstart="dragStart($event, item)" @click="openEditPanel(item)">{{item.title}}</div>
                          </div>
                      </div>
-                     <div class="tl-body tl-grid">
+                     <div class="tl-body tl-row">
                          <div class="tl-time-col"><div v-for="h in timelineHours" :key="h" class="tl-time-label">{{h}}:00</div></div>
                          <div v-for="day in calendarDays" :key="'b'+day.date" class="tl-day-col" @dragover.prevent @drop="onDrop($event, day.date)">
                              <div v-for="h in timelineHours" :key="h" class="tl-slot" @drop.stop="onDrop($event, day.date, h)"></div>
@@ -306,14 +321,37 @@
 
         <div v-else class="d-flex flex-column h-100 gap-3">
              <div><label class="small text-muted">タスク名</label><textarea v-model="panelData.desc" class="form-control fw-bold" rows="3"></textarea></div>
-             <div><label class="small text-muted">日付</label><input type="date" v-model="panelData.due" class="form-control mb-2"><div class="d-flex gap-2"><button class="btn btn-sm btn-outline-secondary" @click="setDateShortcut(0)">今日</button><button class="btn btn-sm btn-outline-secondary" @click="setDateShortcut(1)">明日</button></div></div>
+             
+             <div><label class="small text-muted">日付</label>
+             <div class="d-flex gap-2"><input type="date" v-model="panelData.due" class="form-control"><button class="date-shortcut-btn" @click="setDateShortcut(0)">今日</button><button class="date-shortcut-btn" @click="setDateShortcut(1)">明日</button></div></div>
+             
+             <div><label class="small text-muted">繰り返し</label><input v-model="panelData.recurrence" class="form-control" placeholder="every week" list="recurrenceOptions"></div>
+             
+             <div><label class="small text-muted">優先度</label>
+             <div class="d-flex gap-2">
+                 <div class="priority-btn" :class="{'active high': panelData.priority==='high'}" @click="panelData.priority='high'">高</div>
+                 <div class="priority-btn" :class="{'active medium': panelData.priority==='medium'}" @click="panelData.priority='medium'">中</div>
+                 <div class="priority-btn" :class="{'active low': panelData.priority==='low'}" @click="panelData.priority='low'">低</div>
+                 <div class="priority-btn" :class="{'active': panelData.priority==='none'}" @click="panelData.priority='none'">なし</div>
+             </div></div>
+
              <div><label class="small text-muted">タグ</label><input v-model="tagInput" class="form-control" placeholder="#tag" @keydown.enter.prevent="addTag">
-             <div class="d-flex flex-wrap gap-1 mt-2"><span v-for="t in panelData.tags" :key="t" class="badge-tag" @click="removeTag(t)">{{t}} ×</span></div></div>
+             <div class="d-flex flex-wrap gap-1 mt-2">
+                 <span v-for="t in panelData.tags" :key="t" class="badge-tag" @click="removeTag(t)">{{t}} ×</span>
+             </div>
+             <div class="mt-2 border-top pt-2">
+                 <small class="text-muted">履歴: </small>
+                 <span v-for="t in suggestedTags" :key="t" class="tag-chip" @click="addTagFromHistory(t)">#{{t.replace('#','')}}</span>
+             </div></div>
+
+             <div><label class="small text-muted">URL</label><input v-model="panelData.url" class="form-control" placeholder="https://..."></div>
+             
              <div class="mt-auto d-flex gap-2"><button v-if="isEditMode" class="btn btn-danger" @click="confirmDelete(panelData.taskRef)">削除</button><button class="btn btn-light flex-grow-1" @click="showPanel=false">キャンセル</button><button class="btn btn-primary flex-grow-1" @click="saveTaskChanges">保存</button></div>
         </div>
     </div>
 
     <button v-if="!showPanel && (!isPC || currentTab==='active'||currentTab==='calendar')" class="fab-btn" @click="openAddPanel"><span class="material-icons-round">add</span></button>
+    <datalist id="recurrenceOptions"><option value="every day"></option><option value="every week"></option></datalist>
   </div>
 </div>
 
@@ -352,6 +390,7 @@ createApp({
         if(noDate.length) res.push({title:'No Date', tasks:noDate});
         return res;
     },
+    suggestedTags() { return this.allTagsList.filter(t=>!this.panelData.tags?.includes(t)); },
     calendarTitle() { const d=new Date(this.currentCalStart); return `${d.getFullYear()}年${d.getMonth()+1}月`; },
     calendarDays() {
         const days=[]; const start=new Date(this.currentCalStart);
@@ -422,7 +461,7 @@ createApp({
     },
     // Actions
     openAddPanel() { this.isPC || this.currentTab==='calendar' ? this.openAddGCalPanel(this.getTodayStr()) : this.openAddPanelWithDate(this.getTodayStr()); },
-    openAddPanelWithDate(d) { this.isEditMode=false; this.showPanel=true; this.panelData={desc:'', due:d, isGCal:false, tags:[], priority:'none'}; },
+    openAddPanelWithDate(d) { this.isEditMode=false; this.showPanel=true; this.panelData={desc:'', due:d, isGCal:false, tags:[], priority:'none', recurrence:''}; },
     openAddGCalPanel(d) { this.isEditMode=false; this.showPanel=true; this.panelData={isGCal:true, isNew:true, dateInput:d, startHour:'09', startMin:'00', targetCalendarId:this.settings.calendarIds[0]}; },
     openEditPanel(i) {
         this.isEditMode=true; this.showPanel=true;
@@ -431,6 +470,7 @@ createApp({
             this.panelData={isGCal:true, eid:i.id, calendarId:i.calendarId, title:i.title, desc:d, meetingUrl:u, dateInput:this.convertIsoToYMD(i.start), startHour:i.start.substring(11,13), startMin:i.start.substring(14,16), endHour:i.end.substring(11,13), endMin:i.end.substring(14,16)};
         } else {
             const t=this.tasks.find(x=>x.lineIndex===i.lineIndex)||i; this.panelData={...t, taskRef:t, isGCal:false, tags:[...t.tags]};
+            if(t.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/)) { const m=t.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/); this.panelData.desc=m[1]; this.panelData.url=m[2]; }
         }
     },
     async saveGCalEvent() {
@@ -441,8 +481,9 @@ createApp({
         } catch(e){this.showInfo('Error',e);} finally{this.isSaving=false;}
     },
     async saveTaskChanges() {
-        if(this.isEditMode) { const t=this.panelData.taskRef; t.desc=this.panelData.desc; t.due=this.panelData.due; t.priority=this.panelData.priority; t.tags=[...this.panelData.tags]; }
-        else { this.tasks.push({lineIndex:-1, desc:this.panelData.desc, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, completed:false, tags:[...this.panelData.tags]}); }
+        let d = this.panelData.desc; if(this.panelData.url) d=`[${d}](${this.panelData.url})`;
+        if(this.isEditMode) { const t=this.panelData.taskRef; t.desc=d; t.due=this.panelData.due; t.priority=this.panelData.priority; t.recurrence=this.panelData.recurrence; t.tags=[...this.panelData.tags]; }
+        else { this.tasks.push({lineIndex:-1, desc:d, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, completed:false, tags:[...this.panelData.tags]}); }
         this.showPanel=false; this.pushChanges();
     },
     pushChanges() {
@@ -459,9 +500,7 @@ createApp({
     onDrop(e, date, hour) {
         const item = JSON.parse(e.dataTransfer.getData('json'));
         if(!item.isGCal) return; // Task drag not supported yet
-        const start = hour ? `${date}T${String(hour).padStart(2,'0')}:00:00` : item.start; // Logic simplified for brevity
-        // Full logic needed: Calculate duration, check all day etc.
-        // For now, reload to prevent visual glitch
+        const start = hour ? `${date}T${String(hour).padStart(2,'0')}:00:00` : item.start;
         this.loading=true;
         callGAS('updateCalendarEvent', {calendarId:item.calendarId, eventId:item.id, dateStr:date, startTime:hour?String(hour).padStart(2,'0')+':00':null})
         .then(()=>{this.fetchGCal();}).finally(()=>this.loading=false);
@@ -484,6 +523,7 @@ createApp({
     runArchiveProcess() { /* Same archive logic */ },
     setDateShortcut(d) { const dt=new Date(); dt.setDate(dt.getDate()+d); this.panelData.due=this.getLocalYMD(dt); },
     addTagFromHistory(t) { if(!this.panelData.tags.includes(t))this.panelData.tags.push(t); },
+    addTag() { let v=this.tagInput.trim(); if(!v)return; if(!v.startsWith('#'))v='#'+v; if(!this.panelData.tags.includes(v))this.panelData.tags.push(v); this.tagInput=''; },
     removeTag(t) { this.panelData.tags=this.panelData.tags.filter(x=>x!==t); }
   }
 }).mount('#app');
