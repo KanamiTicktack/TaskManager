@@ -17,178 +17,100 @@
   </script>
 
   <style>
-    /* === 1. Design System === */
+    /* === Design System === */
     :root {
-      --primary: #6366f1; --primary-light: #e0e7ff;
+      --primary: #6366f1; --primary-bg: #e0e7ff;
       --bg-body: #f3f4f6; --bg-card: #ffffff; --bg-input: #ffffff;
       --text-main: #1f2937; --text-sub: #6b7280; --border-color: #e5e7eb;
       --hover-bg: #f9fafb;
-      --radius: 12px;
-      /* Calendar Metrics */
-      --time-col-width: 44px;
-      --header-height: 40px;
-      --allday-min-height: 36px;
-      --slot-height: 44px; /* 1 hour height */
+      --time-col-width: 50px; --header-height: 40px; --slot-height: 50px;
     }
     body.dark-mode {
-      --primary: #818cf8; --primary-light: #312e81;
+      --primary: #818cf8; --primary-bg: #312e81;
       --bg-body: #111827; --bg-card: #1f2937; --bg-input: #374151;
       --text-main: #f3f4f6; --text-sub: #9ca3af; --border-color: #374151;
       --hover-bg: #374151;
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; }
     .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
-    
-    /* Scrollbar Hidden but Functional */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
-    .scroll-y:hover::-webkit-scrollbar-thumb { background: #cbd5e1; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
-    /* === 2. Layout Architecture === */
-    .app-container { display: flex; flex-direction: column; height: 100vh; max-width: 1800px; margin: 0 auto; padding: 12px; gap: 12px; }
+    /* Layout */
+    .app-container { display: flex; flex-direction: column; height: 100vh; max-width: 1600px; margin: 0 auto; padding: 12px; gap: 12px; }
     .app-header { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
-    .app-title { font-weight: 800; font-size: 1.5rem; margin: 0; letter-spacing: -0.5px; }
-    .btn-icon { background: transparent; border: none; color: var(--text-main); padding: 8px; display: flex; align-items: center; cursor: pointer; border-radius: 50%; }
-    .btn-icon:active { background: var(--hover-bg); }
+    .app-title { font-weight: 800; font-size: 1.5rem; margin: 0; }
+    .btn-icon { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; }
 
-    .main-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-    
-    /* Split View Logic */
-    .split-layout { display: flex; flex-direction: column; height: 100%; gap: 16px; }
-    @media (min-width: 992px) {
-        .split-layout { display: grid; grid-template-columns: 400px 1fr; gap: 24px; }
-    }
-    
-    .view-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; position: relative; }
-    .scroll-y { overflow-y: auto; flex: 1; padding-right: 2px; padding-bottom: 80px; }
-
-    /* === 3. Components: Tasks === */
-    .nav-tabs { border-bottom: 1px solid var(--border-color); gap: 4px; flex-shrink: 0; margin-bottom: 12px; flex-wrap: nowrap; overflow-x: auto; }
-    .nav-link { border: none; color: var(--text-sub); font-weight: 600; padding: 8px 16px; border-radius: 20px; white-space: nowrap; font-size: 0.9rem; }
+    /* Tabs (Mobile: Top Fixed, PC: Inside Left Col) */
+    .mobile-tabs { flex-shrink: 0; display: flex; overflow-x: auto; gap: 4px; padding-bottom: 4px; border-bottom: 1px solid var(--border-color); margin-bottom: 8px; }
+    .nav-tabs { border-bottom: 1px solid var(--border-color); gap: 4px; flex-shrink: 0; margin-bottom: 12px; }
+    .nav-link { border: none; color: var(--text-sub); font-weight: 600; padding: 8px 16px; border-radius: 20px; white-space: nowrap; font-size: 0.9rem; background: transparent; }
     .nav-link.active { background: var(--primary) !important; color: white !important; }
 
-    .task-card { 
-        background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 8px; padding: 12px;
-        display: flex; gap: 10px; align-items: flex-start; cursor: pointer; position: relative; transition: transform 0.1s;
-    }
-    .task-card:active { transform: scale(0.98); }
+    /* Main Content */
+    .main-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .split-layout { display: flex; flex-direction: column; height: 100%; }
+    @media (min-width: 992px) { .split-layout { display: grid; grid-template-columns: 400px 1fr; gap: 24px; } }
+    
+    .view-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; position: relative; }
+    .scroll-y { overflow-y: auto; flex: 1; padding-right: 4px; padding-bottom: 80px; }
+
+    /* Tasks */
+    .task-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 8px; padding: 12px; display: flex; gap: 10px; cursor: pointer; position: relative; }
     .task-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 4px 0 0 4px; }
     .priority-high::before { background: #ef4444; } .priority-medium::before { background: #f59e0b; } .priority-low::before { background: #3b82f6; }
     
-    .check-box { width: 22px; height: 22px; border: 2px solid var(--text-sub); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 2px; transition: 0.2s; }
+    .check-box { width: 22px; height: 22px; border: 2px solid var(--text-sub); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
     .check-box.checked { background: var(--primary); border-color: var(--primary); }
     .check-box .material-icons-round { font-size: 16px; color: white; display: none; }
     .check-box.checked .material-icons-round { display: block; }
     
     .task-body { flex: 1; min-width: 0; }
     .task-title { font-weight: 600; font-size: 0.95rem; line-height: 1.4; margin-bottom: 4px; }
-    .task-meta { font-size: 0.75rem; color: var(--text-sub); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-    .tag-badge { background: var(--border-color); padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; color: var(--text-main); }
-    .due-badge { display: flex; align-items: center; gap: 2px; background: var(--hover-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); }
-    .text-done { color: var(--text-sub); text-decoration: line-through; opacity: 0.7; }
+    .task-meta { font-size: 0.75rem; color: var(--text-sub); display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag-badge { background: var(--hover-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); }
+    .text-done { text-decoration: line-through; opacity: 0.6; }
 
-    /* === 4. Components: Timeline Calendar (Fixed Grid) === */
-    .calendar-container {
-        flex: 1; display: flex; flex-direction: column; background: var(--bg-card); 
-        border: 1px solid var(--border-color); border-radius: var(--radius); overflow: hidden;
-    }
+    /* Calendar (Strict Grid) */
+    .calendar-container { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; position: relative; }
+    .tl-grid-container { display: grid; grid-template-columns: var(--time-col-width) repeat(7, 1fr); overflow-y: auto; height: 100%; }
     
-    /* Grid Definition */
-    .tl-grid-container {
-        display: grid;
-        grid-template-columns: var(--time-col-width) repeat(7, 1fr);
-        overflow-y: auto; height: 100%; position: relative;
-        /* Force scrollbar to prevent layout shift */
-        overflow-x: hidden;
-    }
-
-    /* Sticky Header (Date) */
-    .tl-header-cell {
-        position: sticky; top: 0; z-index: 20;
-        background: var(--hover-bg); border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);
-        height: var(--header-height);
-        display: flex; align-items: center; justify-content: center; flex-direction: column;
-        font-size: 0.75rem; font-weight: bold; color: var(--text-sub);
-    }
-    .tl-header-cell:nth-child(8) { border-right: none; } /* Last col */
+    .tl-header-cell { position: sticky; top: 0; z-index: 20; background: var(--hover-bg); border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); height: var(--header-height); display: flex; align-items: center; justify-content: center; flex-direction: column; font-size: 0.75rem; font-weight: bold; color: var(--text-sub); }
+    .tl-allday-cell { position: sticky; top: var(--header-height); z-index: 19; background: var(--bg-card); border-bottom: 2px solid var(--border-color); border-right: 1px solid var(--border-color); min-height: 36px; padding: 2px; }
     
-    /* Sticky All Day (Below Header) */
-    .tl-allday-cell {
-        position: sticky; top: var(--header-height); z-index: 19;
-        background: var(--bg-card); border-bottom: 2px solid var(--border-color); border-right: 1px solid var(--border-color);
-        min-height: var(--allday-min-height); padding: 2px;
-    }
-    .tl-allday-cell:nth-child(16) { border-right: none; } /* Last col of 2nd row */
+    .tl-time-cell { border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); background: var(--hover-bg); color: var(--text-sub); font-size: 0.7rem; display: flex; justify-content: center; height: var(--slot-height); position: sticky; left: 0; z-index: 10; }
+    .tl-slot-cell { border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); height: var(--slot-height); position: relative; }
     
-    /* Time & Body Cells */
-    .tl-time-cell {
-        border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
-        background: var(--hover-bg); color: var(--text-sub); font-size: 0.7rem;
-        display: flex; justify-content: center; height: var(--slot-height);
-        position: sticky; left: 0; z-index: 10; /* Keep time visible */
-    }
-    .tl-time-text { margin-top: -10px; background: var(--hover-bg); padding: 0 2px; }
-
-    .tl-slot-cell {
-        border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
-        height: var(--slot-height); position: relative;
-    }
-    .tl-slot-cell:nth-child(8n) { border-right: none; }
-
-    /* Events */
-    .ev-allday { background: var(--primary); color: white; font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor: grab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ev-time {
-        position: absolute; left: 2px; right: 2px; background: var(--primary); color: white;
-        border-radius: 4px; padding: 2px 4px; font-size: 0.7rem; overflow: hidden; cursor: grab;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.15); z-index: 5; border: 1px solid rgba(255,255,255,0.2);
-    }
-    
-    .sun { color: #ef4444; } .sat { color: #3b82f6; }
+    .ev-time { position: absolute; left: 2px; right: 2px; background: var(--primary); color: white; border-radius: 4px; padding: 2px 4px; font-size: 0.7rem; overflow: hidden; cursor: grab; z-index: 5; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    .ev-allday { background: var(--primary); color: white; font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor: grab; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
     /* Month View */
     .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border-color); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
-    .m-cell { background: var(--bg-card); min-height: 80px; padding: 4px; cursor: pointer; display: flex; flex-direction: column; }
-    .m-cell.selected { background: var(--primary-light) !important; }
+    .m-cell { background: var(--bg-card); min-height: 80px; padding: 4px; cursor: pointer; }
+    .m-cell.selected { background: var(--primary-bg) !important; }
     .date-badge { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.8rem; }
     .date-badge.today { background: var(--primary); color: white; }
     .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-sub); margin: 1px; }
 
-    /* === 5. Side Panel (Editor) === */
-    .side-panel { 
-        position: fixed; top: 0; right: 0; width: 100%; height: 100%; background: var(--bg-card); 
-        z-index: 2000; box-shadow: -5px 0 20px rgba(0,0,0,0.2); padding: 20px;
-        transform: translateX(100%); transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        display: flex; flex-direction: column;
-    }
+    /* Side Panel */
+    .side-panel { position: fixed; top: 0; right: 0; width: 100%; height: 100%; background: var(--bg-card); z-index: 2000; padding: 20px; transform: translateX(100%); transition: transform 0.25s; display: flex; flex-direction: column; box-shadow: -5px 0 25px rgba(0,0,0,0.2); }
     .side-panel.open { transform: translateX(0); }
     @media (min-width: 992px) {
-        .side-panel { 
-            position: absolute; top: 12px; right: 12px; width: 400px; height: auto; max-height: calc(100% - 24px);
-            border-radius: 16px; border: 1px solid var(--border-color);
-            transform: translateY(10px); opacity: 0; pointer-events: none; transition: all 0.2s;
-        }
+        .side-panel { position: absolute; top: 12px; right: 12px; width: 400px; height: auto; max-height: calc(100% - 24px); border-radius: 16px; border: 1px solid var(--border-color); transform: translateY(10px); opacity: 0; pointer-events: none; transition: all 0.2s; }
         .side-panel.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
     }
 
-    /* Input Helpers */
-    .btn-group-custom { display: flex; gap: 4px; background: var(--bg-body); padding: 4px; border-radius: 8px; border: 1px solid var(--border-color); }
-    .btn-opt { flex: 1; padding: 6px; border: none; background: transparent; border-radius: 6px; font-size: 0.8rem; color: var(--text-sub); transition: 0.1s; }
-    .btn-opt.active { background: var(--bg-card); color: var(--text-main); font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-    
-    .tag-history { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; background: var(--bg-body); border-radius: 8px; min-height: 40px; align-content: flex-start; }
-    .chip { padding: 4px 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; font-size: 0.75rem; cursor: pointer; }
-    
     /* Common */
     .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; }
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 900; backdrop-filter: blur(2px); }
-    .modal-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-card); padding: 24px; border-radius: 16px; width: 90%; max-width: 360px; z-index: 2100; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-    .loading-spin { width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 2100; backdrop-filter: blur(2px); }
+    .modal-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-card); padding: 24px; border-radius: 16px; width: 90%; max-width: 360px; z-index: 2200; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .tag-chip { display: inline-block; padding: 4px 10px; border-radius: 16px; background: var(--border-color); font-size: 0.8rem; margin-right: 4px; margin-bottom: 4px; cursor: pointer; }
   </style>
 </head>
 <body>
 <div id="app">
-  <div v-if="loading" class="overlay d-flex flex-column align-items-center justify-content-center text-white"><div class="loading-spin mb-3"></div><div class="fw-bold">{{ loadingMessage }}</div></div>
+  <div v-if="loading" class="overlay d-flex flex-column align-items-center justify-content-center text-white"><div class="spinner-border mb-2"></div><strong>{{ loadingMessage }}</strong></div>
   <transition name="fade"><div v-if="toast.show" style="position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#333; color:white; padding:10px 20px; border-radius:30px; z-index:3000; font-size:0.9rem;">{{ toast.message }}</div></transition>
 
   <div v-if="modal.show" class="overlay" @click="closeModal(false)"></div>
@@ -210,31 +132,41 @@
         <button class="btn-icon" @click="toggleDarkMode"><span class="material-icons-round">{{ darkMode ? 'light_mode' : 'dark_mode' }}</span></button>
     </div>
 
+    <div class="mobile-tabs" v-if="!isPC">
+        <button class="nav-link" :class="{active: currentTab==='active'}" @click="setTab('active')">未完了</button>
+        <button class="nav-link" :class="{active: currentTab==='completed'}" @click="setTab('completed')">完了済</button>
+        <button class="nav-link" :class="{active: currentTab==='calendar'}" @click="setTab('calendar')">カレンダー</button>
+        <button class="nav-link" :class="{active: currentTab==='settings'}" @click="setTab('settings')">設定</button>
+    </div>
+
     <div class="main-content">
         <div class="split-layout">
             
-            <div class="view-panel" v-show="!isPC && currentTab !== 'calendar' || isPC">
-                <div class="nav-tabs d-flex">
+            <div class="view-panel" v-show="isPC || currentTab !== 'calendar'">
+                <div class="nav-tabs d-flex" v-if="isPC">
                     <button class="nav-link" :class="{active: currentTab==='active'}" @click="setTab('active')">未完了</button>
                     <button class="nav-link" :class="{active: currentTab==='completed'}" @click="setTab('completed')">完了済</button>
-                    <button class="nav-link" v-if="!isPC" :class="{active: currentTab==='calendar'}" @click="setTab('calendar')">カレンダー</button>
                     <button class="nav-link" :class="{active: currentTab==='settings'}" @click="setTab('settings')">設定</button>
                 </div>
 
                 <div class="scroll-y">
-                    <div v-if="currentTab==='settings'" class="d-flex flex-column gap-3 p-1">
+                    <div v-if="currentTab==='settings'" class="p-1 d-flex flex-column gap-3">
                         <div class="card p-3 border shadow-sm">
                             <h6 class="fw-bold small mb-3">GitHub連携</h6>
                             <input type="password" v-model="settings.token" class="form-control mb-2" placeholder="Token">
                             <div class="d-flex gap-2 mb-2"><input v-model="settings.owner" class="form-control" placeholder="Owner"><input v-model="settings.repo" class="form-control" placeholder="Repo"></div>
                             <input v-model="settings.path" class="form-control mb-2" placeholder="Tasks.md">
-                            <button class="btn btn-sm btn-primary w-100" @click="saveSettings">接続テスト & 保存</button>
+                            <button class="btn btn-sm btn-primary w-100" @click="saveSettings">保存して接続テスト</button>
                         </div>
                         <div class="card p-3 border shadow-sm">
-                             <h6 class="fw-bold small mb-2">Googleカレンダー</h6>
+                             <h6 class="fw-bold small mb-2">アーカイブ設定</h6>
+                             <input v-model="settings.archivePath" class="form-control mb-2" placeholder="Archive.md">
+                             <button class="btn btn-sm btn-outline-warning w-100" @click="runArchiveProcess">完了済みを移動</button>
+                        </div>
+                        <div class="card p-3 border shadow-sm">
+                             <h6 class="fw-bold small mb-2">カレンダー表示</h6>
                              <div v-for="cal in availableCalendars" :key="cal.id" class="form-check"><input class="form-check-input" type="checkbox" :value="cal.id" v-model="settings.calendarIds"><label class="form-check-label small">{{cal.name}}</label></div>
                         </div>
-                        <button class="btn btn-sm btn-outline-warning w-100" @click="runArchiveProcess">完了済みをアーカイブファイルへ移動</button>
                     </div>
 
                     <div v-else class="p-1">
@@ -253,8 +185,8 @@
                                          <div class="task-title" v-html="renderDesc(task.desc)"></div>
                                          <div class="task-meta">
                                              <span v-for="tag in task.tags" class="tag-badge">#{{tag.replace('#','')}}</span>
-                                             <span v-if="task.due" class="due-badge"><span class="material-icons-round" style="font-size:12px">event</span>{{task.due}}</span>
-                                             <span v-if="task.recurrence" class="due-badge"><span class="material-icons-round" style="font-size:12px">repeat</span>{{task.recurrence}}</span>
+                                             <span v-if="task.due" class="tag-badge">📅 {{task.due}}</span>
+                                             <span v-if="task.recurrence" class="tag-badge">🔁 {{task.recurrence}}</span>
                                          </div>
                                      </div>
                                  </div>
@@ -284,41 +216,26 @@
 
                  <div v-if="calendarMode==='week'" class="calendar-container">
                      <div class="tl-grid-container">
-                         <div class="tl-corner tl-header-cell" style="grid-column: 1; grid-row: 1;"></div>
-                         <div v-for="(day, i) in calendarDays" :key="'h'+i" class="tl-header-cell" :style="{gridColumn: i+2, gridRow: 1}" :class="{sun:day.dayOfWeek==0, sat:day.dayOfWeek==6}">
-                             <div>{{day.dayNum}}</div><div style="font-size:0.65rem">{{['日','月','火','水','木','金','土'][day.dayOfWeek]}}</div>
-                         </div>
-
-                         <div class="tl-ad-label tl-allday-cell" style="grid-column: 1; grid-row: 2;">終日</div>
+                         <div class="tl-header-cell tl-corner" style="grid-column: 1; grid-row: 1"></div>
+                         <div v-for="(day, i) in calendarDays" :key="'h'+i" class="tl-header-cell" :style="{gridColumn: i+2, gridRow: 1}" :class="{sun:day.dayOfWeek==0, sat:day.dayOfWeek==6}"><div>{{day.dayNum}}</div><div style="font-size:0.65rem">{{['日','月','火','水','木','金','土'][day.dayOfWeek]}}</div></div>
+                         
+                         <div class="tl-allday-cell tl-ad-label" style="grid-column: 1; grid-row: 2">終日</div>
                          <div v-for="(day, i) in calendarDays" :key="'ad'+i" class="tl-allday-cell" :style="{gridColumn: i+2, gridRow: 2}" @dragover.prevent @drop="onDrop($event, day.date, null)">
                              <div v-for="item in day.items.filter(x=>x.isGCal && x.isAllDay)" class="ev-allday" :style="{background: item.color}" draggable="true" @dragstart="dragStart($event, item)" @click="openEditPanel(item)">{{item.title}}</div>
                          </div>
-
-                         <div v-for="h in timelineHours" :key="'tl'+h" class="tl-time-cell" :style="{gridColumn: 1, gridRow: h-6}"><span class="tl-time-text">{{h}}:00</span></div>
+                         
+                         <div v-for="h in timelineHours" :key="'tl'+h" class="tl-time-cell" :style="{gridColumn: 1, gridRow: h-6}"><span style="margin-top:-28px">{{h}}:00</span></div>
+                         <template v-for="(day, dIndex) in calendarDays">
+                             <div v-for="h in timelineHours" :key="'s'+dIndex+h" class="tl-slot-cell" :style="{gridColumn: dIndex+2, gridRow: h-6}" @dragover.prevent @drop="onDrop($event, day.date, h)"></div>
+                         </template>
                          
                          <template v-for="(day, dIndex) in calendarDays">
-                             <div v-for="h in timelineHours" :key="'slot'+dIndex+'-'+h" class="tl-slot-cell" :style="{gridColumn: dIndex+2, gridRow: h-6}" @dragover.prevent @drop="onDrop($event, day.date, h)"></div>
-                         </template>
-
-                         <template v-for="(day, dIndex) in calendarDays">
-                             <div v-for="item in day.items.filter(x=>!x.isAllDay && x.isGCal && getEventStyle(x))" 
-                                  :key="item.id" 
-                                  class="ev-time" 
-                                  :style="{ 
-                                      gridColumn: dIndex+2, 
-                                      gridRow: getGridRow(item), 
-                                      marginTop: getMarginTop(item), 
-                                      height: getHeight(item),
-                                      background: item.color 
-                                  }"
-                                  draggable="true" @dragstart="dragStart($event, item)" @click.stop="openEditPanel(item)">
-                                 {{ item.title }}
-                             </div>
+                             <div v-for="item in day.items.filter(x=>!x.isAllDay && x.isGCal && getEventStyle(x))" :key="item.id" class="ev-time" :style="{ gridColumn: dIndex+2, gridRow: getGridRow(item), marginTop: getMarginTop(item), height: getHeight(item), background: item.color }" draggable="true" @dragstart="dragStart($event, item)" @click.stop="openEditPanel(item)">{{ item.title }}</div>
                          </template>
                      </div>
                  </div>
 
-                 <div v-else class="month-grid flex-shrink-0" style="height: 350px;">
+                 <div v-else class="month-grid mb-3 flex-shrink-0" style="height: 350px;">
                      <div v-for="d in ['日','月','火','水','木','金','土']" class="p-2 text-center small fw-bold bg-light">{{d}}</div>
                      <div v-for="day in calendarDays" :key="day.date" class="m-cell" :class="{selected: selectedDate===day.date}" @click="selectedDate=day.date">
                          <div class="date-badge" :class="{today: day.isToday}">{{day.dayNum}}</div>
@@ -328,13 +245,13 @@
 
                  <div class="app-card flex-grow-1 d-flex flex-column mt-3 mb-0 overflow-hidden" v-if="selectedDate">
                      <div class="p-2 border-bottom bg-light fw-bold d-flex justify-content-between align-items-center">
-                         <span>{{selectedDate}}の予定</span>
+                         <span>{{selectedDate}}</span>
                          <div class="d-flex gap-2"><button class="btn btn-sm btn-outline-primary" @click="openAddGCalPanel(selectedDate)">+ 予定</button><button class="btn btn-sm btn-primary" @click="openAddPanelWithDate(selectedDate)">+ タスク</button></div>
                      </div>
                      <div class="scroll-y p-2">
                          <div v-if="selectedDateItems.length===0" class="text-center text-muted small py-4">予定はありません</div>
                          <div v-for="item in selectedDateItems" :key="item.uniqueId" class="task-card border-0 mb-1" :style="item.isGCal?{background:'var(--hover-bg)'}:{}" @click="openEditPanel(item)">
-                             <div v-if="item.isGCal" class="me-2 text-primary" style="font-size:8px;">●</div>
+                             <div v-if="item.isGCal" class="me-2 text-primary" style="font-size:10px;">●</div>
                              <div v-else class="check-box me-2" :class="{checked:item.completed}" @click.stop="toggleTask(item)"><span class="material-icons-round">check</span></div>
                              <div class="flex-grow-1">
                                  <div class="fw-bold small" v-html="renderDesc(item.isGCal?item.title:item.desc)"></div>
@@ -362,28 +279,15 @@
 
         <div v-else class="d-flex flex-column h-100 gap-3">
              <div><label class="small text-muted">タスク名</label><textarea v-model="panelData.desc" class="form-control fw-bold" rows="3"></textarea></div>
-             
              <div><label class="small text-muted">日付</label>
              <div class="d-flex gap-2"><input type="date" v-model="panelData.due" class="form-control"><button class="btn btn-sm btn-light border" @click="setDateShortcut(0)">今日</button><button class="btn btn-sm btn-light border" @click="setDateShortcut(1)">明日</button></div></div>
-             
              <div><label class="small text-muted">繰り返し</label><input v-model="panelData.recurrence" class="form-control" placeholder="every week" list="recOpts"></div>
-             
              <div><label class="small text-muted">優先度</label>
-             <div class="btn-group-custom w-100">
-                 <button class="btn-opt" :class="{active: panelData.priority==='high'}" @click="panelData.priority='high'" style="color:var(--danger)">高</button>
-                 <button class="btn-opt" :class="{active: panelData.priority==='medium'}" @click="panelData.priority='medium'" style="color:#f59e0b">中</button>
-                 <button class="btn-opt" :class="{active: panelData.priority==='low'}" @click="panelData.priority='low'" style="color:var(--primary)">低</button>
-                 <button class="btn-opt" :class="{active: panelData.priority==='none'}" @click="panelData.priority='none'">なし</button>
-             </div></div>
-
+             <div class="btn-group w-100"><button class="btn btn-sm btn-outline-danger" :class="{active:panelData.priority==='high'}" @click="panelData.priority='high'">高</button><button class="btn btn-sm btn-outline-warning" :class="{active:panelData.priority==='medium'}" @click="panelData.priority='medium'">中</button><button class="btn btn-sm btn-outline-primary" :class="{active:panelData.priority==='low'}" @click="panelData.priority='low'">低</button><button class="btn btn-sm btn-outline-secondary" :class="{active:panelData.priority==='none'}" @click="panelData.priority='none'">なし</button></div></div>
              <div><label class="small text-muted">タグ</label><input v-model="tagInput" class="form-control" placeholder="#tag" @keydown.enter.prevent="addTag">
-             <div class="tag-history mt-2">
-                 <span v-for="t in panelData.tags" :key="t" class="chip bg-primary text-white" @click="removeTag(t)">{{t}} ×</span>
-                 <span v-for="t in suggestedTags" :key="t" class="chip" @click="addTagFromHistory(t)">#{{t.replace('#','')}}</span>
-             </div></div>
-
+             <div class="mt-2"><span v-for="t in panelData.tags" :key="t" class="tag-chip bg-primary text-white" @click="removeTag(t)">{{t}} ×</span></div>
+             <div class="mt-2 pt-2 border-top"><small class="text-muted">履歴: </small><span v-for="t in suggestedTags" :key="t" class="tag-chip" @click="addTagFromHistory(t)">#{{t.replace('#','')}}</span></div></div>
              <div><label class="small text-muted">URL</label><input v-model="panelData.url" class="form-control" placeholder="https://..."></div>
-             
              <div class="mt-auto d-flex gap-2"><button v-if="isEditMode" class="btn btn-light text-danger" @click="confirmDelete(panelData.taskRef)">削除</button><button class="btn btn-light flex-grow-1" @click="closePanel">キャンセル</button><button class="btn btn-primary flex-grow-1" @click="saveTaskChanges">保存</button></div>
         </div>
     </div>
@@ -497,7 +401,7 @@ createApp({
         });
         this.allTagsList=Array.from(tags).sort();
     },
-    // Panel & Actions
+    // Actions
     openAddPanel() { this.isPC || this.currentTab==='calendar' ? this.openAddGCalPanel(this.getTodayStr()) : this.openAddPanelWithDate(this.getTodayStr()); },
     openAddPanelWithDate(d) { this.isEditMode=false; this.showPanel=true; this.panelData={desc:'', due:d, isGCal:false, tags:[], priority:'none', recurrence:''}; this.tagInput=''; },
     openAddGCalPanel(d) { this.isEditMode=false; this.showPanel=true; this.panelData={isGCal:true, isNew:true, dateInput:d, startHour:'09', startMin:'00', targetCalendarId:this.settings.calendarIds[0]}; },
@@ -511,27 +415,10 @@ createApp({
             if(t.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/)) { const m=t.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/); this.panelData.desc=m[1]; this.panelData.url=m[2]; }
         }
     },
-    // Grid Calculation (Fix for alignment)
-    getGridRow(i) {
-        const s = new Date(i.start); const startH = s.getHours() + s.getMinutes()/60;
-        // Start from 9:00 = index 9. Offset is -8 (so 9:00 becomes row 1, but we have 2 header rows, so row 3)
-        // Wait, timelineHours start at 9. 
-        // Row 1: Header. Row 2: AllDay. Row 3: 9:00, Row 4: 10:00...
-        // Formula: (Hour - 9) + 3
-        const r = Math.floor(startH - 9) + 3; 
-        return r >= 3 ? r : 3; 
-    },
-    getMarginTop(i) {
-        const s = new Date(i.start); 
-        // Minutes percentage of slot
-        const mins = s.getMinutes();
-        return (mins / 60 * 50) + 'px';
-    },
-    getHeight(i) {
-        const s = new Date(i.start); const e = new Date(i.end);
-        const dur = (e - s) / (1000 * 60 * 60); // hours
-        return (dur * 50) + 'px';
-    },
+    // Grid Calc
+    getGridRow(i) { const s=new Date(i.start); return Math.floor(s.getHours() + s.getMinutes()/60 - 9) + 3; },
+    getMarginTop(i) { const s=new Date(i.start); return (s.getMinutes()/60*50)+'px'; },
+    getHeight(i) { const s=new Date(i.start); const e=new Date(i.end); return ((e-s)/(1000*60*60)*50)+'px'; },
     // Persistence
     async saveGCalEvent() {
         this.isSaving=true; let d=this.panelData.desc||''; if(this.panelData.meetingUrl) d=`【会議URL】: ${this.panelData.meetingUrl}\n\n${d}`;
@@ -568,9 +455,20 @@ createApp({
     closePanel() { this.showPanel=false; },
     toggleTask(t) { t.completed=!t.completed; this.pushChanges(); },
     confirmDelete(t) { this.modal={show:true, title:'削除', message:'削除しますか？', type:'confirm', isDanger:true, okText:'削除', resolve:r=>{if(r)this.deleteTask(t)}}; },
-    deleteTask(t) { /* Archive logic needs to be fully restored here based on previous versions */ 
-        const idx=this.tasks.findIndex(x=>x.lineIndex===t.lineIndex); 
-        if(idx>-1){const org=this.tasks[idx]; this.tasks.splice(idx,1); if(org.lineIndex>=0){this.lines.splice(org.lineIndex,1); this.tasks.forEach(k=>{if(k.lineIndex>org.lineIndex)k.lineIndex--;}); this.pushChanges(); this.closePanel();}}
+    deleteTask(t) { 
+        if(t.isArchived) {
+             if(!this.settings.archivePath) return;
+             this.loading = true; 
+             this.fetchFileContent(this.settings.archivePath).then(res => {
+                 const lines = (res.content || '').split('\n');
+                 const newLines = lines.filter(l => l !== t.originalLine);
+                 this.saveFileContentPromise(this.settings.archivePath, newLines.join('\n'), res.sha)
+                 .then(() => { this.loading = false; this.showToastNotification('削除しました'); this.loadArchiveData(); })
+                 .catch(e => { this.loading = false; this.showInfo('Error', e); });
+             });
+        } else {
+            const idx=this.tasks.findIndex(x=>x.lineIndex===t.lineIndex); if(idx>-1){const org=this.tasks[idx]; this.tasks.splice(idx,1); if(org.lineIndex>=0){this.lines.splice(org.lineIndex,1); this.tasks.forEach(k=>{if(k.lineIndex>org.lineIndex)k.lineIndex--;}); this.pushChanges(); this.closePanel();}}
+        }
     },
     confirmRestore(t) { this.modal={show:true, title:'復元', message:'未完了に戻しますか？', type:'confirm', okText:'復元', resolve: r=>{this.modal.show=false; if(r){const org=this.tasks.find(x=>x.lineIndex===t.lineIndex); if(org){org.completed=false; org.doneDate=''; this.pushChanges();}}}}; },
     runArchiveProcess() { /* Restore full logic */ },
@@ -589,7 +487,10 @@ createApp({
     setDateShortcut(d) { const dt=new Date(); dt.setDate(dt.getDate()+d); this.panelData.due=this.getLocalYMD(dt); },
     addTagFromHistory(t) { if(!this.panelData.tags.includes(t))this.panelData.tags.push(t); },
     addTag() { let v=this.tagInput.trim(); if(!v)return; if(!v.startsWith('#'))v='#'+v; if(!this.panelData.tags.includes(v))this.panelData.tags.push(v); this.tagInput=''; },
-    removeTag(t) { this.panelData.tags=this.panelData.tags.filter(x=>x!==t); }
+    removeTag(t) { this.panelData.tags=this.panelData.tags.filter(x=>x!==t); },
+    // File Ops Helper (Missing in Ver 9.3)
+    async fetchFileContent(path) { return callGAS('getFileContent', { ...this.settings, path: path }); },
+    async saveFileContentPromise(path, content, sha) { return callGAS('saveFileContent', { ...this.settings, path: path, content: content, sha: sha }); }
   }
 }).mount('#app');
 </script>
