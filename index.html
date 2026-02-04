@@ -24,12 +24,10 @@
       --text-main: #1f2937; --text-sub: #6b7280; --border-color: #e5e7eb;
       --hover-bg: #f9fafb;
       --radius: 12px;
-      /* Calendar Metrics (Ver 17.0 Base) */
       --time-col-width: 50px;
       --header-height: 44px;
       --allday-min-height: 34px;
       --slot-height: 60px;
-      --scrollbar-width: 0px; /* Calculated via JS */
     }
     body.dark-mode {
       --primary: #818cf8; --primary-light: #312e81;
@@ -38,7 +36,7 @@
       --hover-bg: #374151;
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; }
-    .form-control, .form-select { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
+    .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
     
     /* Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -81,34 +79,27 @@
     .due-badge { display: flex; align-items: center; gap: 2px; background: var(--hover-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); }
     .text-done { text-decoration: line-through; opacity: 0.6; }
 
-    /* === FLEX CALENDAR (Ver 17.0 Architecture Restored) === */
+    /* === FLEX CALENDAR === */
     .calendar-container {
-        flex: 1; /* Expand to fill height */
-        display: flex; flex-direction: column; background: var(--bg-card); 
-        border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;
-        min-height: 0;
+        flex: 1; display: flex; flex-direction: column; background: var(--bg-card); 
+        border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; min-height: 0;
     }
-    
-    /* Rows & Cols */
     .cal-row { display: flex; width: 100%; flex-shrink: 0; }
     .cal-col-time { width: var(--time-col-width); flex-shrink: 0; border-right: 1px solid var(--border-color); background: var(--hover-bg); text-align: center; }
     .cal-col-day { flex: 1; border-right: 1px solid var(--border-color); position: relative; min-width: 0; }
     .cal-col-day:last-child { border-right: none; }
 
-    /* Header */
     .cal-header { border-bottom: 1px solid var(--border-color); height: var(--header-height); background: var(--hover-bg); }
     .header-cell { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; color: var(--text-sub); }
     .sun { color: #ef4444; } .sat { color: #3b82f6; }
 
-    /* All Day */
     .cal-allday { border-bottom: 2px solid var(--border-color); min-height: var(--allday-min-height); background: var(--bg-card); }
     .allday-label { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: var(--text-sub); }
     .allday-content { padding: 2px; }
     .ad-event { background: var(--primary); color: white; font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* Body (Scrollable) */
     .cal-body { flex: 1; overflow-y: scroll; position: relative; display: flex; flex-direction: column; }
-    .cal-body-content { display: flex; width: 100%; position: relative; } 
+    .cal-body-content { display: flex; flex: 1; min-height: 0; position: relative; } 
     
     .time-slot-label { height: var(--slot-height); border-bottom: 1px solid var(--border-color); font-size: 0.75rem; color: var(--text-sub); display: flex; justify-content: center; padding-top: 4px; }
     .time-slot { height: var(--slot-height); border-bottom: 1px solid var(--border-color); box-sizing: border-box; }
@@ -120,13 +111,7 @@
         border: 1px solid rgba(255,255,255,0.2);
     }
 
-    /* Bottom List (Compact) */
-    .bottom-list { 
-        flex: 0 0 25%;
-        display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; min-height: 120px; 
-    }
-
-    /* Month View */
+    .bottom-list { flex: 0 0 25%; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; min-height: 120px; }
     .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border-color); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; flex-shrink: 0; }
     .m-cell { background: var(--bg-card); min-height: 80px; padding: 4px; cursor: pointer; }
     .m-cell.selected { background: var(--primary-light) !important; }
@@ -146,7 +131,6 @@
         .side-panel.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
     }
     
-    /* Input Helpers */
     .mode-switcher { display: flex; background: var(--bg-body); padding: 4px; border-radius: 10px; margin-bottom: 16px; border: 1px solid var(--border-color); }
     .mode-btn { flex: 1; padding: 8px; border: none; background: transparent; border-radius: 8px; font-weight: 600; font-size: 0.9rem; color: var(--text-sub); transition: 0.2s; }
     .mode-btn.active { background: var(--bg-card); color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
@@ -156,7 +140,7 @@
     .btn-opt.active { background: var(--bg-card); color: var(--text-main); font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
 
     /* Common */
-    .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+    .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
     .fab-btn:active { transform: scale(0.92); }
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 2100; backdrop-filter: blur(2px); }
     .modal-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-card); padding: 24px; border-radius: 16px; width: 90%; max-width: 360px; z-index: 2200; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
@@ -376,7 +360,7 @@ createApp({
       calendarMode: 'week', selectedDate: '', currentCalStart: new Date(), gcalEvents: [], availableCalendars: [],
       showPanel: false, isEditMode: false, panelData: {}, tagInput: '', allTagsList: [], filterTag: '',
       modal: { show: false }, toast: { show: false },
-      timelineHours: [9,10,11,12,13,14,15,16,17,18,19,20],
+      timelineHours: Array.from({length:24},(_,i)=>i), 
       hours: Array.from({length:24},(_,i)=>String(i).padStart(2,'0')), minutes: ['00','15','30','45'],
       scrollbarWidth: 0
   }},
@@ -435,6 +419,8 @@ createApp({
       const s = localStorage.getItem('gh_tasks_settings');
       if(s) { this.settings=JSON.parse(s); this.loadData(); } else { this.currentTab='settings'; }
       if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode');
+      
+      this.$nextTick(() => { const body = this.$refs.calBody; if(body) body.scrollTop = 9 * 60; });
   },
   methods: {
     measureScrollbar() { const el=document.createElement('div'); el.style.cssText='overflow:scroll;visibility:hidden;position:absolute;'; document.body.appendChild(el); this.scrollbarWidth=el.offsetWidth-el.clientWidth; el.remove(); },
@@ -480,20 +466,31 @@ createApp({
         });
         this.allTagsList=Array.from(tags).sort();
     },
-    renderTaskTitle(t) {
-        if(!t) return '';
+    // ★ FIX 1: Clean Raw Task Title (Remove Meta & URL)
+    cleanRawTitle(t) {
+        if(!t) return { clean: '', url: '' };
+        // Extract MD Link
+        let url = '';
+        const linkMatch = t.match(/\[(.*?)\]\((.*?)\)/);
+        if (linkMatch) { t = linkMatch[1]; url = linkMatch[2]; }
+        
+        // Remove Metadata
         let clean = t.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, '')
-                     .replace(/➕\s*\d{4}-\d{2}-\d{2}/g, '')
-                     .replace(/\+\s*\d{4}-\d{2}-\d{2}/g, '')
+                     .replace(/[➕+]\s*\d{4}-\d{2}-\d{2}/g, '')
                      .replace(/✅\s*\d{4}-\d{2}-\d{2}/g, '')
-                     .replace(/🔁\s*[^✅➕📅#]+/g, '')
-                     .replace(/⏫|🔼|🔽/g, '')
-                     .replace(/#todo/gi, '')
-                     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" onclick="event.stopPropagation()">$1</a>');
+                     .replace(/🔁\s*[^✅➕+📅#\n]+/g, '')
+                     .replace(/[⏫🔼🔽]/g, '')
+                     .replace(/#todo/gi, '');
+        
+        // Remove Tags
         const tags = (t.match(/#[^\s#]+/g)||[]);
         tags.forEach(tag => { if(tag!=='#todo') clean = clean.replace(tag, ''); });
-        return clean.trim();
+        
+        return { clean: clean.trim(), url: url };
     },
+    renderTaskTitle(t) { return this.cleanRawTitle(t).clean; },
+    
+    // Actions
     openAddPanel() { 
         this.isEditMode=false; this.showPanel=true; 
         this.panelData={isGCal:false, desc:'', due:this.selectedDate||this.getTodayStr(), tags:[], priority:'none', recurrence:''}; 
@@ -506,17 +503,19 @@ createApp({
             const s = new Date(i.start); const e = new Date(i.end);
             this.panelData={isGCal:true, eid:i.id, calendarId:i.calendarId, title:i.title, desc:d, meetingUrl:u, dateInput:this.convertIsoToYMD(i.start), startHour:String(s.getHours()).padStart(2,'0'), startMin:String(s.getMinutes()).padStart(2,'0'), endHour:String(e.getHours()).padStart(2,'0'), endMin:String(e.getMinutes()).padStart(2,'0')};
         } else {
-            const t=this.tasks.find(x=>x.lineIndex===i.lineIndex)||i; this.panelData={...t, taskRef:t, isGCal:false, tags:[...(t.tags||[])]};
-            if(t.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/)) { const m=t.desc.match(/^\[([^\]]+)\]\(([^)]+)\)$/); this.panelData.desc=m[1]; this.panelData.url=m[2]; }
+            const t=this.tasks.find(x=>x.lineIndex===i.lineIndex)||i;
+            const cleaned = this.cleanRawTitle(t.desc);
+            // ★ FIX: Populate CLEAN data to panel
+            this.panelData={...t, taskRef:t, isGCal:false, desc: cleaned.clean, url: cleaned.url, tags:[...(t.tags||[])]};
         }
     },
     getEventPos(i) { 
         const s=new Date(i.start); const e=new Date(i.end); 
         const startH = s.getHours() + s.getMinutes()/60;
         const endH = e.getHours() + e.getMinutes()/60;
-        if (endH <= 9 || startH >= 21) return null; 
-        const top = (Math.max(9, startH) - 9) * 60; 
-        const height = (Math.min(21, endH) - Math.max(9, startH)) * 60;
+        if (endH <= 0 || startH >= 24) return null; 
+        const top = startH * 60; 
+        const height = (Math.min(24, endH) - Math.max(0, startH)) * 60;
         return { top: top+'px', height: height+'px' };
     },
     async saveGCalEvent() {
@@ -531,27 +530,18 @@ createApp({
         else { this.tasks.push({lineIndex:-1, desc:this.panelData.desc, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, completed:false, tags:[...this.panelData.tags]}); }
         this.showPanel=false; this.pushChanges();
     },
-    // ★ FIX: Clean duplicate metadata before saving
+    // ★ FIX: Construct fresh line from clean data to avoid duplication
     pushChanges() {
         this.isSaving=true;
         const newLines=[...this.lines];
         this.tasks.forEach(t=>{
-            // 1. Clean existing Description (Remove old metadata to prevent duplication)
-            let cleanDesc = t.desc
-                .replace(/📅\s*\d{4}-\d{2}-\d{2}/g, '')
-                .replace(/[➕+]\s*\d{4}-\d{2}-\d{2}/g, '')
-                .replace(/✅\s*\d{4}-\d{2}-\d{2}/g, '')
-                .replace(/🔁\s*[^✅➕+📅#\n]+/g, '')
-                .replace(/[⏫🔼🔽]/g, '')
-                .replace(/#todo/gi, '')
-                .trim();
-            
-            // 2. Remove tags from description text if they exist as array
-            t.tags.forEach(tag => cleanDesc = cleanDesc.replace(tag, '').trim());
+            // Ensure we use the clean desc if it was edited, or clean it now if it's raw
+            const cleanObj = this.cleanRawTitle(t.desc);
+            const title = this.isEditMode && this.panelData.taskRef === t ? this.panelData.desc : cleanObj.clean;
+            const url = this.isEditMode && this.panelData.taskRef === t ? this.panelData.url : cleanObj.url;
 
-            // 3. Construct new line
-            const urlPart = this.panelData.url ? `[${cleanDesc}](${this.panelData.url})` : cleanDesc;
-            const l=`- [${t.completed?'x':' '}] ${urlPart} ${t.priority==='high'?'⏫':t.priority==='medium'?'🔼':t.priority==='low'?'🔽':''} ${t.recurrence?'🔁 '+t.recurrence:''} ${t.due?'📅 '+t.due:''} ${t.tags.join(' ')} #todo`.replace(/\s+/g,' ');
+            const urlPart = url ? `[${title}](${url})` : title;
+            const l=`- [${t.completed?'x':' '}] ${urlPart} ${t.priority==='high'?'⏫':t.priority==='medium'?'🔼':t.priority==='low'?'🔽':''} ${t.recurrence?'🔁 '+t.recurrence:''} ${t.due?'📅 '+t.due:''} ${t.tags.join(' ')} #todo`.replace(/\s+/g,' ').trim();
             
             if(t.lineIndex>=0)newLines[t.lineIndex]=l; else newLines.push(l);
         });
