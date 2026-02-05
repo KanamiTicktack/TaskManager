@@ -29,7 +29,7 @@
       --header-height: 44px;
       --allday-min-height: 34px;
       --slot-height: 60px;
-      --scrollbar-width: 0px; /* JS Calculated */
+      --scrollbar-width: 0px;
     }
     body.dark-mode {
       --primary: #818cf8; --primary-light: #312e81;
@@ -99,13 +99,12 @@
         border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;
         min-height: 0;
     }
-    
     .cal-row { display: flex; width: 100%; flex-shrink: 0; }
     .cal-col-time { width: var(--time-col-width); flex-shrink: 0; border-right: 1px solid var(--border-color); background: var(--hover-bg); text-align: center; }
     .cal-col-day { flex: 1; border-right: 1px solid var(--border-color); position: relative; min-width: 0; }
     .cal-col-day:last-child { border-right: none; }
 
-    /* Header with Clickable State */
+    /* Header */
     .cal-header { border-bottom: 1px solid var(--border-color); height: var(--header-height); background: var(--hover-bg); }
     .header-cell { 
         height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; 
@@ -113,8 +112,7 @@
         cursor: pointer; transition: background 0.1s;
     }
     .header-cell:hover { background: rgba(0,0,0,0.03); }
-    .header-cell.selected { background: var(--primary-light) !important; color: var(--primary); box-shadow: inset 0 -2px 0 var(--primary); }
-    
+    .header-cell.selected { background: var(--primary-light) !important; color: var(--primary); }
     .sun { color: #ef4444; } .sat { color: #3b82f6; }
 
     .cal-allday { border-bottom: 2px solid var(--border-color); min-height: var(--allday-min-height); background: var(--bg-card); }
@@ -270,7 +268,7 @@
 
             <div class="view-panel" v-show="isPC || currentTab==='calendar'">
                  <div class="d-flex justify-content-between align-items-center mb-2 px-1 flex-shrink-0">
-                     <div class="btn-group border rounded overflow-hidden"><button class="btn btn-sm btn-light rounded-0" :class="{active: calendarMode==='week'}" @click="calendarMode='week'">週</button><button class="btn btn-sm btn-light rounded-0" :class="{active: calendarMode==='month'}" @click="calendarMode='month'">月</button></div>
+                     <div class="btn-group border rounded overflow-hidden"><button class="btn btn-sm btn-light rounded-0" :class="{active: calendarMode==='week'}" @click="setCalendarMode('week')">週</button><button class="btn btn-sm btn-light rounded-0" :class="{active: calendarMode==='month'}" @click="setCalendarMode('month')">月</button></div>
                      <div class="d-flex align-items-center gap-2 bg-white rounded border px-1"><button class="btn-icon p-1" @click="changeDateRange(-1)"><span class="material-icons-round">chevron_left</span></button><span class="fw-bold small">{{ calendarTitle }}</span><button class="btn-icon p-1" @click="changeDateRange(1)"><span class="material-icons-round">chevron_right</span></button></div>
                  </div>
 
@@ -312,7 +310,7 @@
 
                  <div v-else class="month-grid mb-3 flex-shrink-0" style="height: 350px;">
                      <div v-for="d in ['日','月','火','水','木','金','土']" class="p-2 text-center small fw-bold bg-light">{{d}}</div>
-                     <div v-for="day in calendarDays" :key="day.date" class="m-cell" :class="{selected: selectedDate===day.date}" @click="selectedDate=day.date">
+                     <div v-for="day in calendarDays" :key="day.date" class="m-cell" :class="{selected: selectedDate===day.date}" @click="selectDate(day.date)">
                          <div class="date-badge" :class="{today: day.isToday}">{{day.dayNum}}</div>
                          <div class="d-flex flex-wrap gap-1 mt-1"><div v-for="item in day.items" class="dot" :style="{background: item.isGCal?item.color:'var(--text-sub)'}"></div></div>
                      </div>
@@ -390,7 +388,7 @@ createApp({
       calendarMode: 'week', selectedDate: '', currentCalStart: new Date(), gcalEvents: [], availableCalendars: [],
       showPanel: false, isEditMode: false, panelData: {}, tagInput: '', allTagsList: [], filterTag: '',
       modal: { show: false }, toast: { show: false },
-      // ★ Fixed: 9:00 - 20:00
+      // ★ FIXED: 9:00 - 20:00
       timelineHours: [9,10,11,12,13,14,15,16,17,18,19,20],
       hours: Array.from({length:24},(_,i)=>String(i).padStart(2,'0')), minutes: ['00','15','30','45'],
       scrollbarWidth: 0
@@ -535,20 +533,19 @@ createApp({
             this.panelData={...t, taskRef:t, isGCal:false, desc: cleaned.clean, url: cleaned.url, tags:[...(t.tags||[])]};
         }
     },
-    // ★ Fixed: Offset for 9:00 start (0px at 9:00)
+    // ★ FIX: 9:00 - 20:00 range calculation (offset -9)
     getEventPos(i) { 
         const s=new Date(i.start); const e=new Date(i.end); 
         const startH = s.getHours() + s.getMinutes()/60;
         const endH = e.getHours() + e.getMinutes()/60;
         
-        // Filter out events that end before 9:00 or start after 21:00
         if (endH <= 9 || startH >= 21) return null; 
         
-        // Clamp logic
+        // Clamp to 9-21 window
         const effectiveStart = Math.max(9, startH);
         const effectiveEnd = Math.min(21, endH);
         
-        const top = (effectiveStart - 9) * 60; 
+        const top = (effectiveStart - 9) * 60; // 60px per hour
         const height = (effectiveEnd - effectiveStart) * 60;
         
         return { top: top+'px', height: height+'px' };
@@ -583,9 +580,11 @@ createApp({
     onDrop(e, date, hour) {
         const item = JSON.parse(e.dataTransfer.getData('json'));
         if(!item.isGCal) return; 
-        const start = hour ? `${date}T${String(hour).padStart(2,'0')}:00:00` : item.start;
+        // Correct time calculation for 9:00 start
+        const timeHour = 9 + hour; // Index 0 = 9:00
+        const start = `${date}T${String(timeHour).padStart(2,'0')}:00:00`;
         this.loading=true;
-        callGAS('updateCalendarEvent', {calendarId:item.calendarId, eventId:item.id, dateStr:date, startTime:hour?String(hour).padStart(2,'0')+':00':null})
+        callGAS('updateCalendarEvent', {calendarId:item.calendarId, eventId:item.id, dateStr:date, startTime:String(timeHour).padStart(2,'0')+':00'})
         .then(()=>{this.fetchGCal();}).finally(()=>this.loading=false);
     },
     closePanel() { this.showPanel=false; },
@@ -612,7 +611,8 @@ createApp({
     convertIsoToYMD(iso) { return iso ? this.getLocalYMD(new Date(iso)) : ''; },
     getTodayStr() { return this.getLocalYMD(new Date()); },
     formatTimeRange(item) { if(item.isAllDay) return '終日'; const d1=new Date(item.start); const d2=new Date(item.end); return `${String(d1.getHours()).padStart(2,'0')}:${String(d1.getMinutes()).padStart(2,'0')} - ${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`; },
-    changeDateRange(d) { const dt=new Date(this.currentCalStart); if(this.calendarMode==='week')dt.setDate(dt.getDate()+d*7); else dt.setMonth(dt.getMonth()+d); this.currentCalStart=dt; },
+    changeDateRange(d) { const dt=new Date(this.currentCalStart); if(this.calendarMode==='week')dt.setDate(dt.getDate()+d*7); else dt.setMonth(dt.getMonth()+d); this.currentCalStart=dt; this.fetchGCal(); }, // Added fetch
+    setCalendarMode(m) { this.calendarMode = m; this.fetchGCal(); }, // Added fetch
     selectDate(d) { this.selectedDate=d; },
     showToastNotification(m) { this.toast={show:true, message:m}; setTimeout(()=>this.toast.show=false, 3000); },
     showInfo(t,m) { this.modal={show:true, title:t, message:m, type:'info', okText:'OK'}; },
