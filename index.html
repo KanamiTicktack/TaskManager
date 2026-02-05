@@ -38,7 +38,7 @@
       --hover-bg: #374151;
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; }
-    .form-control, .form-select { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
+    .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
     
     /* Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -390,7 +390,7 @@
 </div>
 
 <script>
-const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycbwmATuUcgjXeDDEJy6hrFS1dOsoR9zv9RZGIaTESgQ9id2HKlaG_LaUKG8IL4EpNQQwug/exec"; 
+const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycbxmfN6FpqvN8Y_v0gApvtgKUIxIkvIzYM22_JmIqXeIbe6ij_A72NqfF7vraCuI1hURaA/exec"; 
 async function callGAS(a, p={}) { const r=await fetch(CONST_GAS_URL,{method:'POST',body:JSON.stringify({...p,action:a})}); const j=await r.json(); if(j.error)throw new Error(j.error); return j; }
 
 const { createApp } = Vue;
@@ -593,7 +593,6 @@ createApp({
         else { this.tasks.push({lineIndex:-1, desc:this.panelData.desc, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, completed:false, tags:[...this.panelData.tags]}); }
         this.showPanel=false; this.pushChanges();
     },
-    // ★ FIX: Auto-append ✅ YYYY-MM-DD on complete
     pushChanges() {
         this.isSaving=true;
         const newLines=[...this.lines];
@@ -603,10 +602,7 @@ createApp({
             const url = this.isEditMode && this.panelData.taskRef === t ? this.panelData.url : cleanObj.url;
             const urlPart = url ? `[${title}](${url})` : title;
             
-            // Add Done Date if completed
-            const donePart = t.completed ? `✅ ${this.getTodayStr()}` : '';
-
-            const l=`- [${t.completed?'x':' '}] ${urlPart} ${t.priority==='high'?'⏫':t.priority==='medium'?'🔼':t.priority==='low'?'🔽':''} ${t.recurrence?'🔁 '+t.recurrence:''} ${t.due?'📅 '+t.due:''} ${donePart} ${t.tags.join(' ')} #todo`.replace(/\s+/g,' ').trim();
+            const l=`- [${t.completed?'x':' '}] ${urlPart} ${t.priority==='high'?'⏫':t.priority==='medium'?'🔼':t.priority==='low'?'🔽':''} ${t.recurrence?'🔁 '+t.recurrence:''} ${t.due?'📅 '+t.due:''} ${t.tags.join(' ')} #todo`.replace(/\s+/g,' ').trim();
             if(t.lineIndex>=0)newLines[t.lineIndex]=l; else newLines.push(l);
         });
         callGAS('saveFileContent', {...this.settings, content:newLines.join('\n'), sha:this.sha}).then(r=>{this.sha=r.newSha; this.lines=newLines; this.showToastNotification('保存しました');}).catch(e=>console.error(e)).finally(()=>this.isSaving=false);
@@ -615,19 +611,11 @@ createApp({
     onDrop(e, date, hour) {
         const item = JSON.parse(e.dataTransfer.getData('json'));
         if(!item.isGCal) return; 
-        
-        // ★ FIX: D&D Logic (Requires End Time)
-        const oldStart = new Date(item.start); const oldEnd = new Date(item.end);
-        const durationMs = oldEnd - oldStart;
-        
-        const newStart = new Date(`${date}T${String(9+hour).padStart(2,'0')}:00:00`);
-        const newEnd = new Date(newStart.getTime() + durationMs);
-        
-        const startTime = `${String(newStart.getHours()).padStart(2,'0')}:${String(newStart.getMinutes()).padStart(2,'0')}`;
-        const endTime = `${String(newEnd.getHours()).padStart(2,'0')}:${String(newEnd.getMinutes()).padStart(2,'0')}`;
-
+        // Correct time calculation for 9:00 start
+        const timeHour = 9 + hour; // Index 0 = 9:00
+        const start = `${date}T${String(timeHour).padStart(2,'0')}:00:00`;
         this.loading=true;
-        callGAS('updateCalendarEvent', {calendarId:item.calendarId, eventId:item.id, dateStr:date, startTime:startTime, endTime:endTime})
+        callGAS('updateCalendarEvent', {calendarId:item.calendarId, eventId:item.id, dateStr:date, startTime:String(timeHour).padStart(2,'0')+':00'})
         .then(()=>{this.fetchGCal();}).finally(()=>this.loading=false);
     },
     closePanel() { this.showPanel=false; },
