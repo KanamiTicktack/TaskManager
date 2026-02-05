@@ -67,15 +67,12 @@
     .view-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; position: relative; }
     .scroll-y { overflow-y: auto; flex: 1; padding-right: 2px; padding-bottom: 80px; }
 
-    /* Tabs (Shared Style) - Hide Scrollbar Fix */
+    /* Tabs */
     .nav-tabs { 
         border-bottom: 1px solid var(--border-color); gap: 4px; flex-shrink: 0; margin-bottom: 12px; 
-        flex-wrap: nowrap; overflow-x: auto; 
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE/Edge */
+        flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
     }
-    .nav-tabs::-webkit-scrollbar { display: none; /* Chrome/Safari */ }
-    
+    .nav-tabs::-webkit-scrollbar { display: none; }
     .nav-link { border: none; color: var(--text-sub); font-weight: 600; padding: 8px 16px; border-radius: 20px; white-space: nowrap; font-size: 0.9rem; background: transparent; }
     .nav-link.active { background: var(--primary) !important; color: white !important; }
 
@@ -108,8 +105,16 @@
     .cal-col-day { flex: 1; border-right: 1px solid var(--border-color); position: relative; min-width: 0; }
     .cal-col-day:last-child { border-right: none; }
 
+    /* Header with Clickable State */
     .cal-header { border-bottom: 1px solid var(--border-color); height: var(--header-height); background: var(--hover-bg); }
-    .header-cell { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; color: var(--text-sub); }
+    .header-cell { 
+        height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        font-size: 0.8rem; font-weight: bold; color: var(--text-sub); 
+        cursor: pointer; transition: background 0.1s;
+    }
+    .header-cell:hover { background: rgba(0,0,0,0.03); }
+    .header-cell.selected { background: var(--primary-light) !important; color: var(--primary); box-shadow: inset 0 -2px 0 var(--primary); }
+    
     .sun { color: #ef4444; } .sat { color: #3b82f6; }
 
     .cal-allday { border-bottom: 2px solid var(--border-color); min-height: var(--allday-min-height); background: var(--bg-card); }
@@ -272,7 +277,7 @@
                  <div v-if="calendarMode==='week'" class="calendar-container">
                      <div class="cal-row cal-header" :style="{paddingRight: scrollbarWidth+'px'}">
                          <div class="cal-col-time"></div>
-                         <div v-for="day in calendarDays" :key="'h'+day.date" class="cal-col-day header-cell" :class="{sun:day.dayOfWeek==0, sat:day.dayOfWeek==6}">
+                         <div v-for="day in calendarDays" :key="'h'+day.date" class="cal-col-day header-cell" :class="{sun:day.dayOfWeek==0, sat:day.dayOfWeek==6, selected: day.date===selectedDate}" @click="selectDate(day.date)">
                              <div style="font-size:1.1rem; line-height:1">{{day.dayNum}}</div>
                              <div style="font-size:0.7rem; font-weight:normal">{{['日','月','火','水','木','金','土'][day.dayOfWeek]}}</div>
                          </div>
@@ -385,7 +390,7 @@ createApp({
       calendarMode: 'week', selectedDate: '', currentCalStart: new Date(), gcalEvents: [], availableCalendars: [],
       showPanel: false, isEditMode: false, panelData: {}, tagInput: '', allTagsList: [], filterTag: '',
       modal: { show: false }, toast: { show: false },
-      // ★ FIX: 9:00 - 20:00 Range
+      // ★ Fixed: 9:00 - 20:00
       timelineHours: [9,10,11,12,13,14,15,16,17,18,19,20],
       hours: Array.from({length:24},(_,i)=>String(i).padStart(2,'0')), minutes: ['00','15','30','45'],
       scrollbarWidth: 0
@@ -445,6 +450,8 @@ createApp({
       const s = localStorage.getItem('gh_tasks_settings');
       if(s) { this.settings=JSON.parse(s); this.loadData(); } else { this.currentTab='settings'; }
       if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode');
+      
+      this.$nextTick(() => { const body = this.$refs.calBody; if(body) body.scrollTop = 9 * 60; });
   },
   methods: {
     measureScrollbar() { const el=document.createElement('div'); el.style.cssText='overflow:scroll;visibility:hidden;position:absolute;'; document.body.appendChild(el); this.scrollbarWidth=el.offsetWidth-el.clientWidth; el.remove(); },
@@ -528,16 +535,21 @@ createApp({
             this.panelData={...t, taskRef:t, isGCal:false, desc: cleaned.clean, url: cleaned.url, tags:[...(t.tags||[])]};
         }
     },
-    // ★ FIX: Offset for 9:00 start
+    // ★ Fixed: Offset for 9:00 start (0px at 9:00)
     getEventPos(i) { 
         const s=new Date(i.start); const e=new Date(i.end); 
         const startH = s.getHours() + s.getMinutes()/60;
         const endH = e.getHours() + e.getMinutes()/60;
         
+        // Filter out events that end before 9:00 or start after 21:00
         if (endH <= 9 || startH >= 21) return null; 
         
-        const top = (Math.max(9, startH) - 9) * 60; // Offset by 9h
-        const height = (Math.min(21, endH) - Math.max(9, startH)) * 60;
+        // Clamp logic
+        const effectiveStart = Math.max(9, startH);
+        const effectiveEnd = Math.min(21, endH);
+        
+        const top = (effectiveStart - 9) * 60; 
+        const height = (effectiveEnd - effectiveStart) * 60;
         
         return { top: top+'px', height: height+'px' };
     },
