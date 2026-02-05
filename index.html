@@ -40,7 +40,7 @@
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; }
     .form-control, .form-select { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
     
-    /* Scrollbar Styling */
+    /* Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .scroll-y:hover::-webkit-scrollbar-thumb { background: #94a3b8; }
@@ -68,10 +68,7 @@
     .scroll-y { overflow-y: auto; flex: 1; padding-right: 2px; padding-bottom: 80px; }
 
     /* Tabs */
-    .nav-tabs { 
-        border-bottom: 1px solid var(--border-color); gap: 4px; flex-shrink: 0; margin-bottom: 12px; 
-        flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
-    }
+    .nav-tabs { border-bottom: 1px solid var(--border-color); gap: 4px; flex-shrink: 0; margin-bottom: 12px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
     .nav-tabs::-webkit-scrollbar { display: none; }
     .nav-link { border: none; color: var(--text-sub); font-weight: 600; padding: 8px 16px; border-radius: 20px; white-space: nowrap; font-size: 0.9rem; background: transparent; }
     .nav-link.active { background: var(--primary) !important; color: white !important; }
@@ -104,7 +101,6 @@
     .cal-col-day { flex: 1; border-right: 1px solid var(--border-color); position: relative; min-width: 0; }
     .cal-col-day:last-child { border-right: none; }
 
-    /* Header */
     .cal-header { border-bottom: 1px solid var(--border-color); height: var(--header-height); background: var(--hover-bg); }
     .header-cell { 
         height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; 
@@ -518,7 +514,8 @@ createApp({
     // Actions
     openAddPanel() { 
         this.isEditMode=false; this.showPanel=true; 
-        this.panelData={isGCal:false, desc:'', due:this.selectedDate||this.getTodayStr(), tags:[], priority:'none', recurrence:''}; 
+        // ★ FIX: Initial values for switching
+        this.panelData={isGCal:false, isNew:true, targetCalendarId:this.settings.calendarIds[0], desc:'', due:this.selectedDate||this.getTodayStr(), tags:[], priority:'none', recurrence:''}; 
         this.tagInput='';
     },
     openEditPanel(i) {
@@ -533,19 +530,20 @@ createApp({
             this.panelData={...t, taskRef:t, isGCal:false, desc: cleaned.clean, url: cleaned.url, tags:[...(t.tags||[])]};
         }
     },
-    // ★ FIX: 9:00 - 20:00 range calculation (offset -9)
+    // ★ FIX: Offset for 9:00 start (0px at 9:00)
     getEventPos(i) { 
         const s=new Date(i.start); const e=new Date(i.end); 
         const startH = s.getHours() + s.getMinutes()/60;
         const endH = e.getHours() + e.getMinutes()/60;
         
+        // Filter out events that end before 9:00 or start after 21:00
         if (endH <= 9 || startH >= 21) return null; 
         
-        // Clamp to 9-21 window
+        // Clamp logic
         const effectiveStart = Math.max(9, startH);
         const effectiveEnd = Math.min(21, endH);
         
-        const top = (effectiveStart - 9) * 60; // 60px per hour
+        const top = (effectiveStart - 9) * 60; 
         const height = (effectiveEnd - effectiveStart) * 60;
         
         return { top: top+'px', height: height+'px' };
@@ -553,7 +551,7 @@ createApp({
     async saveGCalEvent() {
         this.isSaving=true; let d=this.panelData.desc||''; if(this.panelData.meetingUrl) d=`【会議URL】: ${this.panelData.meetingUrl}\n\n${d}`;
         try {
-            await callGAS(this.panelData.isNew?'createCalendarEvent':'updateCalendarEvent', {...this.panelData, description:d, startTime:`${this.panelData.startHour}:${this.panelData.startMin}`, endTime:`${this.panelData.endHour}:${this.panelData.endMin}`, dateStr:this.panelData.dateInput});
+            await callGAS(this.panelData.isNew?'createCalendarEvent':'updateCalendarEvent', {...this.panelData, calendarId:this.panelData.targetCalendarId, description:d, startTime:`${this.panelData.startHour}:${this.panelData.startMin}`, endTime:`${this.panelData.endHour}:${this.panelData.endMin}`, dateStr:this.panelData.dateInput});
             this.showPanel=false; this.fetchGCal();
         } catch(e){this.showInfo('Error',e);} finally{this.isSaving=false;}
     },
