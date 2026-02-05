@@ -38,7 +38,7 @@
       --hover-bg: #374151;
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; }
-    .form-control, .form-select { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
+    .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
     
     /* Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -68,7 +68,10 @@
     .scroll-y { overflow-y: auto; flex: 1; padding-right: 2px; padding-bottom: 80px; }
 
     /* Tabs */
-    .nav-tabs { border-bottom: 1px solid var(--border-color); gap: 4px; flex-shrink: 0; margin-bottom: 12px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    .nav-tabs { 
+        border-bottom: 1px solid var(--border-color); gap: 4px; flex-shrink: 0; margin-bottom: 12px; 
+        flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+    }
     .nav-tabs::-webkit-scrollbar { display: none; }
     .nav-link { border: none; color: var(--text-sub); font-weight: 600; padding: 8px 16px; border-radius: 20px; white-space: nowrap; font-size: 0.9rem; background: transparent; }
     .nav-link.active { background: var(--primary) !important; color: white !important; }
@@ -90,7 +93,7 @@
     .due-badge { display: flex; align-items: center; gap: 2px; background: var(--hover-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); }
     .text-done { text-decoration: line-through; opacity: 0.6; }
 
-    /* Calendar (Flex Layout) */
+    /* Calendar */
     .calendar-container {
         flex: 1; display: flex; flex-direction: column; background: var(--bg-card); 
         border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;
@@ -552,7 +555,6 @@ createApp({
         const startH = s.getHours() + s.getMinutes()/60;
         const endH = e.getHours() + e.getMinutes()/60;
         
-        // Filter out events that end before 9:00 or start after 21:00
         if (endH <= 9 || startH >= 21) return null; 
         
         // Clamp logic
@@ -566,10 +568,14 @@ createApp({
     },
     async saveGCalEvent() {
         this.isSaving=true; let d=this.panelData.desc||''; if(this.panelData.meetingUrl) d=`【会議URL】: ${this.panelData.meetingUrl}\n\n${d}`;
-        // ★ FIX: Correct params for All Day
+        
+        // ★ FIX: Calendar ID Selection
+        const calId = this.panelData.isNew ? this.panelData.targetCalendarId : this.panelData.calendarId;
+        if (!calId) { this.showInfo('エラー', 'カレンダーが選択されていません'); this.isSaving=false; return; }
+
         const params = {
             ...this.panelData, 
-            calendarId: this.panelData.targetCalendarId,
+            calendarId: calId,
             description:d, 
             dateStr:this.panelData.dateInput
         };
@@ -608,7 +614,6 @@ createApp({
     onDrop(e, date, hour) {
         const item = JSON.parse(e.dataTransfer.getData('json'));
         if(!item.isGCal) return; 
-        // Correct time calculation for 9:00 start
         const timeHour = 9 + hour; // Index 0 = 9:00
         const start = `${date}T${String(timeHour).padStart(2,'0')}:00:00`;
         this.loading=true;
