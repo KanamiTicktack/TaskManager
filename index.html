@@ -345,6 +345,8 @@
 
         <div v-if="panelData.isGCal" class="d-flex flex-column h-100 gap-3">
              <div v-if="panelData.isNew"><label class="small text-muted">カレンダー</label><select v-model="panelData.targetCalendarId" class="form-select"><option v-for="c in availableCalendars" :value="c.id">{{c.name}}</option></select></div>
+             <div v-else class="small text-muted mb-1"><span class="badge bg-light text-dark border">{{panelData.calendarName}}</span></div>
+
              <div><label class="small text-muted">タイトル</label><input v-model="panelData.title" class="form-control fw-bold"></div>
              
              <div>
@@ -390,7 +392,7 @@
 </div>
 
 <script>
-const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycbxmfN6FpqvN8Y_v0gApvtgKUIxIkvIzYM22_JmIqXeIbe6ij_A72NqfF7vraCuI1hURaA/exec"; 
+const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycbw7dGJqhfhCCOD4FArTu2zhmRijTYuhIqcqi6l-Ij3JMJ43NkzLzw-8IJPFt5AylgrTqw/exec"; 
 async function callGAS(a, p={}) { const r=await fetch(CONST_GAS_URL,{method:'POST',body:JSON.stringify({...p,action:a})}); const j=await r.json(); if(j.error)throw new Error(j.error); return j; }
 
 const { createApp } = Vue;
@@ -543,7 +545,7 @@ createApp({
         if(i.isGCal) {
             let d=i.desc||'', u=''; const m=d.match(/^【会議URL】:\s*(\S+)(\n\n)?/); if(m){u=m[1]; d=d.replace(m[0],'');}
             const s = new Date(i.start); const e = new Date(i.end);
-            this.panelData={isGCal:true, eid:i.id, calendarId:i.calendarId, title:i.title, desc:d, meetingUrl:u, dateInput:this.convertIsoToYMD(i.start), isAllDay: i.isAllDay || false, startHour:String(s.getHours()).padStart(2,'0'), startMin:String(s.getMinutes()).padStart(2,'0'), endHour:String(e.getHours()).padStart(2,'0'), endMin:String(e.getMinutes()).padStart(2,'0')};
+            this.panelData={isGCal:true, eid:i.id, calendarId:i.calendarId, calendarName:i.calendarName, title:i.title, desc:d, meetingUrl:u, dateInput:this.convertIsoToYMD(i.start), isAllDay: i.isAllDay || false, startHour:String(s.getHours()).padStart(2,'0'), startMin:String(s.getMinutes()).padStart(2,'0'), endHour:String(e.getHours()).padStart(2,'0'), endMin:String(e.getMinutes()).padStart(2,'0')};
         } else {
             const t=this.tasks.find(x=>x.lineIndex===i.lineIndex)||i;
             const cleaned = this.cleanRawTitle(t.desc);
@@ -569,10 +571,13 @@ createApp({
     },
     async saveGCalEvent() {
         this.isSaving=true; let d=this.panelData.desc||''; if(this.panelData.meetingUrl) d=`【会議URL】: ${this.panelData.meetingUrl}\n\n${d}`;
-        // ★ FIX: Correct params for All Day
+        // ★ FIX: Calendar ID Selection
+        const calId = this.panelData.isNew ? this.panelData.targetCalendarId : this.panelData.calendarId;
+        if (!calId) { this.showInfo('エラー', 'カレンダーが選択されていません'); this.isSaving=false; return; }
+
         const params = {
             ...this.panelData, 
-            calendarId: this.panelData.isNew ? this.panelData.targetCalendarId : this.panelData.calendarId,
+            calendarId: calId,
             description:d, 
             dateStr:this.panelData.dateInput
         };
@@ -593,6 +598,7 @@ createApp({
         else { this.tasks.push({lineIndex:-1, desc:this.panelData.desc, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, completed:false, tags:[...this.panelData.tags]}); }
         this.showPanel=false; this.pushChanges();
     },
+    // ★ FIX: Auto-append ✅ YYYY-MM-DD on complete
     pushChanges() {
         this.isSaving=true;
         const newLines=[...this.lines];
@@ -602,7 +608,9 @@ createApp({
             const url = this.isEditMode && this.panelData.taskRef === t ? this.panelData.url : cleanObj.url;
             const urlPart = url ? `[${title}](${url})` : title;
             
-            const l=`- [${t.completed?'x':' '}] ${urlPart} ${t.priority==='high'?'⏫':t.priority==='medium'?'🔼':t.priority==='low'?'🔽':''} ${t.recurrence?'🔁 '+t.recurrence:''} ${t.due?'📅 '+t.due:''} ${t.tags.join(' ')} #todo`.replace(/\s+/g,' ').trim();
+            const donePart = t.completed ? `✅ ${this.getTodayStr()}` : '';
+
+            const l=`- [${t.completed?'x':' '}] ${urlPart} ${t.priority==='high'?'⏫':t.priority==='medium'?'🔼':t.priority==='low'?'🔽':''} ${t.recurrence?'🔁 '+t.recurrence:''} ${t.due?'📅 '+t.due:''} ${donePart} ${t.tags.join(' ')} #todo`.replace(/\s+/g,' ').trim();
             if(t.lineIndex>=0)newLines[t.lineIndex]=l; else newLines.push(l);
         });
         callGAS('saveFileContent', {...this.settings, content:newLines.join('\n'), sha:this.sha}).then(r=>{this.sha=r.newSha; this.lines=newLines; this.showToastNotification('保存しました');}).catch(e=>console.error(e)).finally(()=>this.isSaving=false);
@@ -611,11 +619,19 @@ createApp({
     onDrop(e, date, hour) {
         const item = JSON.parse(e.dataTransfer.getData('json'));
         if(!item.isGCal) return; 
-        // Correct time calculation for 9:00 start
-        const timeHour = 9 + hour; // Index 0 = 9:00
-        const start = `${date}T${String(timeHour).padStart(2,'0')}:00:00`;
+        
+        // ★ FIX: D&D Logic (Requires End Time)
+        const oldStart = new Date(item.start); const oldEnd = new Date(item.end);
+        const durationMs = oldEnd - oldStart;
+        
+        const newStart = new Date(`${date}T${String(9+hour).padStart(2,'0')}:00:00`);
+        const newEnd = new Date(newStart.getTime() + durationMs);
+        
+        const startTime = `${String(newStart.getHours()).padStart(2,'0')}:${String(newStart.getMinutes()).padStart(2,'0')}`;
+        const endTime = `${String(newEnd.getHours()).padStart(2,'0')}:${String(newEnd.getMinutes()).padStart(2,'0')}`;
+
         this.loading=true;
-        callGAS('updateCalendarEvent', {calendarId:item.calendarId, eventId:item.id, dateStr:date, startTime:String(timeHour).padStart(2,'0')+':00'})
+        callGAS('updateCalendarEvent', {calendarId:item.calendarId, eventId:item.id, dateStr:date, startTime:startTime, endTime:endTime})
         .then(()=>{this.fetchGCal();}).finally(()=>this.loading=false);
     },
     closePanel() { this.showPanel=false; },
