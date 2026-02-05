@@ -40,7 +40,6 @@
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; }
     .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
     
-    /* Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .scroll-y:hover::-webkit-scrollbar-thumb { background: #94a3b8; }
@@ -79,59 +78,45 @@
     /* Tasks */
     .task-card { 
         background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 8px; padding: 12px;
-        display: flex; gap: 10px; align-items: flex-start; cursor: pointer; position: relative;
+        display: flex; gap: 10px; align-items: flex-start; cursor: pointer; position: relative; transition: background 0.1s;
     }
+    .task-card:active { background: var(--hover-bg); }
     .task-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 4px 0 0 4px; }
     .priority-high::before { background: #ef4444; } .priority-medium::before { background: #f59e0b; } .priority-low::before { background: #3b82f6; }
     .check-box { width: 22px; height: 22px; border: 2px solid var(--text-sub); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
     .check-box.checked { background: var(--primary); border-color: var(--primary); }
     .check-box .material-icons-round { font-size: 16px; color: white; display: none; }
     .check-box.checked .material-icons-round { display: block; }
-    .task-title { font-weight: 600; font-size: 0.95rem; line-height: 1.4; margin-bottom: 4px; }
+    .task-title { font-weight: 600; font-size: 0.95rem; line-height: 1.4; margin-bottom: 4px; word-break: break-word; }
+    /* Link Styling in Task Title */
+    .task-title a { color: var(--primary); text-decoration: none; position: relative; z-index: 20; }
+    .task-title a:hover { text-decoration: underline; }
+    
     .task-meta { font-size: 0.75rem; color: var(--text-sub); display: flex; gap: 6px; flex-wrap: wrap; }
     .tag-badge { background: var(--border-color); padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; }
     .due-badge { display: flex; align-items: center; gap: 2px; background: var(--hover-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); }
     .text-done { text-decoration: line-through; opacity: 0.6; }
 
     /* Calendar (Flex Layout) */
-    .calendar-container {
-        flex: 1; display: flex; flex-direction: column; background: var(--bg-card); 
-        border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;
-        min-height: 0;
-    }
+    .calendar-container { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; min-height: 0; }
     .cal-row { display: flex; width: 100%; flex-shrink: 0; }
     .cal-col-time { width: var(--time-col-width); flex-shrink: 0; border-right: 1px solid var(--border-color); background: var(--hover-bg); text-align: center; }
     .cal-col-day { flex: 1; border-right: 1px solid var(--border-color); position: relative; min-width: 0; }
     .cal-col-day:last-child { border-right: none; }
-
     .cal-header { border-bottom: 1px solid var(--border-color); height: var(--header-height); background: var(--hover-bg); }
-    .header-cell { 
-        height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; 
-        font-size: 0.8rem; font-weight: bold; color: var(--text-sub); 
-        cursor: pointer; transition: background 0.1s;
-    }
+    .header-cell { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; color: var(--text-sub); cursor: pointer; transition: background 0.1s; }
     .header-cell:hover { background: rgba(0,0,0,0.03); }
     .header-cell.selected { background: var(--primary-light) !important; color: var(--primary); }
     .sun { color: #ef4444; } .sat { color: #3b82f6; }
-
     .cal-allday { border-bottom: 2px solid var(--border-color); min-height: var(--allday-min-height); background: var(--bg-card); }
     .allday-label { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: var(--text-sub); }
     .allday-content { padding: 2px; }
     .ad-event { background: var(--primary); color: white; font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
     .cal-body { flex: 1; overflow-y: scroll; position: relative; display: flex; flex-direction: column; }
     .cal-body-content { display: flex; width: 100%; position: relative; } 
-    
     .time-slot-label { height: var(--slot-height); border-bottom: 1px solid var(--border-color); font-size: 0.75rem; color: var(--text-sub); display: flex; justify-content: center; padding-top: 4px; }
     .time-slot { height: var(--slot-height); border-bottom: 1px solid var(--border-color); box-sizing: border-box; }
-    
-    .event-chip {
-        position: absolute; left: 2px; right: 2px; background: var(--primary); color: white;
-        border-radius: 4px; padding: 2px 4px; font-size: 0.75rem; overflow: hidden;
-        cursor: grab; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;
-        border: 1px solid rgba(255,255,255,0.2);
-    }
-
+    .event-chip { position: absolute; left: 2px; right: 2px; background: var(--primary); color: white; border-radius: 4px; padding: 2px 4px; font-size: 0.75rem; overflow: hidden; cursor: grab; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10; border: 1px solid rgba(255,255,255,0.2); }
     .bottom-list { flex: 0 0 25%; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; min-height: 120px; }
     .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border-color); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; flex-shrink: 0; }
     .m-cell { background: var(--bg-card); min-height: 80px; padding: 4px; cursor: pointer; }
@@ -141,17 +126,9 @@
     .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-sub); margin: 1px; }
 
     /* Side Panel */
-    .side-panel { 
-        position: fixed; top: 0; right: 0; width: 100%; height: 100%; background: var(--bg-card); 
-        z-index: 2000; box-shadow: -5px 0 20px rgba(0,0,0,0.2); padding: 20px;
-        transform: translateX(100%); transition: transform 0.25s; display: flex; flex-direction: column;
-    }
+    .side-panel { position: fixed; top: 0; right: 0; width: 100%; height: 100%; background: var(--bg-card); z-index: 2000; box-shadow: -5px 0 20px rgba(0,0,0,0.2); padding: 20px; transform: translateX(100%); transition: transform 0.25s; display: flex; flex-direction: column; }
     .side-panel.open { transform: translateX(0); }
-    @media (min-width: 992px) {
-        .side-panel { position: absolute; top: 12px; right: 12px; width: 400px; height: auto; max-height: calc(100% - 24px); border-radius: 16px; border: 1px solid var(--border-color); transform: translateY(10px); opacity: 0; pointer-events: none; transition: all 0.2s; }
-        .side-panel.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
-    }
-    
+    @media (min-width: 992px) { .side-panel { position: absolute; top: 12px; right: 12px; width: 400px; height: auto; max-height: calc(100% - 24px); border-radius: 16px; border: 1px solid var(--border-color); transform: translateY(10px); opacity: 0; pointer-events: none; transition: all 0.2s; } .side-panel.open { opacity: 1; transform: translateY(0); pointer-events: auto; } }
     .mode-switcher { display: flex; background: var(--bg-body); padding: 4px; border-radius: 10px; margin-bottom: 16px; border: 1px solid var(--border-color); }
     .mode-btn { flex: 1; padding: 8px; border: none; background: transparent; border-radius: 8px; font-weight: 600; font-size: 0.9rem; color: var(--text-sub); transition: 0.2s; }
     .mode-btn.active { background: var(--bg-card); color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
@@ -160,17 +137,38 @@
     .btn-opt { flex: 1; padding: 6px; border: none; background: transparent; border-radius: 6px; font-size: 0.8rem; color: var(--text-sub); transition: 0.1s; }
     .btn-opt.active { background: var(--bg-card); color: var(--text-main); font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
 
-    /* Common */
+    /* FAB */
     .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
     .fab-btn:active { transform: scale(0.92); }
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 2100; backdrop-filter: blur(2px); }
     .modal-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-card); padding: 24px; border-radius: 16px; width: 90%; max-width: 360px; z-index: 2200; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+
+    /* ★ Status Toast (New) ★ */
+    .status-toast {
+        position: fixed; bottom: 30px; right: 100px; /* FABの左側 */
+        background: var(--bg-card); border: 1px solid var(--border-color);
+        padding: 8px 16px; border-radius: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        display: flex; align-items: center; gap: 8px; z-index: 3000;
+        font-size: 0.85rem; font-weight: 600; color: var(--text-main);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        opacity: 0; transform: translateY(20px); pointer-events: none;
+    }
+    .status-toast.visible { opacity: 1; transform: translateY(0); }
+    .status-toast.loading .status-icon { border: 2px solid var(--text-sub); border-top-color: transparent; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
+    .status-toast.success .status-icon { color: #10b981; }
+    .status-toast.error .status-icon { color: #ef4444; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @media (max-width: 768px) { .status-toast { right: 50%; transform: translateX(50%) translateY(20px); bottom: 100px; } .status-toast.visible { transform: translateX(50%) translateY(0); } }
   </style>
 </head>
 <body>
 <div id="app">
-  <div v-if="loading" class="overlay d-flex flex-column align-items-center justify-content-center text-white"><div class="spinner-border mb-2"></div><strong>{{ loadingMessage }}</strong></div>
-  <transition name="fade"><div v-if="toast.show" style="position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#333; color:white; padding:10px 20px; border-radius:30px; z-index:3000;">{{ toast.message }}</div></transition>
+  <div class="status-toast" :class="[{visible: status.visible}, status.type]">
+      <div class="status-icon" v-if="status.type==='loading'"></div>
+      <span class="material-icons-round status-icon" v-else-if="status.type==='success'">check_circle</span>
+      <span class="material-icons-round status-icon" v-else-if="status.type==='error'">error</span>
+      <span>{{ status.message }}</span>
+  </div>
 
   <div v-if="modal.show" class="overlay" @click="closeModal(false)"></div>
   <div v-if="modal.show" class="modal-box">
@@ -279,14 +277,12 @@
                              <div style="font-size:0.7rem; font-weight:normal">{{['日','月','火','水','木','金','土'][day.dayOfWeek]}}</div>
                          </div>
                      </div>
-                     
                      <div class="cal-row cal-allday" :style="{paddingRight: scrollbarWidth+'px'}">
                          <div class="cal-col-time allday-label">終日</div>
                          <div v-for="day in calendarDays" :key="'ad'+day.date" class="cal-col-day allday-content" @dragover.prevent @drop="onDrop($event, day.date, null)">
                              <div v-for="item in day.items.filter(x=>x.isGCal && x.isAllDay)" class="ad-event" :style="{background: item.color}" draggable="true" @dragstart="dragStart($event, item)" @click="openEditPanel(item)">{{item.title}}</div>
                          </div>
                      </div>
-                     
                      <div class="cal-body" ref="calBody">
                          <div class="cal-body-content">
                              <div class="cal-col-time">
@@ -296,11 +292,7 @@
                                  <div v-for="h in timelineHours" :key="'s'+h" class="time-slot" @drop.stop="onDrop($event, day.date, h)"></div>
                                  <div v-for="item in day.items.filter(x=>!x.isAllDay && x.isGCal && getEventPos(x))" 
                                       :key="item.id" class="event-chip" 
-                                      :style="{ 
-                                          top: getEventPos(item).top, 
-                                          height: getEventPos(item).height,
-                                          background: item.color 
-                                      }"
+                                      :style="{ top: getEventPos(item).top, height: getEventPos(item).height, background: item.color }"
                                       draggable="true" @dragstart="dragStart($event, item)" @click.stop="openEditPanel(item)">{{ item.title }}</div>
                              </div>
                          </div>
@@ -337,40 +329,28 @@
 
     <div class="side-panel" :class="{open: showPanel}">
         <div class="d-flex justify-content-between mb-3"><h5 class="m-0 fw-bold">{{isEditMode?'編集':'新規作成'}}</h5><button class="btn-icon" @click="closePanel"><span class="material-icons-round">close</span></button></div>
-        
         <div class="mode-switcher" v-if="!isEditMode">
             <button class="mode-btn" :class="{active: !panelData.isGCal}" @click="panelData.isGCal=false">タスク</button>
             <button class="mode-btn" :class="{active: panelData.isGCal}" @click="panelData.isGCal=true">カレンダー</button>
         </div>
-
         <div v-if="panelData.isGCal" class="d-flex flex-column h-100 gap-3">
              <div v-if="panelData.isNew"><label class="small text-muted">カレンダー</label><select v-model="panelData.targetCalendarId" class="form-select"><option v-for="c in availableCalendars" :value="c.id">{{c.name}}</option></select></div>
              <div v-else class="small text-muted mb-1"><span class="badge bg-light text-dark border">{{panelData.calendarName}}</span></div>
-
              <div><label class="small text-muted">タイトル</label><input v-model="panelData.title" class="form-control fw-bold"></div>
-             
              <div>
                  <div class="d-flex align-items-center gap-2 mb-2">
                      <label class="small text-muted m-0">日時</label>
-                     <div class="form-check m-0 ms-auto">
-                         <input class="form-check-input" type="checkbox" id="checkAllDay" v-model="panelData.isAllDay">
-                         <label class="form-check-label small" for="checkAllDay">終日</label>
-                     </div>
+                     <div class="form-check m-0 ms-auto"><input class="form-check-input" type="checkbox" id="checkAllDay" v-model="panelData.isAllDay"><label class="form-check-label small" for="checkAllDay">終日</label></div>
                  </div>
                  <input type="date" v-model="panelData.dateInput" class="form-control mb-2">
                  <div class="d-flex gap-2 align-items-center" v-if="!panelData.isAllDay">
-                     <select v-model="panelData.startHour" class="form-select"><option v-for="h in hours" :value="h">{{h}}</option></select>:
-                     <select v-model="panelData.startMin" class="form-select"><option v-for="m in minutes" :value="m">{{m}}</option></select> ～ 
-                     <select v-model="panelData.endHour" class="form-select"><option value="">--</option><option v-for="h in hours" :value="h">{{h}}</option></select>:
-                     <select v-model="panelData.endMin" class="form-select"><option value="">--</option><option v-for="m in minutes" :value="m">{{m}}</option></select>
+                     <select v-model="panelData.startHour" class="form-select"><option v-for="h in hours" :value="h">{{h}}</option></select>:<select v-model="panelData.startMin" class="form-select"><option v-for="m in minutes" :value="m">{{m}}</option></select> ～ <select v-model="panelData.endHour" class="form-select"><option value="">--</option><option v-for="h in hours" :value="h">{{h}}</option></select>:<select v-model="panelData.endMin" class="form-select"><option value="">--</option><option v-for="m in minutes" :value="m">{{m}}</option></select>
                  </div>
              </div>
-
              <div><label class="small text-muted">会議URL</label><input v-model="panelData.meetingUrl" class="form-control" placeholder="https://..."></div>
              <div class="flex-grow-1"><label class="small text-muted">メモ</label><textarea v-model="panelData.desc" class="form-control h-100"></textarea></div>
              <div class="d-flex gap-2"><button class="btn btn-light flex-grow-1" @click="closePanel">キャンセル</button><button class="btn btn-primary flex-grow-1" @click="saveGCalEvent">保存</button></div>
         </div>
-
         <div v-else class="d-flex flex-column h-100 gap-3">
              <div><label class="small text-muted">タスク名</label><textarea v-model="panelData.desc" class="form-control fw-bold" rows="3"></textarea></div>
              <div><label class="small text-muted">日付</label>
@@ -392,23 +372,22 @@
 </div>
 
 <script>
-const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycbw7dGJqhfhCCOD4FArTu2zhmRijTYuhIqcqi6l-Ij3JMJ43NkzLzw-8IJPFt5AylgrTqw/exec"; 
+const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycbwmATuUcgjXeDDEJy6hrFS1dOsoR9zv9RZGIaTESgQ9id2HKlaG_LaUKG8IL4EpNQQwug/exec"; 
 async function callGAS(a, p={}) { const r=await fetch(CONST_GAS_URL,{method:'POST',body:JSON.stringify({...p,action:a})}); const j=await r.json(); if(j.error)throw new Error(j.error); return j; }
 
 const { createApp } = Vue;
 createApp({
   data() { return {
-      loading: false, loadingMessage: 'Loading...', isSaving: false,
+      status: { visible: false, type: 'idle', message: '' },
       currentTab: 'active', isPC: window.innerWidth >= 992,
       settings: { token:'', owner:'', repo:'', path:'', archivePath:'', calendarIds:[] },
       lines: [], tasks: [], archiveTasks: [],
       calendarMode: 'week', selectedDate: '', currentCalStart: new Date(), gcalEvents: [], availableCalendars: [],
       showPanel: false, isEditMode: false, panelData: {}, tagInput: '', allTagsList: [], filterTag: '',
       modal: { show: false }, toast: { show: false },
-      // ★ FIXED: 9:00 - 20:00
       timelineHours: [9,10,11,12,13,14,15,16,17,18,19,20],
       hours: Array.from({length:24},(_,i)=>String(i).padStart(2,'0')), minutes: ['00','15','30','45'],
-      scrollbarWidth: 0
+      scrollbarWidth: 0, loading: false 
   }},
   computed: {
     activeCount() { return this.tasks.filter(t=>!t.completed).length; },
@@ -423,14 +402,10 @@ createApp({
         const todayGroup = { title: '今日 & 期限切れ', tasks: [] };
         const futureGroups = {};
         const noDateGroup = { title: '期限なし', tasks: [] };
-
         this.tasks.filter(t=>!t.completed && (!this.filterTag || t.tags.includes(this.filterTag))).forEach(t=>{
             if(!t.due) noDateGroup.tasks.push(t);
             else if(t.due <= today) todayGroup.tasks.push(t);
-            else { 
-                if(!futureGroups[t.due]) futureGroups[t.due]=[]; 
-                futureGroups[t.due].push(t); 
-            }
+            else { if(!futureGroups[t.due]) futureGroups[t.due]=[]; futureGroups[t.due].push(t); }
         });
         const res = [];
         if(todayGroup.tasks.length>0) res.push(todayGroup);
@@ -454,33 +429,38 @@ createApp({
         return days;
     },
     selectedDateItems() { return this.calendarDays.find(d=>d.date===this.selectedDate)?.items.sort((a,b)=>{ if(a.isGCal!==b.isGCal) return a.isGCal?-1:1; return (a.start||'0')>(b.start||'0')?1:-1; }) || []; },
-    selectedDateDisplay() { return this.selectedDate; }
   },
   mounted() {
       this.selectedDate = this.getTodayStr();
       this.measureScrollbar();
-      window.addEventListener('resize', ()=>{ 
-          this.isPC=window.innerWidth>=992; if(this.isPC && this.currentTab==='calendar')this.currentTab='active'; 
-          this.measureScrollbar(); // Recalc scrollbar on resize
-      });
+      window.addEventListener('resize', ()=>{ this.isPC=window.innerWidth>=992; this.measureScrollbar(); });
       const s = localStorage.getItem('gh_tasks_settings');
       if(s) { this.settings=JSON.parse(s); this.loadData(); } else { this.currentTab='settings'; }
       if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode');
-      
       this.$nextTick(() => { const body = this.$refs.calBody; if(body) body.scrollTop = 9 * 60; });
   },
   methods: {
+    updateStatus(type, msg) {
+        this.status = { visible: true, type: type, message: msg };
+        if(type !== 'loading') setTimeout(() => { this.status.visible = false; }, 3000);
+    },
+    saveSettings() {
+        localStorage.setItem('gh_tasks_settings', JSON.stringify(this.settings));
+        this.updateStatus('success', '設定を保存しました');
+        this.loadData();
+    },
     measureScrollbar() { const el=document.createElement('div'); el.style.cssText='overflow:scroll;visibility:hidden;position:absolute;'; document.body.appendChild(el); this.scrollbarWidth=el.offsetWidth-el.clientWidth; el.remove(); },
     setTab(t) { this.currentTab=t; if(t==='completed' && !this.archiveTasks.length) this.loadArchiveData(); },
     toggleDarkMode() { document.body.classList.toggle('dark-mode'); localStorage.setItem('theme', document.body.classList.contains('dark-mode')?'dark':'light'); },
     async loadData() {
-        this.loading=true;
+        this.updateStatus('loading', '読み込み中...');
         try {
             const res = await callGAS('getFileContent', this.settings);
             this.sha = res.sha; this.lines = res.content.split('\n'); this.parseContent(res.content);
             await this.fetchGCal();
             this.availableCalendars = await callGAS('getAvailableCalendars');
-        } catch(e) { console.error(e); } finally { this.loading=false; }
+            this.updateStatus('success', '完了');
+        } catch(e) { this.updateStatus('error', 'エラー: ' + e.message); }
     },
     async fetchGCal() {
         if(!this.settings.calendarIds.length) return;
@@ -496,6 +476,39 @@ createApp({
                 this.archiveTasks = lines.map(l=>{ const m=l.match(/^[-*]\s*\[x\]\s*(.*)/i); return m?{desc:m[1], doneDate:'', completed:true, originalLine:l}:null; }).filter(t=>t);
             }
         } catch(e) { console.error(e); }
+    },
+    async runArchiveProcess() {
+        if(!this.settings.archivePath) { this.showInfo('設定エラー', 'アーカイブファイルのパスを設定してください'); return; }
+        this.updateStatus('loading', 'アーカイブ中...');
+        try {
+            // 1. Fetch Current Main
+            const mainRes = await callGAS('getFileContent', this.settings);
+            const mainLines = mainRes.content.split('\n');
+            const activeLines = [];
+            const completedLines = [];
+            mainLines.forEach(l => {
+                if(l.match(/^[-*]\s*\[x\]/i)) completedLines.push(l);
+                else activeLines.push(l);
+            });
+
+            if(completedLines.length === 0) { this.updateStatus('success', '完了タスクはありません'); return; }
+
+            // 2. Fetch Archive
+            const arcRes = await callGAS('getFileContent', {...this.settings, path: this.settings.archivePath});
+            let arcContent = arcRes.content || '';
+            if(arcContent && !arcContent.endsWith('\n')) arcContent += '\n';
+            arcContent += completedLines.join('\n');
+
+            // 3. Save Archive
+            await callGAS('saveFileContent', {...this.settings, path: this.settings.archivePath, content: arcContent, sha: arcRes.sha});
+
+            // 4. Save Main
+            await callGAS('saveFileContent', {...this.settings, content: activeLines.join('\n'), sha: mainRes.sha});
+
+            // 5. Reload
+            this.loadData();
+            this.updateStatus('success', completedLines.length + '件をアーカイブしました');
+        } catch(e) { this.updateStatus('error', 'アーカイブ失敗: ' + e.message); }
     },
     parseContent(txt) {
         this.tasks=[]; const tags=new Set();
@@ -518,25 +531,25 @@ createApp({
         let url = '';
         const linkMatch = t.match(/\[(.*?)\]\((.*?)\)/);
         if (linkMatch) { t = linkMatch[1]; url = linkMatch[2]; }
-        
         let clean = t.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, '')
                      .replace(/[➕+]\s*\d{4}-\d{2}-\d{2}/g, '')
                      .replace(/✅\s*\d{4}-\d{2}-\d{2}/g, '')
                      .replace(/🔁\s*[^✅➕+📅#\n]+/g, '')
                      .replace(/[⏫🔼🔽]/g, '')
                      .replace(/#todo/gi, '');
-        
         const tags = (t.match(/#[^\s#]+/g)||[]);
         tags.forEach(tag => { if(tag!=='#todo') clean = clean.replace(tag, ''); });
-        
         return { clean: clean.trim(), url: url };
     },
-    renderTaskTitle(t) { return this.cleanRawTitle(t).clean; },
-    
-    // Actions
+    renderTaskTitle(t) { 
+        let { clean, url } = this.cleanRawTitle(t);
+        // Linkify raw URLs
+        clean = clean.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" onclick="event.stopPropagation()">$1</a>');
+        if(url) return `<a href="${url}" target="_blank" onclick="event.stopPropagation()">${clean}</a>`;
+        return clean;
+    },
     openAddPanel() { 
         this.isEditMode=false; this.showPanel=true; 
-        // ★ FIX: Initial values for switching
         this.panelData={isGCal:false, isNew:true, targetCalendarId:this.settings.calendarIds[0], desc:'', due:this.selectedDate||this.getTodayStr(), tags:[], priority:'none', recurrence:'', isAllDay:false}; 
         this.tagInput='';
     },
@@ -552,28 +565,20 @@ createApp({
             this.panelData={...t, taskRef:t, isGCal:false, desc: cleaned.clean, url: cleaned.url, tags:[...(t.tags||[])]};
         }
     },
-    // ★ FIX: Offset for 9:00 start (0px at 9:00)
     getEventPos(i) { 
         const s=new Date(i.start); const e=new Date(i.end); 
         const startH = s.getHours() + s.getMinutes()/60;
         const endH = e.getHours() + e.getMinutes()/60;
-        
         if (endH <= 9 || startH >= 21) return null; 
-        
-        // Clamp logic
-        const effectiveStart = Math.max(9, startH);
-        const effectiveEnd = Math.min(21, endH);
-        
-        const top = (effectiveStart - 9) * 60; 
-        const height = (effectiveEnd - effectiveStart) * 60;
-        
+        const top = (Math.max(9, startH) - 9) * 60; 
+        const height = (Math.min(21, endH) - Math.max(9, startH)) * 60;
         return { top: top+'px', height: height+'px' };
     },
     async saveGCalEvent() {
-        this.isSaving=true; let d=this.panelData.desc||''; if(this.panelData.meetingUrl) d=`【会議URL】: ${this.panelData.meetingUrl}\n\n${d}`;
-        // ★ FIX: Calendar ID Selection
+        this.updateStatus('loading', '保存中...');
+        let d=this.panelData.desc||''; if(this.panelData.meetingUrl) d=`【会議URL】: ${this.panelData.meetingUrl}\n\n${d}`;
         const calId = this.panelData.isNew ? this.panelData.targetCalendarId : this.panelData.calendarId;
-        if (!calId) { this.showInfo('エラー', 'カレンダーが選択されていません'); this.isSaving=false; return; }
+        if (!calId) { this.updateStatus('error', 'カレンダー未選択'); return; }
 
         const params = {
             ...this.panelData, 
@@ -591,48 +596,41 @@ createApp({
         try {
             await callGAS(this.panelData.isNew?'createCalendarEvent':'updateCalendarEvent', params);
             this.showPanel=false; this.fetchGCal();
-        } catch(e){this.showInfo('Error',e);} finally{this.isSaving=false;}
+            this.updateStatus('success', '保存しました');
+        } catch(e){this.updateStatus('error', e.message);}
     },
     async saveTaskChanges() {
         if(this.isEditMode) { const t=this.panelData.taskRef; t.desc=this.panelData.desc; t.due=this.panelData.due; t.priority=this.panelData.priority; t.tags=[...this.panelData.tags]; t.recurrence=this.panelData.recurrence; }
         else { this.tasks.push({lineIndex:-1, desc:this.panelData.desc, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, completed:false, tags:[...this.panelData.tags]}); }
         this.showPanel=false; this.pushChanges();
     },
-    // ★ FIX: Auto-append ✅ YYYY-MM-DD on complete
     pushChanges() {
-        this.isSaving=true;
+        this.updateStatus('loading', '保存中...');
         const newLines=[...this.lines];
         this.tasks.forEach(t=>{
             const cleanObj = this.cleanRawTitle(t.desc);
             const title = this.isEditMode && this.panelData.taskRef === t ? this.panelData.desc : cleanObj.clean;
             const url = this.isEditMode && this.panelData.taskRef === t ? this.panelData.url : cleanObj.url;
             const urlPart = url ? `[${title}](${url})` : title;
-            
             const donePart = t.completed ? `✅ ${this.getTodayStr()}` : '';
-
             const l=`- [${t.completed?'x':' '}] ${urlPart} ${t.priority==='high'?'⏫':t.priority==='medium'?'🔼':t.priority==='low'?'🔽':''} ${t.recurrence?'🔁 '+t.recurrence:''} ${t.due?'📅 '+t.due:''} ${donePart} ${t.tags.join(' ')} #todo`.replace(/\s+/g,' ').trim();
             if(t.lineIndex>=0)newLines[t.lineIndex]=l; else newLines.push(l);
         });
-        callGAS('saveFileContent', {...this.settings, content:newLines.join('\n'), sha:this.sha}).then(r=>{this.sha=r.newSha; this.lines=newLines; this.showToastNotification('保存しました');}).catch(e=>console.error(e)).finally(()=>this.isSaving=false);
+        callGAS('saveFileContent', {...this.settings, content:newLines.join('\n'), sha:this.sha}).then(r=>{this.sha=r.newSha; this.lines=newLines; this.updateStatus('success', '保存しました');}).catch(e=>this.updateStatus('error', e.message));
     },
     dragStart(e, i) { if(!item.isGCal && !item.isAllDay) return; e.dataTransfer.setData('json', JSON.stringify(i)); },
     onDrop(e, date, hour) {
         const item = JSON.parse(e.dataTransfer.getData('json'));
         if(!item.isGCal) return; 
-        
-        // ★ FIX: D&D Logic (Requires End Time)
         const oldStart = new Date(item.start); const oldEnd = new Date(item.end);
         const durationMs = oldEnd - oldStart;
-        
         const newStart = new Date(`${date}T${String(9+hour).padStart(2,'0')}:00:00`);
         const newEnd = new Date(newStart.getTime() + durationMs);
-        
         const startTime = `${String(newStart.getHours()).padStart(2,'0')}:${String(newStart.getMinutes()).padStart(2,'0')}`;
         const endTime = `${String(newEnd.getHours()).padStart(2,'0')}:${String(newEnd.getMinutes()).padStart(2,'0')}`;
-
-        this.loading=true;
+        this.updateStatus('loading', '移動中...');
         callGAS('updateCalendarEvent', {calendarId:item.calendarId, eventId:item.id, dateStr:date, startTime:startTime, endTime:endTime})
-        .then(()=>{this.fetchGCal();}).finally(()=>this.loading=false);
+        .then(()=>{this.fetchGCal(); this.updateStatus('success', '移動しました');}).catch(e=>this.updateStatus('error', e.message));
     },
     closePanel() { this.showPanel=false; },
     toggleTask(t) { t.completed=!t.completed; this.pushChanges(); },
@@ -640,28 +638,28 @@ createApp({
     deleteTask(t) { 
         if(t.isArchived) {
              if(!this.settings.archivePath) return;
-             this.loading = true; 
+             this.updateStatus('loading', '削除中...');
              this.fetchFileContent(this.settings.archivePath).then(res => {
                  const lines = (res.content || '').split('\n');
                  const newLines = lines.filter(l => l !== t.originalLine);
                  this.saveFileContentPromise(this.settings.archivePath, newLines.join('\n'), res.sha)
-                 .then(() => { this.loading = false; this.showToastNotification('削除しました'); this.loadArchiveData(); })
-                 .catch(e => { this.loading = false; this.showInfo('Error', e); });
+                 .then(() => { this.updateStatus('success', '削除しました'); this.loadArchiveData(); })
+                 .catch(e => this.updateStatus('error', e.message));
              });
         } else {
             const idx=this.tasks.findIndex(x=>x.lineIndex===t.lineIndex); if(idx>-1){const org=this.tasks[idx]; this.tasks.splice(idx,1); if(org.lineIndex>=0){this.lines.splice(org.lineIndex,1); this.tasks.forEach(k=>{if(k.lineIndex>org.lineIndex)k.lineIndex--;}); this.pushChanges(); this.closePanel();}}
         }
     },
     confirmRestore(t) { this.modal={show:true, title:'復元', message:'未完了に戻しますか？', type:'confirm', okText:'復元', resolve: r=>{this.modal.show=false; if(r){const org=this.tasks.find(x=>x.lineIndex===t.lineIndex); if(org){org.completed=false; org.doneDate=''; this.pushChanges();}}}}; },
-    runArchiveProcess() { /* Restore full logic */ },
+    runArchiveProcess() { /* Logic moved to method above */ },
     getLocalYMD(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; },
     convertIsoToYMD(iso) { return iso ? this.getLocalYMD(new Date(iso)) : ''; },
     getTodayStr() { return this.getLocalYMD(new Date()); },
     formatTimeRange(item) { if(item.isAllDay) return '終日'; const d1=new Date(item.start); const d2=new Date(item.end); return `${String(d1.getHours()).padStart(2,'0')}:${String(d1.getMinutes()).padStart(2,'0')} - ${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`; },
-    changeDateRange(d) { const dt=new Date(this.currentCalStart); if(this.calendarMode==='week')dt.setDate(dt.getDate()+d*7); else dt.setMonth(dt.getMonth()+d); this.currentCalStart=dt; this.fetchGCal(); }, // Added fetch
-    setCalendarMode(m) { this.calendarMode = m; this.fetchGCal(); }, // Added fetch
+    changeDateRange(d) { const dt=new Date(this.currentCalStart); if(this.calendarMode==='week')dt.setDate(dt.getDate()+d*7); else dt.setMonth(dt.getMonth()+d); this.currentCalStart=dt; this.fetchGCal(); },
+    setCalendarMode(m) { this.calendarMode = m; this.fetchGCal(); },
     selectDate(d) { this.selectedDate=d; },
-    showToastNotification(m) { this.toast={show:true, message:m}; setTimeout(()=>this.toast.show=false, 3000); },
+    showToastNotification(m) { this.updateStatus('success', m); },
     showInfo(t,m) { this.modal={show:true, title:t, message:m, type:'info', okText:'OK'}; },
     closeModal(r) { this.modal.show=false; if(this.modal.resolve)this.modal.resolve(r); },
     loadMoreCompleted() { this.displayLimit+=50; },
