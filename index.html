@@ -250,6 +250,7 @@
                         </div>
 
                         <div v-if="currentTab==='completed'">
+                             <div v-if="displayCompletedTasks.length===0" class="text-center py-5 text-muted small">未アーカイブの完了タスクはありません</div>
                              <div v-for="task in displayCompletedTasks" :key="task.uniqueId" class="task-card opacity-75">
                                  <div class="check-box checked" @click.stop="confirmRestore(task)"><span class="material-icons-round">check</span></div>
                                  <div class="task-body">
@@ -277,12 +278,14 @@
                              <div style="font-size:0.7rem; font-weight:normal">{{['日','月','火','水','木','金','土'][day.dayOfWeek]}}</div>
                          </div>
                      </div>
+                     
                      <div class="cal-row cal-allday" :style="{paddingRight: scrollbarWidth+'px'}">
                          <div class="cal-col-time allday-label">終日</div>
                          <div v-for="day in calendarDays" :key="'ad'+day.date" class="cal-col-day allday-content" @dragover.prevent @drop="onDrop($event, day.date, null)">
                              <div v-for="item in day.items.filter(x=>x.isGCal && x.isAllDay)" class="ad-event" :style="{background: item.color}" draggable="true" @dragstart="dragStart($event, item)" @click="openEditPanel(item)">{{item.title}}</div>
                          </div>
                      </div>
+                     
                      <div class="cal-body" ref="calBody">
                          <div class="cal-body-content">
                              <div class="cal-col-time">
@@ -292,7 +295,11 @@
                                  <div v-for="h in timelineHours" :key="'s'+h" class="time-slot" @drop.stop="onDrop($event, day.date, h)"></div>
                                  <div v-for="item in day.items.filter(x=>!x.isAllDay && x.isGCal && getEventPos(x))" 
                                       :key="item.id" class="event-chip" 
-                                      :style="{ top: getEventPos(item).top, height: getEventPos(item).height, background: item.color }"
+                                      :style="{ 
+                                          top: getEventPos(item).top, 
+                                          height: getEventPos(item).height,
+                                          background: item.color 
+                                      }"
                                       draggable="true" @dragstart="dragStart($event, item)" @click.stop="openEditPanel(item)">{{ item.title }}</div>
                              </div>
                          </div>
@@ -329,28 +336,39 @@
 
     <div class="side-panel" :class="{open: showPanel}">
         <div class="d-flex justify-content-between mb-3"><h5 class="m-0 fw-bold">{{isEditMode?'編集':'新規作成'}}</h5><button class="btn-icon" @click="closePanel"><span class="material-icons-round">close</span></button></div>
+        
         <div class="mode-switcher" v-if="!isEditMode">
             <button class="mode-btn" :class="{active: !panelData.isGCal}" @click="panelData.isGCal=false">タスク</button>
             <button class="mode-btn" :class="{active: panelData.isGCal}" @click="panelData.isGCal=true">カレンダー</button>
         </div>
+
         <div v-if="panelData.isGCal" class="d-flex flex-column h-100 gap-3">
              <div v-if="panelData.isNew"><label class="small text-muted">カレンダー</label><select v-model="panelData.targetCalendarId" class="form-select"><option v-for="c in availableCalendars" :value="c.id">{{c.name}}</option></select></div>
              <div v-else class="small text-muted mb-1"><span class="badge bg-light text-dark border">{{panelData.calendarName}}</span></div>
              <div><label class="small text-muted">タイトル</label><input v-model="panelData.title" class="form-control fw-bold"></div>
+             
              <div>
                  <div class="d-flex align-items-center gap-2 mb-2">
                      <label class="small text-muted m-0">日時</label>
-                     <div class="form-check m-0 ms-auto"><input class="form-check-input" type="checkbox" id="checkAllDay" v-model="panelData.isAllDay"><label class="form-check-label small" for="checkAllDay">終日</label></div>
+                     <div class="form-check m-0 ms-auto">
+                         <input class="form-check-input" type="checkbox" id="checkAllDay" v-model="panelData.isAllDay">
+                         <label class="form-check-label small" for="checkAllDay">終日</label>
+                     </div>
                  </div>
                  <input type="date" v-model="panelData.dateInput" class="form-control mb-2">
                  <div class="d-flex gap-2 align-items-center" v-if="!panelData.isAllDay">
-                     <select v-model="panelData.startHour" class="form-select"><option v-for="h in hours" :value="h">{{h}}</option></select>:<select v-model="panelData.startMin" class="form-select"><option v-for="m in minutes" :value="m">{{m}}</option></select> ～ <select v-model="panelData.endHour" class="form-select"><option value="">--</option><option v-for="h in hours" :value="h">{{h}}</option></select>:<select v-model="panelData.endMin" class="form-select"><option value="">--</option><option v-for="m in minutes" :value="m">{{m}}</option></select>
+                     <select v-model="panelData.startHour" class="form-select"><option v-for="h in hours" :value="h">{{h}}</option></select>:
+                     <select v-model="panelData.startMin" class="form-select"><option v-for="m in minutes" :value="m">{{m}}</option></select> ～ 
+                     <select v-model="panelData.endHour" class="form-select"><option value="">--</option><option v-for="h in hours" :value="h">{{h}}</option></select>:
+                     <select v-model="panelData.endMin" class="form-select"><option value="">--</option><option v-for="m in minutes" :value="m">{{m}}</option></select>
                  </div>
              </div>
+
              <div><label class="small text-muted">会議URL</label><input v-model="panelData.meetingUrl" class="form-control" placeholder="https://..."></div>
              <div class="flex-grow-1"><label class="small text-muted">メモ</label><textarea v-model="panelData.desc" class="form-control h-100"></textarea></div>
              <div class="d-flex gap-2"><button class="btn btn-light flex-grow-1" @click="closePanel">キャンセル</button><button class="btn btn-primary flex-grow-1" @click="saveGCalEvent">保存</button></div>
         </div>
+
         <div v-else class="d-flex flex-column h-100 gap-3">
              <div><label class="small text-muted">タスク名</label><textarea v-model="panelData.desc" class="form-control fw-bold" rows="3"></textarea></div>
              <div><label class="small text-muted">日付</label>
@@ -385,6 +403,7 @@ createApp({
       calendarMode: 'week', selectedDate: '', currentCalStart: new Date(), gcalEvents: [], availableCalendars: [],
       showPanel: false, isEditMode: false, panelData: {}, tagInput: '', allTagsList: [], filterTag: '',
       modal: { show: false }, toast: { show: false },
+      // ★ FIXED: 9:00 - 20:00
       timelineHours: [9,10,11,12,13,14,15,16,17,18,19,20],
       hours: Array.from({length:24},(_,i)=>String(i).padStart(2,'0')), minutes: ['00','15','30','45'],
       scrollbarWidth: 0, loading: false 
@@ -402,10 +421,14 @@ createApp({
         const todayGroup = { title: '今日 & 期限切れ', tasks: [] };
         const futureGroups = {};
         const noDateGroup = { title: '期限なし', tasks: [] };
+
         this.tasks.filter(t=>!t.completed && (!this.filterTag || t.tags.includes(this.filterTag))).forEach(t=>{
             if(!t.due) noDateGroup.tasks.push(t);
             else if(t.due <= today) todayGroup.tasks.push(t);
-            else { if(!futureGroups[t.due]) futureGroups[t.due]=[]; futureGroups[t.due].push(t); }
+            else { 
+                if(!futureGroups[t.due]) futureGroups[t.due]=[]; 
+                futureGroups[t.due].push(t); 
+            }
         });
         const res = [];
         if(todayGroup.tasks.length>0) res.push(todayGroup);
@@ -429,14 +452,19 @@ createApp({
         return days;
     },
     selectedDateItems() { return this.calendarDays.find(d=>d.date===this.selectedDate)?.items.sort((a,b)=>{ if(a.isGCal!==b.isGCal) return a.isGCal?-1:1; return (a.start||'0')>(b.start||'0')?1:-1; }) || []; },
+    selectedDateDisplay() { return this.selectedDate; }
   },
   mounted() {
       this.selectedDate = this.getTodayStr();
       this.measureScrollbar();
-      window.addEventListener('resize', ()=>{ this.isPC=window.innerWidth>=992; this.measureScrollbar(); });
+      window.addEventListener('resize', ()=>{ 
+          this.isPC=window.innerWidth>=992; if(this.isPC && this.currentTab==='calendar')this.currentTab='active'; 
+          this.measureScrollbar(); // Recalc scrollbar on resize
+      });
       const s = localStorage.getItem('gh_tasks_settings');
       if(s) { this.settings=JSON.parse(s); this.loadData(); } else { this.currentTab='settings'; }
       if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode');
+      
       this.$nextTick(() => { const body = this.$refs.calBody; if(body) body.scrollTop = 9 * 60; });
   },
   methods: {
@@ -450,7 +478,7 @@ createApp({
         this.loadData();
     },
     measureScrollbar() { const el=document.createElement('div'); el.style.cssText='overflow:scroll;visibility:hidden;position:absolute;'; document.body.appendChild(el); this.scrollbarWidth=el.offsetWidth-el.clientWidth; el.remove(); },
-    setTab(t) { this.currentTab=t; /* No loadArchiveData needed for completed tab anymore */ },
+    setTab(t) { this.currentTab=t; if(t==='completed' && !this.archiveTasks.length) this.loadArchiveData(); },
     toggleDarkMode() { document.body.classList.toggle('dark-mode'); localStorage.setItem('theme', document.body.classList.contains('dark-mode')?'dark':'light'); },
     async loadData() {
         this.updateStatus('loading', '読み込み中...');
@@ -467,7 +495,17 @@ createApp({
         const res = await callGAS('getCalendarEvents', {startStr:this.calendarDays[0].date, endStr:this.calendarDays[this.calendarDays.length-1].date, calendarIds:JSON.stringify(this.settings.calendarIds)});
         if(res.events) this.gcalEvents = res.events;
     },
-    // ★ FIX: Robust Archive Logic
+    async loadArchiveData() {
+        if(!this.settings.archivePath) return;
+        try {
+            const res = await callGAS('getFileContent', {...this.settings, path:this.settings.archivePath});
+            if(res.content) {
+                const lines = res.content.split('\n');
+                this.archiveTasks = lines.map(l=>{ const m=l.match(/^[-*]\s*\[x\]\s*(.*)/i); return m?{desc:m[1], doneDate:'', completed:true, originalLine:l}:null; }).filter(t=>t);
+            }
+        } catch(e) { console.error(e); }
+    },
+    // ★ FIX: Restored Archive Logic
     async runArchiveProcess() {
         if(!this.settings.archivePath) { this.showInfo('設定エラー', 'アーカイブファイルのパスを設定してください'); return; }
         this.updateStatus('loading', 'アーカイブ中...');
@@ -522,24 +560,25 @@ createApp({
         let url = '';
         const linkMatch = t.match(/\[(.*?)\]\((.*?)\)/);
         if (linkMatch) { t = linkMatch[1]; url = linkMatch[2]; }
+        
         let clean = t.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, '')
                      .replace(/[➕+]\s*\d{4}-\d{2}-\d{2}/g, '')
                      .replace(/✅\s*\d{4}-\d{2}-\d{2}/g, '')
                      .replace(/🔁\s*[^✅➕+📅#\n]+/g, '')
                      .replace(/[⏫🔼🔽]/g, '')
                      .replace(/#todo/gi, '');
+        
         const tags = (t.match(/#[^\s#]+/g)||[]);
         tags.forEach(tag => { if(tag!=='#todo') clean = clean.replace(tag, ''); });
+        
         return { clean: clean.trim(), url: url };
     },
-    renderTaskTitle(t) { 
-        let { clean, url } = this.cleanRawTitle(t);
-        clean = clean.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" onclick="event.stopPropagation()">$1</a>');
-        if(url) return `<a href="${url}" target="_blank" onclick="event.stopPropagation()">${clean}</a>`;
-        return clean;
-    },
+    renderTaskTitle(t) { return this.cleanRawTitle(t).clean; },
+    
+    // Actions
     openAddPanel() { 
         this.isEditMode=false; this.showPanel=true; 
+        // ★ FIX: Initial values for switching
         this.panelData={isGCal:false, isNew:true, targetCalendarId:this.settings.calendarIds[0], desc:'', due:this.selectedDate||this.getTodayStr(), tags:[], priority:'none', recurrence:'', isAllDay:false}; 
         this.tagInput='';
     },
@@ -555,18 +594,27 @@ createApp({
             this.panelData={...t, taskRef:t, isGCal:false, desc: cleaned.clean, url: cleaned.url, tags:[...(t.tags||[])]};
         }
     },
+    // ★ FIX: Offset for 9:00 start (0px at 9:00)
     getEventPos(i) { 
         const s=new Date(i.start); const e=new Date(i.end); 
         const startH = s.getHours() + s.getMinutes()/60;
         const endH = e.getHours() + e.getMinutes()/60;
+        
         if (endH <= 9 || startH >= 21) return null; 
-        const top = (Math.max(9, startH) - 9) * 60; 
-        const height = (Math.min(21, endH) - Math.max(9, startH)) * 60;
+        
+        // Clamp logic
+        const effectiveStart = Math.max(9, startH);
+        const effectiveEnd = Math.min(21, endH);
+        
+        const top = (effectiveStart - 9) * 60; 
+        const height = (effectiveEnd - effectiveStart) * 60;
+        
         return { top: top+'px', height: height+'px' };
     },
     async saveGCalEvent() {
         this.updateStatus('loading', '保存中...');
         let d=this.panelData.desc||''; if(this.panelData.meetingUrl) d=`【会議URL】: ${this.panelData.meetingUrl}\n\n${d}`;
+        // ★ FIX: Calendar ID Selection
         const calId = this.panelData.isNew ? this.panelData.targetCalendarId : this.panelData.calendarId;
         if (!calId) { this.updateStatus('error', 'カレンダー未選択'); return; }
 
@@ -594,6 +642,7 @@ createApp({
         else { this.tasks.push({lineIndex:-1, desc:this.panelData.desc, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, completed:false, tags:[...this.panelData.tags]}); }
         this.showPanel=false; this.pushChanges();
     },
+    // ★ FIX: Auto-append ✅ YYYY-MM-DD on complete
     pushChanges() {
         this.updateStatus('loading', '保存中...');
         const newLines=[...this.lines];
@@ -602,7 +651,9 @@ createApp({
             const title = this.isEditMode && this.panelData.taskRef === t ? this.panelData.desc : cleanObj.clean;
             const url = this.isEditMode && this.panelData.taskRef === t ? this.panelData.url : cleanObj.url;
             const urlPart = url ? `[${title}](${url})` : title;
+            
             const donePart = t.completed ? `✅ ${this.getTodayStr()}` : '';
+
             const l=`- [${t.completed?'x':' '}] ${urlPart} ${t.priority==='high'?'⏫':t.priority==='medium'?'🔼':t.priority==='low'?'🔽':''} ${t.recurrence?'🔁 '+t.recurrence:''} ${t.due?'📅 '+t.due:''} ${donePart} ${t.tags.join(' ')} #todo`.replace(/\s+/g,' ').trim();
             if(t.lineIndex>=0)newLines[t.lineIndex]=l; else newLines.push(l);
         });
@@ -612,12 +663,17 @@ createApp({
     onDrop(e, date, hour) {
         const item = JSON.parse(e.dataTransfer.getData('json'));
         if(!item.isGCal) return; 
+        
+        // ★ FIX: D&D Logic (Requires End Time)
         const oldStart = new Date(item.start); const oldEnd = new Date(item.end);
         const durationMs = oldEnd - oldStart;
+        
         const newStart = new Date(`${date}T${String(9+hour).padStart(2,'0')}:00:00`);
         const newEnd = new Date(newStart.getTime() + durationMs);
+        
         const startTime = `${String(newStart.getHours()).padStart(2,'0')}:${String(newStart.getMinutes()).padStart(2,'0')}`;
         const endTime = `${String(newEnd.getHours()).padStart(2,'0')}:${String(newEnd.getMinutes()).padStart(2,'0')}`;
+
         this.updateStatus('loading', '移動中...');
         callGAS('updateCalendarEvent', {calendarId:item.calendarId, eventId:item.id, dateStr:date, startTime:startTime, endTime:endTime})
         .then(()=>{this.fetchGCal(); this.updateStatus('success', '移動しました');}).catch(e=>this.updateStatus('error', e.message));
@@ -627,19 +683,19 @@ createApp({
     confirmDelete(t) { this.modal={show:true, title:'削除', message:'削除しますか？', type:'confirm', isDanger:true, okText:'削除', resolve:r=>{if(r)this.deleteTask(t)}}; },
     deleteTask(t) { 
         if(t.isArchived) {
-             /* Archive deletion from completed tab is no longer needed/possible as they are hidden */
+             /* Archive deletion is implicit via display filtering now */
         } else {
             const idx=this.tasks.findIndex(x=>x.lineIndex===t.lineIndex); if(idx>-1){const org=this.tasks[idx]; this.tasks.splice(idx,1); if(org.lineIndex>=0){this.lines.splice(org.lineIndex,1); this.tasks.forEach(k=>{if(k.lineIndex>org.lineIndex)k.lineIndex--;}); this.pushChanges(); this.closePanel();}}
         }
     },
     confirmRestore(t) { this.modal={show:true, title:'復元', message:'未完了に戻しますか？', type:'confirm', okText:'復元', resolve: r=>{this.modal.show=false; if(r){const org=this.tasks.find(x=>x.lineIndex===t.lineIndex); if(org){org.completed=false; org.doneDate=''; this.pushChanges();}}}}; },
-    runArchiveProcess() { /* Logic moved to method above */ },
+    
     getLocalYMD(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; },
     convertIsoToYMD(iso) { return iso ? this.getLocalYMD(new Date(iso)) : ''; },
     getTodayStr() { return this.getLocalYMD(new Date()); },
     formatTimeRange(item) { if(item.isAllDay) return '終日'; const d1=new Date(item.start); const d2=new Date(item.end); return `${String(d1.getHours()).padStart(2,'0')}:${String(d1.getMinutes()).padStart(2,'0')} - ${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`; },
-    changeDateRange(d) { const dt=new Date(this.currentCalStart); if(this.calendarMode==='week')dt.setDate(dt.getDate()+d*7); else dt.setMonth(dt.getMonth()+d); this.currentCalStart=dt; this.fetchGCal(); },
-    setCalendarMode(m) { this.calendarMode = m; this.fetchGCal(); },
+    changeDateRange(d) { const dt=new Date(this.currentCalStart); if(this.calendarMode==='week')dt.setDate(dt.getDate()+d*7); else dt.setMonth(dt.getMonth()+d); this.currentCalStart=dt; this.fetchGCal(); }, // Added fetch
+    setCalendarMode(m) { this.calendarMode = m; this.fetchGCal(); }, // Added fetch
     selectDate(d) { this.selectedDate=d; },
     showToastNotification(m) { this.updateStatus('success', m); },
     showInfo(t,m) { this.modal={show:true, title:t, message:m, type:'info', okText:'OK'}; },
