@@ -143,9 +143,9 @@
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 2100; backdrop-filter: blur(2px); }
     .modal-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-card); padding: 24px; border-radius: 16px; width: 90%; max-width: 360px; z-index: 2200; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
 
-    /* ★ Status Toast (New) ★ */
+    /* Status Toast */
     .status-toast {
-        position: fixed; bottom: 30px; right: 100px; /* FABの左側 */
+        position: fixed; bottom: 30px; right: 100px;
         background: var(--bg-card); border: 1px solid var(--border-color);
         padding: 8px 16px; border-radius: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         display: flex; align-items: center; gap: 8px; z-index: 3000;
@@ -254,7 +254,7 @@
                                  <div class="check-box checked" @click.stop="confirmRestore(task)"><span class="material-icons-round">check</span></div>
                                  <div class="task-body">
                                      <div class="task-title text-done" v-html="renderTaskTitle(task.desc)"></div>
-                                     <div class="task-meta"><span v-if="task.isArchived" class="badge bg-secondary" style="font-size:0.6rem">Archived</span> {{task.doneDate}}</div>
+                                     <div class="task-meta">{{task.doneDate}}</div>
                                  </div>
                                  <button class="btn-icon text-danger" @click.stop="confirmDelete(task)"><span class="material-icons-round" style="font-size:18px">delete</span></button>
                              </div>
@@ -372,7 +372,7 @@
 </div>
 
 <script>
-const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycbwmATuUcgjXeDDEJy6hrFS1dOsoR9zv9RZGIaTESgQ9id2HKlaG_LaUKG8IL4EpNQQwug/exec"; 
+const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycbw7dGJqhfhCCOD4FArTu2zhmRijTYuhIqcqi6l-Ij3JMJ43NkzLzw-8IJPFt5AylgrTqw/exec"; 
 async function callGAS(a, p={}) { const r=await fetch(CONST_GAS_URL,{method:'POST',body:JSON.stringify({...p,action:a})}); const j=await r.json(); if(j.error)throw new Error(j.error); return j; }
 
 const { createApp } = Vue;
@@ -392,9 +392,9 @@ createApp({
   computed: {
     activeCount() { return this.tasks.filter(t=>!t.completed).length; },
     allCompletedTasks() {
+        // ★ FIX: Only tasks from Main File
         const m = this.tasks.filter(t=>t.completed).map(t=>({...t, isArchived:false, uniqueId:'m-'+t.lineIndex}));
-        const a = this.archiveTasks.map((t,i)=>({...t, isArchived:true, uniqueId:'a-'+i}));
-        return [...m, ...a].sort((a,b)=>a.doneDate<b.doneDate?1:-1);
+        return m.sort((a,b)=>a.doneDate<b.doneDate?1:-1);
     },
     displayCompletedTasks() { return this.allCompletedTasks.slice(0, 50); },
     groupedActiveTasks() {
@@ -450,7 +450,7 @@ createApp({
         this.loadData();
     },
     measureScrollbar() { const el=document.createElement('div'); el.style.cssText='overflow:scroll;visibility:hidden;position:absolute;'; document.body.appendChild(el); this.scrollbarWidth=el.offsetWidth-el.clientWidth; el.remove(); },
-    setTab(t) { this.currentTab=t; if(t==='completed' && !this.archiveTasks.length) this.loadArchiveData(); },
+    setTab(t) { this.currentTab=t; /* No loadArchiveData needed for completed tab anymore */ },
     toggleDarkMode() { document.body.classList.toggle('dark-mode'); localStorage.setItem('theme', document.body.classList.contains('dark-mode')?'dark':'light'); },
     async loadData() {
         this.updateStatus('loading', '読み込み中...');
@@ -467,16 +467,7 @@ createApp({
         const res = await callGAS('getCalendarEvents', {startStr:this.calendarDays[0].date, endStr:this.calendarDays[this.calendarDays.length-1].date, calendarIds:JSON.stringify(this.settings.calendarIds)});
         if(res.events) this.gcalEvents = res.events;
     },
-    async loadArchiveData() {
-        if(!this.settings.archivePath) return;
-        try {
-            const res = await callGAS('getFileContent', {...this.settings, path:this.settings.archivePath});
-            if(res.content) {
-                const lines = res.content.split('\n');
-                this.archiveTasks = lines.map(l=>{ const m=l.match(/^[-*]\s*\[x\]\s*(.*)/i); return m?{desc:m[1], doneDate:'', completed:true, originalLine:l}:null; }).filter(t=>t);
-            }
-        } catch(e) { console.error(e); }
-    },
+    // ★ FIX: Robust Archive Logic
     async runArchiveProcess() {
         if(!this.settings.archivePath) { this.showInfo('設定エラー', 'アーカイブファイルのパスを設定してください'); return; }
         this.updateStatus('loading', 'アーカイブ中...');
@@ -506,7 +497,7 @@ createApp({
             await callGAS('saveFileContent', {...this.settings, content: activeLines.join('\n'), sha: mainRes.sha});
 
             // 5. Reload
-            this.loadData();
+            await this.loadData();
             this.updateStatus('success', completedLines.length + '件をアーカイブしました');
         } catch(e) { this.updateStatus('error', 'アーカイブ失敗: ' + e.message); }
     },
@@ -543,7 +534,6 @@ createApp({
     },
     renderTaskTitle(t) { 
         let { clean, url } = this.cleanRawTitle(t);
-        // Linkify raw URLs
         clean = clean.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" onclick="event.stopPropagation()">$1</a>');
         if(url) return `<a href="${url}" target="_blank" onclick="event.stopPropagation()">${clean}</a>`;
         return clean;
@@ -637,15 +627,7 @@ createApp({
     confirmDelete(t) { this.modal={show:true, title:'削除', message:'削除しますか？', type:'confirm', isDanger:true, okText:'削除', resolve:r=>{if(r)this.deleteTask(t)}}; },
     deleteTask(t) { 
         if(t.isArchived) {
-             if(!this.settings.archivePath) return;
-             this.updateStatus('loading', '削除中...');
-             this.fetchFileContent(this.settings.archivePath).then(res => {
-                 const lines = (res.content || '').split('\n');
-                 const newLines = lines.filter(l => l !== t.originalLine);
-                 this.saveFileContentPromise(this.settings.archivePath, newLines.join('\n'), res.sha)
-                 .then(() => { this.updateStatus('success', '削除しました'); this.loadArchiveData(); })
-                 .catch(e => this.updateStatus('error', e.message));
-             });
+             /* Archive deletion from completed tab is no longer needed/possible as they are hidden */
         } else {
             const idx=this.tasks.findIndex(x=>x.lineIndex===t.lineIndex); if(idx>-1){const org=this.tasks[idx]; this.tasks.splice(idx,1); if(org.lineIndex>=0){this.lines.splice(org.lineIndex,1); this.tasks.forEach(k=>{if(k.lineIndex>org.lineIndex)k.lineIndex--;}); this.pushChanges(); this.closePanel();}}
         }
