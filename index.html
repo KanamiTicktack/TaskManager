@@ -29,7 +29,7 @@
       --header-height: 44px;
       --allday-min-height: 34px;
       --slot-height: 60px;
-      --scrollbar-width: 0px;
+      --scrollbar-width: 0px; /* JS Calculated */
     }
     body.dark-mode {
       --primary: #818cf8; --primary-light: #312e81;
@@ -38,9 +38,9 @@
       --hover-bg: #374151;
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; }
-    .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
+    .form-control, .form-select { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
     
-    /* Scrollbar */
+    /* Scrollbar Styling */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .scroll-y:hover::-webkit-scrollbar-thumb { background: #94a3b8; }
@@ -52,13 +52,13 @@
     .btn-icon { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; align-items: center; cursor: pointer; }
     .btn-icon:active { background: var(--hover-bg); }
 
-    /* Mobile Navigation (New) */
+    /* Mobile Navigation */
     .mobile-nav {
         display: flex; gap: 4px; overflow-x: auto; flex-shrink: 0; padding-bottom: 4px;
         border-bottom: 1px solid var(--border-color); margin-bottom: 8px;
-        -webkit-overflow-scrolling: touch;
+        -webkit-overflow-scrolling: touch; scrollbar-width: none;
     }
-    .mobile-nav::-webkit-scrollbar { display: none; } /* Hide scrollbar in nav */
+    .mobile-nav::-webkit-scrollbar { display: none; }
 
     .main-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     .split-layout { display: flex; flex-direction: column; height: 100%; gap: 16px; }
@@ -67,8 +67,15 @@
     .view-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; position: relative; }
     .scroll-y { overflow-y: auto; flex: 1; padding-right: 2px; padding-bottom: 80px; }
 
-    /* Tabs (Shared Style) */
-    .nav-tabs { border-bottom: 1px solid var(--border-color); gap: 4px; flex-shrink: 0; margin-bottom: 12px; flex-wrap: nowrap; overflow-x: auto; }
+    /* Tabs (Shared Style) - Hide Scrollbar Fix */
+    .nav-tabs { 
+        border-bottom: 1px solid var(--border-color); gap: 4px; flex-shrink: 0; margin-bottom: 12px; 
+        flex-wrap: nowrap; overflow-x: auto; 
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge */
+    }
+    .nav-tabs::-webkit-scrollbar { display: none; /* Chrome/Safari */ }
+    
     .nav-link { border: none; color: var(--text-sub); font-weight: 600; padding: 8px 16px; border-radius: 20px; white-space: nowrap; font-size: 0.9rem; background: transparent; }
     .nav-link.active { background: var(--primary) !important; color: white !important; }
 
@@ -95,6 +102,7 @@
         border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;
         min-height: 0;
     }
+    
     .cal-row { display: flex; width: 100%; flex-shrink: 0; }
     .cal-col-time { width: var(--time-col-width); flex-shrink: 0; border-right: 1px solid var(--border-color); background: var(--hover-bg); text-align: center; }
     .cal-col-day { flex: 1; border-right: 1px solid var(--border-color); position: relative; min-width: 0; }
@@ -377,7 +385,8 @@ createApp({
       calendarMode: 'week', selectedDate: '', currentCalStart: new Date(), gcalEvents: [], availableCalendars: [],
       showPanel: false, isEditMode: false, panelData: {}, tagInput: '', allTagsList: [], filterTag: '',
       modal: { show: false }, toast: { show: false },
-      timelineHours: Array.from({length:24},(_,i)=>i), 
+      // ★ FIX: 9:00 - 20:00 Range
+      timelineHours: [9,10,11,12,13,14,15,16,17,18,19,20],
       hours: Array.from({length:24},(_,i)=>String(i).padStart(2,'0')), minutes: ['00','15','30','45'],
       scrollbarWidth: 0
   }},
@@ -436,8 +445,6 @@ createApp({
       const s = localStorage.getItem('gh_tasks_settings');
       if(s) { this.settings=JSON.parse(s); this.loadData(); } else { this.currentTab='settings'; }
       if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode');
-      
-      this.$nextTick(() => { const body = this.$refs.calBody; if(body) body.scrollTop = 9 * 60; });
   },
   methods: {
     measureScrollbar() { const el=document.createElement('div'); el.style.cssText='overflow:scroll;visibility:hidden;position:absolute;'; document.body.appendChild(el); this.scrollbarWidth=el.offsetWidth-el.clientWidth; el.remove(); },
@@ -521,13 +528,17 @@ createApp({
             this.panelData={...t, taskRef:t, isGCal:false, desc: cleaned.clean, url: cleaned.url, tags:[...(t.tags||[])]};
         }
     },
+    // ★ FIX: Offset for 9:00 start
     getEventPos(i) { 
         const s=new Date(i.start); const e=new Date(i.end); 
         const startH = s.getHours() + s.getMinutes()/60;
         const endH = e.getHours() + e.getMinutes()/60;
-        if (endH <= 0 || startH >= 24) return null; 
-        const top = startH * 60; 
-        const height = (Math.min(24, endH) - Math.max(0, startH)) * 60;
+        
+        if (endH <= 9 || startH >= 21) return null; 
+        
+        const top = (Math.max(9, startH) - 9) * 60; // Offset by 9h
+        const height = (Math.min(21, endH) - Math.max(9, startH)) * 60;
+        
         return { top: top+'px', height: height+'px' };
     },
     async saveGCalEvent() {
