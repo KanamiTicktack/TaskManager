@@ -24,10 +24,12 @@
       --text-main: #1f2937; --text-sub: #6b7280; --border-color: #e5e7eb;
       --hover-bg: #f9fafb;
       --radius: 12px;
+      /* Calendar Metrics */
       --time-col-width: 50px;
       --header-height: 44px;
       --allday-min-height: 34px;
       --slot-height: 60px;
+      --scrollbar-width: 0px;
     }
     body.dark-mode {
       --primary: #818cf8; --primary-light: #312e81;
@@ -50,6 +52,14 @@
     .btn-icon { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; align-items: center; cursor: pointer; }
     .btn-icon:active { background: var(--hover-bg); }
 
+    /* Mobile Navigation (New) */
+    .mobile-nav {
+        display: flex; gap: 4px; overflow-x: auto; flex-shrink: 0; padding-bottom: 4px;
+        border-bottom: 1px solid var(--border-color); margin-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .mobile-nav::-webkit-scrollbar { display: none; } /* Hide scrollbar in nav */
+
     .main-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     .split-layout { display: flex; flex-direction: column; height: 100%; gap: 16px; }
     @media (min-width: 992px) { .split-layout { display: grid; grid-template-columns: 400px 1fr; gap: 24px; } }
@@ -57,9 +67,9 @@
     .view-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; position: relative; }
     .scroll-y { overflow-y: auto; flex: 1; padding-right: 2px; padding-bottom: 80px; }
 
-    /* Tabs */
+    /* Tabs (Shared Style) */
     .nav-tabs { border-bottom: 1px solid var(--border-color); gap: 4px; flex-shrink: 0; margin-bottom: 12px; flex-wrap: nowrap; overflow-x: auto; }
-    .nav-link { border: none; color: var(--text-sub); font-weight: 600; padding: 8px 16px; border-radius: 20px; white-space: nowrap; font-size: 0.9rem; }
+    .nav-link { border: none; color: var(--text-sub); font-weight: 600; padding: 8px 16px; border-radius: 20px; white-space: nowrap; font-size: 0.9rem; background: transparent; }
     .nav-link.active { background: var(--primary) !important; color: white !important; }
 
     /* Tasks */
@@ -79,10 +89,11 @@
     .due-badge { display: flex; align-items: center; gap: 2px; background: var(--hover-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); }
     .text-done { text-decoration: line-through; opacity: 0.6; }
 
-    /* === FLEX CALENDAR === */
+    /* Calendar (Flex Layout) */
     .calendar-container {
         flex: 1; display: flex; flex-direction: column; background: var(--bg-card); 
-        border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; min-height: 0;
+        border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;
+        min-height: 0;
     }
     .cal-row { display: flex; width: 100%; flex-shrink: 0; }
     .cal-col-time { width: var(--time-col-width); flex-shrink: 0; border-right: 1px solid var(--border-color); background: var(--hover-bg); text-align: center; }
@@ -99,7 +110,7 @@
     .ad-event { background: var(--primary); color: white; font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .cal-body { flex: 1; overflow-y: scroll; position: relative; display: flex; flex-direction: column; }
-    .cal-body-content { display: flex; flex: 1; min-height: 0; position: relative; } 
+    .cal-body-content { display: flex; width: 100%; position: relative; } 
     
     .time-slot-label { height: var(--slot-height); border-bottom: 1px solid var(--border-color); font-size: 0.75rem; color: var(--text-sub); display: flex; justify-content: center; padding-top: 4px; }
     .time-slot { height: var(--slot-height); border-bottom: 1px solid var(--border-color); box-sizing: border-box; }
@@ -170,14 +181,20 @@
         <button class="btn-icon" @click="toggleDarkMode"><span class="material-icons-round">{{ darkMode ? 'light_mode' : 'dark_mode' }}</span></button>
     </div>
 
+    <div class="mobile-nav" v-if="!isPC">
+        <button class="nav-link" :class="{active: currentTab==='active'}" @click="setTab('active')">未完了</button>
+        <button class="nav-link" :class="{active: currentTab==='completed'}" @click="setTab('completed')">完了済</button>
+        <button class="nav-link" :class="{active: currentTab==='calendar'}" @click="setTab('calendar')">カレンダー</button>
+        <button class="nav-link" :class="{active: currentTab==='settings'}" @click="setTab('settings')">設定</button>
+    </div>
+
     <div class="main-content">
         <div class="split-layout">
             
             <div class="view-panel" v-show="!isPC && currentTab !== 'calendar' || isPC">
-                <div class="nav-tabs d-flex">
+                <div class="nav-tabs d-flex" v-if="isPC">
                     <button class="nav-link" :class="{active: currentTab==='active'}" @click="setTab('active')">未完了</button>
                     <button class="nav-link" :class="{active: currentTab==='completed'}" @click="setTab('completed')">完了済</button>
-                    <button class="nav-link" v-if="!isPC" :class="{active: currentTab==='calendar'}" @click="setTab('calendar')">カレンダー</button>
                     <button class="nav-link" :class="{active: currentTab==='settings'}" @click="setTab('settings')">設定</button>
                 </div>
 
@@ -261,7 +278,7 @@
                      </div>
                      
                      <div class="cal-body" ref="calBody">
-                         <div class="cal-row cal-body-content">
+                         <div class="cal-body-content">
                              <div class="cal-col-time">
                                  <div v-for="h in timelineHours" :key="'tl'+h" class="time-slot-label">{{h}}:00</div>
                              </div>
@@ -466,15 +483,12 @@ createApp({
         });
         this.allTagsList=Array.from(tags).sort();
     },
-    // ★ FIX 1: Clean Raw Task Title (Remove Meta & URL)
     cleanRawTitle(t) {
         if(!t) return { clean: '', url: '' };
-        // Extract MD Link
         let url = '';
         const linkMatch = t.match(/\[(.*?)\]\((.*?)\)/);
         if (linkMatch) { t = linkMatch[1]; url = linkMatch[2]; }
         
-        // Remove Metadata
         let clean = t.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, '')
                      .replace(/[➕+]\s*\d{4}-\d{2}-\d{2}/g, '')
                      .replace(/✅\s*\d{4}-\d{2}-\d{2}/g, '')
@@ -482,7 +496,6 @@ createApp({
                      .replace(/[⏫🔼🔽]/g, '')
                      .replace(/#todo/gi, '');
         
-        // Remove Tags
         const tags = (t.match(/#[^\s#]+/g)||[]);
         tags.forEach(tag => { if(tag!=='#todo') clean = clean.replace(tag, ''); });
         
@@ -505,7 +518,6 @@ createApp({
         } else {
             const t=this.tasks.find(x=>x.lineIndex===i.lineIndex)||i;
             const cleaned = this.cleanRawTitle(t.desc);
-            // ★ FIX: Populate CLEAN data to panel
             this.panelData={...t, taskRef:t, isGCal:false, desc: cleaned.clean, url: cleaned.url, tags:[...(t.tags||[])]};
         }
     },
@@ -530,19 +542,16 @@ createApp({
         else { this.tasks.push({lineIndex:-1, desc:this.panelData.desc, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, completed:false, tags:[...this.panelData.tags]}); }
         this.showPanel=false; this.pushChanges();
     },
-    // ★ FIX: Construct fresh line from clean data to avoid duplication
     pushChanges() {
         this.isSaving=true;
         const newLines=[...this.lines];
         this.tasks.forEach(t=>{
-            // Ensure we use the clean desc if it was edited, or clean it now if it's raw
             const cleanObj = this.cleanRawTitle(t.desc);
             const title = this.isEditMode && this.panelData.taskRef === t ? this.panelData.desc : cleanObj.clean;
             const url = this.isEditMode && this.panelData.taskRef === t ? this.panelData.url : cleanObj.url;
-
             const urlPart = url ? `[${title}](${url})` : title;
-            const l=`- [${t.completed?'x':' '}] ${urlPart} ${t.priority==='high'?'⏫':t.priority==='medium'?'🔼':t.priority==='low'?'🔽':''} ${t.recurrence?'🔁 '+t.recurrence:''} ${t.due?'📅 '+t.due:''} ${t.tags.join(' ')} #todo`.replace(/\s+/g,' ').trim();
             
+            const l=`- [${t.completed?'x':' '}] ${urlPart} ${t.priority==='high'?'⏫':t.priority==='medium'?'🔼':t.priority==='low'?'🔽':''} ${t.recurrence?'🔁 '+t.recurrence:''} ${t.due?'📅 '+t.due:''} ${t.tags.join(' ')} #todo`.replace(/\s+/g,' ').trim();
             if(t.lineIndex>=0)newLines[t.lineIndex]=l; else newLines.push(l);
         });
         callGAS('saveFileContent', {...this.settings, content:newLines.join('\n'), sha:this.sha}).then(r=>{this.sha=r.newSha; this.lines=newLines; this.showToastNotification('保存しました');}).catch(e=>console.error(e)).finally(()=>this.isSaving=false);
