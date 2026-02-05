@@ -38,7 +38,7 @@
       --hover-bg: #374151;
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; }
-    .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
+    .form-control, .form-select { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
     
     /* Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -387,7 +387,7 @@
 </div>
 
 <script>
-const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycbxd-vue3AV2zTLZ5abQVw287UD6fVXj44E0_9kzBW6P5EILSTua0q3EBKLd9MzSd6HNjw/exec"; 
+const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycbwmATuUcgjXeDDEJy6hrFS1dOsoR9zv9RZGIaTESgQ9id2HKlaG_LaUKG8IL4EpNQQwug/exec"; 
 async function callGAS(a, p={}) { const r=await fetch(CONST_GAS_URL,{method:'POST',body:JSON.stringify({...p,action:a})}); const j=await r.json(); if(j.error)throw new Error(j.error); return j; }
 
 const { createApp } = Vue;
@@ -530,7 +530,7 @@ createApp({
     // Actions
     openAddPanel() { 
         this.isEditMode=false; this.showPanel=true; 
-        // ★ FIX: Init isNew for GCal
+        // ★ FIX: Initial values for switching
         this.panelData={isGCal:false, isNew:true, targetCalendarId:this.settings.calendarIds[0], desc:'', due:this.selectedDate||this.getTodayStr(), tags:[], priority:'none', recurrence:'', isAllDay:false}; 
         this.tagInput='';
     },
@@ -552,6 +552,7 @@ createApp({
         const startH = s.getHours() + s.getMinutes()/60;
         const endH = e.getHours() + e.getMinutes()/60;
         
+        // Filter out events that end before 9:00 or start after 21:00
         if (endH <= 9 || startH >= 21) return null; 
         
         // Clamp logic
@@ -607,6 +608,7 @@ createApp({
     onDrop(e, date, hour) {
         const item = JSON.parse(e.dataTransfer.getData('json'));
         if(!item.isGCal) return; 
+        // Correct time calculation for 9:00 start
         const timeHour = 9 + hour; // Index 0 = 9:00
         const start = `${date}T${String(timeHour).padStart(2,'0')}:00:00`;
         this.loading=true;
