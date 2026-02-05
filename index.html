@@ -38,7 +38,7 @@
       --hover-bg: #374151;
     }
     body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; }
-    .form-control, .form-select { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
+    .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
     
     /* Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -343,8 +343,24 @@
         <div v-if="panelData.isGCal" class="d-flex flex-column h-100 gap-3">
              <div v-if="panelData.isNew"><label class="small text-muted">カレンダー</label><select v-model="panelData.targetCalendarId" class="form-select"><option v-for="c in availableCalendars" :value="c.id">{{c.name}}</option></select></div>
              <div><label class="small text-muted">タイトル</label><input v-model="panelData.title" class="form-control fw-bold"></div>
-             <div><label class="small text-muted">日時</label><input type="date" v-model="panelData.dateInput" class="form-control mb-2">
-             <div class="d-flex gap-2 align-items-center"><select v-model="panelData.startHour" class="form-select"><option v-for="h in hours" :value="h">{{h}}</option></select>:<select v-model="panelData.startMin" class="form-select"><option v-for="m in minutes" :value="m">{{m}}</option></select> ～ <select v-model="panelData.endHour" class="form-select"><option value="">--</option><option v-for="h in hours" :value="h">{{h}}</option></select>:<select v-model="panelData.endMin" class="form-select"><option value="">--</option><option v-for="m in minutes" :value="m">{{m}}</option></select></div></div>
+             
+             <div>
+                 <div class="d-flex align-items-center gap-2 mb-2">
+                     <label class="small text-muted m-0">日時</label>
+                     <div class="form-check m-0 ms-auto">
+                         <input class="form-check-input" type="checkbox" id="checkAllDay" v-model="panelData.isAllDay">
+                         <label class="form-check-label small" for="checkAllDay">終日</label>
+                     </div>
+                 </div>
+                 <input type="date" v-model="panelData.dateInput" class="form-control mb-2">
+                 <div class="d-flex gap-2 align-items-center" v-if="!panelData.isAllDay">
+                     <select v-model="panelData.startHour" class="form-select"><option v-for="h in hours" :value="h">{{h}}</option></select>:
+                     <select v-model="panelData.startMin" class="form-select"><option v-for="m in minutes" :value="m">{{m}}</option></select> ～ 
+                     <select v-model="panelData.endHour" class="form-select"><option value="">--</option><option v-for="h in hours" :value="h">{{h}}</option></select>:
+                     <select v-model="panelData.endMin" class="form-select"><option value="">--</option><option v-for="m in minutes" :value="m">{{m}}</option></select>
+                 </div>
+             </div>
+
              <div><label class="small text-muted">会議URL</label><input v-model="panelData.meetingUrl" class="form-control" placeholder="https://..."></div>
              <div class="flex-grow-1"><label class="small text-muted">メモ</label><textarea v-model="panelData.desc" class="form-control h-100"></textarea></div>
              <div class="d-flex gap-2"><button class="btn btn-light flex-grow-1" @click="closePanel">キャンセル</button><button class="btn btn-primary flex-grow-1" @click="saveGCalEvent">保存</button></div>
@@ -514,8 +530,8 @@ createApp({
     // Actions
     openAddPanel() { 
         this.isEditMode=false; this.showPanel=true; 
-        // ★ FIX: Initial values for switching
-        this.panelData={isGCal:false, isNew:true, targetCalendarId:this.settings.calendarIds[0], desc:'', due:this.selectedDate||this.getTodayStr(), tags:[], priority:'none', recurrence:''}; 
+        // ★ FIX: Init isNew for GCal
+        this.panelData={isGCal:false, isNew:true, targetCalendarId:this.settings.calendarIds[0], desc:'', due:this.selectedDate||this.getTodayStr(), tags:[], priority:'none', recurrence:'', isAllDay:false}; 
         this.tagInput='';
     },
     openEditPanel(i) {
@@ -523,7 +539,7 @@ createApp({
         if(i.isGCal) {
             let d=i.desc||'', u=''; const m=d.match(/^【会議URL】:\s*(\S+)(\n\n)?/); if(m){u=m[1]; d=d.replace(m[0],'');}
             const s = new Date(i.start); const e = new Date(i.end);
-            this.panelData={isGCal:true, eid:i.id, calendarId:i.calendarId, title:i.title, desc:d, meetingUrl:u, dateInput:this.convertIsoToYMD(i.start), startHour:String(s.getHours()).padStart(2,'0'), startMin:String(s.getMinutes()).padStart(2,'0'), endHour:String(e.getHours()).padStart(2,'0'), endMin:String(e.getMinutes()).padStart(2,'0')};
+            this.panelData={isGCal:true, eid:i.id, calendarId:i.calendarId, title:i.title, desc:d, meetingUrl:u, dateInput:this.convertIsoToYMD(i.start), isAllDay: i.isAllDay || false, startHour:String(s.getHours()).padStart(2,'0'), startMin:String(s.getMinutes()).padStart(2,'0'), endHour:String(e.getHours()).padStart(2,'0'), endMin:String(e.getMinutes()).padStart(2,'0')};
         } else {
             const t=this.tasks.find(x=>x.lineIndex===i.lineIndex)||i;
             const cleaned = this.cleanRawTitle(t.desc);
@@ -536,7 +552,6 @@ createApp({
         const startH = s.getHours() + s.getMinutes()/60;
         const endH = e.getHours() + e.getMinutes()/60;
         
-        // Filter out events that end before 9:00 or start after 21:00
         if (endH <= 9 || startH >= 21) return null; 
         
         // Clamp logic
@@ -550,8 +565,22 @@ createApp({
     },
     async saveGCalEvent() {
         this.isSaving=true; let d=this.panelData.desc||''; if(this.panelData.meetingUrl) d=`【会議URL】: ${this.panelData.meetingUrl}\n\n${d}`;
+        // ★ FIX: Correct params for All Day
+        const params = {
+            ...this.panelData, 
+            calendarId: this.panelData.targetCalendarId,
+            description:d, 
+            dateStr:this.panelData.dateInput
+        };
+        if(this.panelData.isAllDay) {
+            params.startTime = null; params.endTime = null;
+        } else {
+            params.startTime = `${this.panelData.startHour}:${this.panelData.startMin}`;
+            params.endTime = `${this.panelData.endHour}:${this.panelData.endMin}`;
+        }
+
         try {
-            await callGAS(this.panelData.isNew?'createCalendarEvent':'updateCalendarEvent', {...this.panelData, calendarId:this.panelData.targetCalendarId, description:d, startTime:`${this.panelData.startHour}:${this.panelData.startMin}`, endTime:`${this.panelData.endHour}:${this.panelData.endMin}`, dateStr:this.panelData.dateInput});
+            await callGAS(this.panelData.isNew?'createCalendarEvent':'updateCalendarEvent', params);
             this.showPanel=false; this.fetchGCal();
         } catch(e){this.showInfo('Error',e);} finally{this.isSaving=false;}
     },
@@ -578,7 +607,6 @@ createApp({
     onDrop(e, date, hour) {
         const item = JSON.parse(e.dataTransfer.getData('json'));
         if(!item.isGCal) return; 
-        // Correct time calculation for 9:00 start
         const timeHour = 9 + hour; // Index 0 = 9:00
         const start = `${date}T${String(timeHour).padStart(2,'0')}:00:00`;
         this.loading=true;
