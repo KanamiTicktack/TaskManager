@@ -500,11 +500,14 @@
             flex-shrink: 0;
         }
 
+
         .m-cell {
             background: var(--bg-card);
             min-height: 80px;
             padding: 4px;
             cursor: pointer;
+            min-width: 0;
+            /* Fix for grid expansion with nowrap text */
         }
 
         .m-cell.selected {
