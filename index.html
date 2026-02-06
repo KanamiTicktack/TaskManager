@@ -1367,7 +1367,7 @@
                             let pri = 'none'; if (d.includes('⏫')) pri = 'high'; else if (d.includes('🔼')) pri = 'medium'; else if (d.includes('🔽')) pri = 'low';
                             const tempText = d.replace(/https?:\/\/[^\s]+/g, '');
                             const tks = []; (tempText.match(/#[^\s#]+/g) || []).forEach(t => { if (t !== '#todo') { tks.push(t); tags.add(t); } });
-                            const tks = []; (tempText.match(/#[^\s#]+/g) || []).forEach(t => { if (t !== '#todo') { tks.push(t); tags.add(t); } });
+
                             // Calc level (2 spaces = 1 level, but let's be flexible: 1 tab or >=2 spaces)
                             let level = 0;
                             if (indent.includes('\t')) level = indent.length;
