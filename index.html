@@ -1,714 +1,1617 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-  <meta charset="utf-8">
-  <title>Tasks</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/vue@3.2.45/dist/vue.global.prod.js"></script>
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover, maximum-scale=1.0">
-  <meta name="theme-color" content="#6366f1">
-  <link rel="manifest" href="./manifest.json">
-  <link rel="apple-touch-icon" href="./icon-192.png">
-  
-  <script>
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.error);
-  </script>
+    <meta charset="utf-8">
+    <title>Tasks</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.2.45/dist/vue.global.prod.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
-  <style>
-    /* === Design System === */
-    :root {
-      --primary: #6366f1; --primary-light: #e0e7ff;
-      --bg-body: #f3f4f6; --bg-card: #ffffff; --bg-input: #ffffff;
-      --text-main: #1f2937; --text-sub: #6b7280; --border-color: #e5e7eb;
-      --hover-bg: #f9fafb;
-      --radius: 12px;
-      /* Calendar Metrics */
-      --time-col-width: 50px;
-      --header-height: 44px;
-      --allday-min-height: 34px;
-      --slot-height: 60px;
-      --scrollbar-width: 0px;
-    }
-    body.dark-mode {
-      --primary: #818cf8; --primary-light: #312e81;
-      --bg-body: #111827; --bg-card: #1f2937; --bg-input: #374151;
-      --text-main: #f3f4f6; --text-sub: #9ca3af; --border-color: #374151;
-      --hover-bg: #374151;
-    }
-    body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; }
-    .form-control, .form-select, input, textarea { background-color: var(--bg-input); border-color: var(--border-color); color: var(--text-main); font-size: 16px !important; }
-    
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    .scroll-y:hover::-webkit-scrollbar-thumb { background: #94a3b8; }
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover, maximum-scale=1.0">
+    <meta name="theme-color" content="#6366f1">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="./icon-192.png">
 
-    /* Layout */
-    .app-container { display: flex; flex-direction: column; height: 100vh; max-width: 1800px; margin: 0 auto; padding: 12px; gap: 12px; }
-    .app-header { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
-    .app-title { font-weight: 800; font-size: 1.5rem; margin: 0; letter-spacing: -0.5px; }
-    .btn-icon { background: transparent; border: none; color: var(--text-main); padding: 8px; border-radius: 50%; display: flex; align-items: center; cursor: pointer; }
-    .btn-icon:active { background: var(--hover-bg); }
+    <script>
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.error);
+    </script>
 
-    /* Mobile Navigation */
-    .mobile-nav {
-        display: flex; gap: 4px; overflow-x: auto; flex-shrink: 0; padding-bottom: 4px;
-        border-bottom: 1px solid var(--border-color); margin-bottom: 8px;
-        -webkit-overflow-scrolling: touch; scrollbar-width: none;
-    }
-    .mobile-nav::-webkit-scrollbar { display: none; }
+    <style>
+        /* === Design System === */
+        :root {
+            --primary: #6366f1;
+            --primary-light: #e0e7ff;
+            --bg-body: #f3f4f6;
+            --bg-card: #ffffff;
+            --bg-input: #ffffff;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --border-color: #e5e7eb;
+            --hover-bg: #f9fafb;
+            --radius: 12px;
+            /* Calendar Metrics */
+            --time-col-width: 50px;
+            --header-height: 44px;
+            --allday-min-height: 34px;
+            --slot-height: 60px;
+            --scrollbar-width: 0px;
+        }
 
-    .main-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-    .split-layout { display: flex; flex-direction: column; height: 100%; gap: 16px; }
-    @media (min-width: 992px) { .split-layout { display: grid; grid-template-columns: 400px 1fr; gap: 24px; } }
-    
-    .view-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; position: relative; }
-    .scroll-y { overflow-y: auto; flex: 1; padding-right: 2px; padding-bottom: 80px; }
+        body.dark-mode {
+            --primary: #818cf8;
+            --primary-light: rgba(99, 102, 241, 0.2);
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --bg-input: #334155;
+            --text-main: #f1f5f9;
+            --text-sub: #94a3b8;
+            --border-color: #334155;
+            --hover-bg: #334155;
+        }
 
-    /* Tabs */
-    .nav-tabs { 
-        border-bottom: 1px solid var(--border-color); gap: 4px; flex-shrink: 0; margin-bottom: 12px; 
-        flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
-    }
-    .nav-tabs::-webkit-scrollbar { display: none; }
-    .nav-link { border: none; color: var(--text-sub); font-weight: 600; padding: 8px 16px; border-radius: 20px; white-space: nowrap; font-size: 0.9rem; background: transparent; }
-    .nav-link.active { background: var(--primary) !important; color: white !important; }
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
 
-    /* Tasks */
-    .task-card { 
-        background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 8px; padding: 12px;
-        display: flex; gap: 10px; align-items: flex-start; cursor: pointer; position: relative; transition: background 0.1s;
-    }
-    .task-card:active { background: var(--hover-bg); }
-    .task-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 4px 0 0 4px; }
-    .priority-high::before { background: #ef4444; } .priority-medium::before { background: #f59e0b; } .priority-low::before { background: #3b82f6; }
-    .check-box { width: 22px; height: 22px; border: 2px solid var(--text-sub); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
-    .check-box.checked { background: var(--primary); border-color: var(--primary); }
-    .check-box .material-icons-round { font-size: 16px; color: white; display: none; }
-    .check-box.checked .material-icons-round { display: block; }
-    .task-title { font-weight: 600; font-size: 0.95rem; line-height: 1.4; margin-bottom: 4px; word-break: break-word; }
-    /* Link Styling in Task Title */
-    .task-title a { color: var(--primary); text-decoration: none; position: relative; z-index: 20; }
-    .task-title a:hover { text-decoration: underline; }
-    
-    .task-meta { font-size: 0.75rem; color: var(--text-sub); display: flex; gap: 6px; flex-wrap: wrap; }
-    .tag-badge { background: var(--border-color); padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; }
-    .due-badge { display: flex; align-items: center; gap: 2px; background: var(--hover-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); }
-    .text-done { text-decoration: line-through; opacity: 0.6; }
+        .form-control,
+        .form-select,
+        input,
+        textarea {
+            background-color: var(--bg-input);
+            border-color: var(--border-color);
+            color: var(--text-main);
+            font-size: 16px !important;
+        }
 
-    /* Calendar (Flex Layout) */
-    .calendar-container { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; min-height: 0; }
-    .cal-row { display: flex; width: 100%; flex-shrink: 0; }
-    .cal-col-time { width: var(--time-col-width); flex-shrink: 0; border-right: 1px solid var(--border-color); background: var(--hover-bg); text-align: center; }
-    .cal-col-day { flex: 1; border-right: 1px solid var(--border-color); position: relative; min-width: 0; }
-    .cal-col-day:last-child { border-right: none; }
-    .cal-header { border-bottom: 1px solid var(--border-color); height: var(--header-height); background: var(--hover-bg); }
-    .header-cell { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; color: var(--text-sub); cursor: pointer; transition: background 0.1s; }
-    .header-cell:hover { background: rgba(0,0,0,0.03); }
-    .header-cell.selected { background: var(--primary-light) !important; color: var(--primary); }
-    .sun { color: #ef4444; } .sat { color: #3b82f6; }
-    .cal-allday { border-bottom: 2px solid var(--border-color); min-height: var(--allday-min-height); background: var(--bg-card); }
-    .allday-label { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: var(--text-sub); }
-    .allday-content { padding: 2px; }
-    .ad-event { background: var(--primary); color: white; font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cal-body { flex: 1; overflow-y: scroll; position: relative; display: flex; flex-direction: column; }
-    .cal-body-content { display: flex; width: 100%; position: relative; } 
-    .time-slot-label { height: var(--slot-height); border-bottom: 1px solid var(--border-color); font-size: 0.75rem; color: var(--text-sub); display: flex; justify-content: center; padding-top: 4px; }
-    .time-slot { height: var(--slot-height); border-bottom: 1px solid var(--border-color); box-sizing: border-box; }
-    .event-chip { position: absolute; left: 2px; right: 2px; background: var(--primary); color: white; border-radius: 4px; padding: 2px 4px; font-size: 0.75rem; overflow: hidden; cursor: grab; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10; border: 1px solid rgba(255,255,255,0.2); }
-    .bottom-list { flex: 0 0 25%; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; min-height: 120px; }
-    .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border-color); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; flex-shrink: 0; }
-    .m-cell { background: var(--bg-card); min-height: 80px; padding: 4px; cursor: pointer; }
-    .m-cell.selected { background: var(--primary-light) !important; }
-    .date-badge { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.8rem; font-weight: bold; }
-    .date-badge.today { background: var(--primary); color: white; }
-    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-sub); margin: 1px; }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
 
-    /* Side Panel */
-    .side-panel { position: fixed; top: 0; right: 0; width: 100%; height: 100%; background: var(--bg-card); z-index: 2000; box-shadow: -5px 0 20px rgba(0,0,0,0.2); padding: 20px; transform: translateX(100%); transition: transform 0.25s; display: flex; flex-direction: column; }
-    .side-panel.open { transform: translateX(0); }
-    @media (min-width: 992px) { .side-panel { position: absolute; top: 12px; right: 12px; width: 400px; height: auto; max-height: calc(100% - 24px); border-radius: 16px; border: 1px solid var(--border-color); transform: translateY(10px); opacity: 0; pointer-events: none; transition: all 0.2s; } .side-panel.open { opacity: 1; transform: translateY(0); pointer-events: auto; } }
-    .mode-switcher { display: flex; background: var(--bg-body); padding: 4px; border-radius: 10px; margin-bottom: 16px; border: 1px solid var(--border-color); }
-    .mode-btn { flex: 1; padding: 8px; border: none; background: transparent; border-radius: 8px; font-weight: 600; font-size: 0.9rem; color: var(--text-sub); transition: 0.2s; }
-    .mode-btn.active { background: var(--bg-card); color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .tag-chip { display: inline-block; padding: 4px 10px; border-radius: 16px; background: var(--border-color); font-size: 0.8rem; margin-right: 4px; margin-bottom: 4px; cursor: pointer; }
-    .btn-group-custom { display: flex; gap: 4px; background: var(--bg-body); padding: 4px; border-radius: 8px; border: 1px solid var(--border-color); }
-    .btn-opt { flex: 1; padding: 6px; border: none; background: transparent; border-radius: 6px; font-size: 0.8rem; color: var(--text-sub); transition: 0.1s; }
-    .btn-opt.active { background: var(--bg-card); color: var(--text-main); font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
 
-    /* FAB */
-    .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-    .fab-btn:active { transform: scale(0.92); }
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 2100; backdrop-filter: blur(2px); }
-    .modal-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-card); padding: 24px; border-radius: 16px; width: 90%; max-width: 360px; z-index: 2200; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .scroll-y:hover::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+        }
 
-    /* Status Toast */
-    .status-toast {
-        position: fixed; bottom: 30px; right: 100px;
-        background: var(--bg-card); border: 1px solid var(--border-color);
-        padding: 8px 16px; border-radius: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        display: flex; align-items: center; gap: 8px; z-index: 3000;
-        font-size: 0.85rem; font-weight: 600; color: var(--text-main);
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        opacity: 0; transform: translateY(20px); pointer-events: none;
-    }
-    .status-toast.visible { opacity: 1; transform: translateY(0); }
-    .status-toast.loading .status-icon { border: 2px solid var(--text-sub); border-top-color: transparent; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
-    .status-toast.success .status-icon { color: #10b981; }
-    .status-toast.error .status-icon { color: #ef4444; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    @media (max-width: 768px) { .status-toast { right: 50%; transform: translateX(50%) translateY(20px); bottom: 100px; } .status-toast.visible { transform: translateX(50%) translateY(0); } }
-  </style>
+        /* Layout */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 12px;
+            gap: 12px;
+        }
+
+        .app-header {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 4px;
+        }
+
+        .app-title {
+            font-weight: 800;
+            font-size: 1.5rem;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .btn-icon {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .btn-icon:active {
+            background: var(--hover-bg);
+        }
+
+        /* Mobile Navigation */
+        .mobile-nav {
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+            flex-shrink: 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 8px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .mobile-nav::-webkit-scrollbar {
+            display: none;
+        }
+
+        .main-content {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .split-layout {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 16px;
+        }
+
+        @media (min-width: 992px) {
+            .split-layout {
+                display: grid;
+                grid-template-columns: 400px 1fr;
+                gap: 24px;
+            }
+        }
+
+        .view-panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .scroll-y {
+            overflow-y: auto;
+            flex: 1;
+            padding-right: 2px;
+            padding-bottom: 80px;
+        }
+
+        /* Tabs */
+        .nav-tabs {
+            border-bottom: 1px solid var(--border-color);
+            gap: 4px;
+            flex-shrink: 0;
+            margin-bottom: 12px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .nav-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-link {
+            border: none;
+            color: var(--text-sub);
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 20px;
+            white-space: nowrap;
+            font-size: 0.9rem;
+            background: transparent;
+        }
+
+        .nav-link.active {
+            background: var(--primary) !important;
+            color: white !important;
+        }
+
+        /* Tasks */
+        .task-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            padding: 12px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            cursor: pointer;
+            position: relative;
+            transition: background 0.1s;
+        }
+
+        .task-card:active {
+            background: var(--hover-bg);
+        }
+
+        .task-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            border-radius: 4px 0 0 4px;
+        }
+
+        .priority-high::before {
+            background: #ef4444;
+        }
+
+        .priority-medium::before {
+            background: #f59e0b;
+        }
+
+        .priority-low::before {
+            background: #3b82f6;
+        }
+
+        .check-box {
+            width: 22px;
+            height: 22px;
+            border: 2px solid var(--text-sub);
+            border-radius: 6px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 2px;
+        }
+
+        .check-box.checked {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .check-box .material-icons-round {
+            font-size: 16px;
+            color: white;
+            display: none;
+        }
+
+        .check-box.checked .material-icons-round {
+            display: block;
+        }
+
+        .task-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+
+        /* Link Styling in Task Title */
+        .task-title a {
+            color: var(--primary);
+            text-decoration: none;
+            position: relative;
+            z-index: 20;
+        }
+
+        .task-title a:hover {
+            text-decoration: underline;
+        }
+
+        .task-meta {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .tag-badge {
+            background: var(--border-color);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+        }
+
+        .due-badge {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            background: var(--hover-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .text-done {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
+        /* Calendar (Flex Layout) */
+        .calendar-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .cal-row {
+            display: flex;
+            width: 100%;
+            flex-shrink: 0;
+        }
+
+        .cal-col-time {
+            width: var(--time-col-width);
+            flex-shrink: 0;
+            border-right: 1px solid var(--border-color);
+            background: var(--hover-bg);
+            text-align: center;
+        }
+
+        .cal-col-day {
+            flex: 1;
+            border-right: 1px solid var(--border-color);
+            position: relative;
+            min-width: 0;
+        }
+
+        .cal-col-day:last-child {
+            border-right: none;
+        }
+
+        .cal-header {
+            border-bottom: 1px solid var(--border-color);
+            height: var(--header-height);
+            background: var(--hover-bg);
+        }
+
+        .header-cell {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: var(--text-sub);
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .header-cell:hover {
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        .header-cell.selected {
+            background: var(--primary-light) !important;
+            color: var(--primary);
+        }
+
+        .sun {
+            color: #ef4444;
+        }
+
+        .sat {
+            color: #3b82f6;
+        }
+
+        .cal-allday {
+            border-bottom: 2px solid var(--border-color);
+            min-height: var(--allday-min-height);
+            background: var(--bg-card);
+        }
+
+        .allday-label {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: var(--text-sub);
+        }
+
+        .allday-content {
+            padding: 2px;
+        }
+
+        .ad-event {
+            background: var(--primary);
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 4px;
+            border-radius: 3px;
+            margin-bottom: 2px;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .cal-body {
+            flex: 1;
+            overflow-y: scroll;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cal-body-content {
+            display: flex;
+            width: 100%;
+            position: relative;
+        }
+
+        .time-slot-label {
+            height: var(--slot-height);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            display: flex;
+            justify-content: center;
+            padding-top: 4px;
+        }
+
+        .time-slot {
+            height: var(--slot-height);
+            border-bottom: 1px solid var(--border-color);
+            box-sizing: border-box;
+        }
+
+        .event-chip {
+            position: absolute;
+            left: 2px;
+            right: 2px;
+            background: var(--primary);
+            color: white;
+            border-radius: 4px;
+            padding: 2px 4px;
+            font-size: 0.75rem;
+            overflow: hidden;
+            cursor: grab;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .bottom-list {
+            flex: 0 0 25%;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            min-height: 120px;
+        }
+
+        .month-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background: var(--border-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .m-cell {
+            background: var(--bg-card);
+            min-height: 80px;
+            padding: 4px;
+            cursor: pointer;
+        }
+
+        .m-cell.selected {
+            background: var(--primary-light) !important;
+        }
+
+        .date-badge {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .date-badge.today {
+            background: var(--primary);
+            color: white;
+        }
+
+        .dot {
+            display: none;
+        }
+
+        /* Replaced by text */
+        .cal-event-text {
+            font-size: 10px;
+            padding: 1px 4px;
+            border-radius: 4px;
+            margin-bottom: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background: var(--hover-bg);
+            color: var(--text-main);
+        }
+
+        .cal-event-text.done {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
+        /* Side Panel */
+        .side-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-card);
+            z-index: 2000;
+            box-shadow: -5px 0 20px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            transform: translateX(100%);
+            transition: transform 0.25s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .side-panel.open {
+            transform: translateX(0);
+        }
+
+        @media (min-width: 992px) {
+            .side-panel {
+                position: absolute;
+                top: 12px;
+                right: 12px;
+                width: 400px;
+                height: auto;
+                max-height: calc(100% - 24px);
+                border-radius: 16px;
+                border: 1px solid var(--border-color);
+                transform: translateY(10px);
+                opacity: 0;
+                pointer-events: none;
+                transition: all 0.2s;
+            }
+
+            .side-panel.open {
+                opacity: 1;
+                transform: translateY(0);
+                pointer-events: auto;
+            }
+        }
+
+        .mode-switcher {
+            display: flex;
+            background: var(--bg-body);
+            padding: 4px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            transition: 0.2s;
+        }
+
+        .mode-btn.active {
+            background: var(--bg-card);
+            color: var(--primary);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .tag-chip {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 16px;
+            background: var(--border-color);
+            font-size: 0.8rem;
+            margin-right: 4px;
+            margin-bottom: 4px;
+            cursor: pointer;
+        }
+
+        .btn-group-custom {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-body);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-opt {
+            flex: 1;
+            padding: 6px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: var(--text-sub);
+            transition: 0.1s;
+        }
+
+        .btn-opt.active {
+            background: var(--bg-card);
+            color: var(--text-main);
+            font-weight: bold;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* FAB */
+        .fab-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+
+        .fab-btn:active {
+            transform: scale(0.92);
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 2100;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-card);
+            padding: 24px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 360px;
+            z-index: 2200;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Status Toast */
+        .status-toast {
+            position: fixed;
+            bottom: 30px;
+            right: 100px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 3000;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+        }
+
+        .status-toast.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .status-toast.loading .status-icon {
+            border: 2px solid var(--text-sub);
+            border-top-color: transparent;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            animation: spin 1s linear infinite;
+        }
+
+        .status-toast.success .status-icon {
+            color: #10b981;
+        }
+
+        .status-toast.error .status-icon {
+            color: #ef4444;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .status-toast {
+                right: 50%;
+                transform: translateX(50%) translateY(20px);
+                bottom: 100px;
+            }
+
+            .status-toast.visible {
+                transform: translateX(50%) translateY(0);
+            }
+        }
+    </style>
 </head>
+
 <body>
-<div id="app">
-  <div class="status-toast" :class="[{visible: status.visible}, status.type]">
-      <div class="status-icon" v-if="status.type==='loading'"></div>
-      <span class="material-icons-round status-icon" v-else-if="status.type==='success'">check_circle</span>
-      <span class="material-icons-round status-icon" v-else-if="status.type==='error'">error</span>
-      <span>{{ status.message }}</span>
-  </div>
-
-  <div v-if="modal.show" class="overlay" @click="closeModal(false)"></div>
-  <div v-if="modal.show" class="modal-box">
-      <h6 class="fw-bold mb-3">{{ modal.title }}</h6>
-      <p class="text-secondary small mb-4">{{ modal.message }}</p>
-      <div class="d-flex justify-content-end gap-2">
-          <button v-if="modal.type==='confirm'" class="btn btn-sm btn-light" @click="closeModal(false)">キャンセル</button>
-          <button class="btn btn-sm" :class="modal.isDanger?'btn-danger':'btn-primary'" @click="closeModal(true)">{{ modal.okText }}</button>
-      </div>
-  </div>
-
-  <div class="app-container">
-    <div class="app-header">
-        <div class="d-flex align-items-center gap-2">
-            <h1 class="app-title">Tasks</h1>
-            <span class="badge bg-secondary rounded-pill" v-if="activeCount > 0">{{ activeCount }}</span>
+    <div id="app">
+        <div class="status-toast" :class="[{visible: status.visible}, status.type]">
+            <div class="status-icon" v-if="status.type==='loading'"></div>
+            <span class="material-icons-round status-icon" v-else-if="status.type==='success'">check_circle</span>
+            <span class="material-icons-round status-icon" v-else-if="status.type==='error'">error</span>
+            <span>{{ status.message }}</span>
         </div>
-        <button class="btn-icon" @click="toggleDarkMode"><span class="material-icons-round">{{ darkMode ? 'light_mode' : 'dark_mode' }}</span></button>
-    </div>
 
-    <div class="mobile-nav" v-if="!isPC">
-        <button class="nav-link" :class="{active: currentTab==='active'}" @click="setTab('active')">未完了</button>
-        <button class="nav-link" :class="{active: currentTab==='completed'}" @click="setTab('completed')">完了済</button>
-        <button class="nav-link" :class="{active: currentTab==='calendar'}" @click="setTab('calendar')">カレンダー</button>
-        <button class="nav-link" :class="{active: currentTab==='settings'}" @click="setTab('settings')">設定</button>
-    </div>
+        <div v-if="modal.show" class="overlay" @click="closeModal(false)"></div>
+        <div v-if="modal.show" class="modal-box">
+            <h6 class="fw-bold mb-3">{{ modal.title }}</h6>
+            <p class="text-secondary small mb-4">{{ modal.message }}</p>
+            <div class="d-flex justify-content-end gap-2">
+                <button v-if="modal.type==='confirm'" class="btn btn-sm btn-light"
+                    @click="closeModal(false)">キャンセル</button>
+                <button class="btn btn-sm" :class="modal.isDanger?'btn-danger':'btn-primary'"
+                    @click="closeModal(true)">{{ modal.okText }}</button>
+            </div>
+        </div>
 
-    <div class="main-content">
-        <div class="split-layout">
-            
-            <div class="view-panel" v-show="!isPC && currentTab !== 'calendar' || isPC">
-                <div class="nav-tabs d-flex" v-if="isPC">
-                    <button class="nav-link" :class="{active: currentTab==='active'}" @click="setTab('active')">未完了</button>
-                    <button class="nav-link" :class="{active: currentTab==='completed'}" @click="setTab('completed')">完了済</button>
-                    <button class="nav-link" :class="{active: currentTab==='settings'}" @click="setTab('settings')">設定</button>
+        <div class="app-container">
+            <div class="app-header">
+                <div class="d-flex align-items-center gap-2">
+                    <h1 class="app-title">Tasks</h1>
+                    <span class="badge bg-secondary rounded-pill" v-if="activeCount > 0">{{ activeCount }}</span>
                 </div>
-
-                <div class="scroll-y">
-                    <div v-if="currentTab==='settings'" class="p-1 d-flex flex-column gap-3">
-                        <div class="card p-3 border shadow-sm">
-                            <h6 class="fw-bold small mb-3">GitHub連携</h6>
-                            <input type="password" v-model="settings.token" class="form-control mb-2" placeholder="Token">
-                            <div class="d-flex gap-2 mb-2"><input v-model="settings.owner" class="form-control" placeholder="Owner"><input v-model="settings.repo" class="form-control" placeholder="Repo"></div>
-                            <input v-model="settings.path" class="form-control mb-2" placeholder="Tasks.md">
-                            <button class="btn btn-sm btn-primary w-100" @click="saveSettings">保存</button>
-                        </div>
-                        <div class="card p-3 border shadow-sm">
-                             <h6 class="fw-bold small mb-2">カレンダー設定</h6>
-                             <div v-for="cal in availableCalendars" :key="cal.id" class="form-check"><input class="form-check-input" type="checkbox" :value="cal.id" v-model="settings.calendarIds"><label class="form-check-label small">{{cal.name}}</label></div>
-                        </div>
-                        <div class="card p-3 border shadow-sm">
-                             <h6 class="fw-bold small mb-2">アーカイブ設定</h6>
-                             <input v-model="settings.archivePath" class="form-control mb-2" placeholder="Archive.md">
-                             <button class="btn btn-sm btn-outline-warning w-100" @click="runArchiveProcess">完了タスクを移動</button>
-                        </div>
-                    </div>
-
-                    <div v-else class="p-1">
-                        <div v-if="currentTab==='active'" class="d-flex justify-content-end mb-3">
-                            <select class="form-select form-select-sm" style="width: auto; max-width: 100%; min-width: 120px;" v-model="filterTag"><option value="">すべてのタグ</option><option v-for="t in allTagsList" :value="t">{{t}}</option></select>
-                        </div>
-
-                        <div v-if="(currentTab==='active' && groupedActiveTasks.length===0) || (currentTab==='completed' && displayCompletedTasks.length===0)" class="text-center py-5 text-muted small">タスクはありません</div>
-                        
-                        <div v-if="currentTab==='active'">
-                             <div v-for="group in groupedActiveTasks" :key="group.title" class="mb-4">
-                                 <div class="small fw-bold text-secondary ms-1 mb-2">{{ group.title }}</div>
-                                 <div v-for="task in group.tasks" :key="task.lineIndex" class="task-card" :class="'priority-'+task.priority" @click="openEditPanel(task)">
-                                     <div class="check-box" @click.stop="toggleTask(task)"><span class="material-icons-round">check</span></div>
-                                     <div class="task-body">
-                                         <div class="task-title" v-html="renderTaskTitle(task.desc)"></div>
-                                         <div class="task-meta">
-                                             <span v-for="tag in task.tags" class="tag-badge">#{{tag.replace('#','')}}</span>
-                                             <span v-if="task.recurrence" class="due-badge"><span class="material-icons-round" style="font-size:12px">repeat</span>{{task.recurrence}}</span>
-                                         </div>
-                                     </div>
-                                 </div>
-                             </div>
-                        </div>
-
-                        <div v-if="currentTab==='completed'">
-                             <div v-if="displayCompletedTasks.length===0" class="text-center py-5 text-muted small">未アーカイブの完了タスクはありません</div>
-                             <div v-for="task in displayCompletedTasks" :key="task.uniqueId" class="task-card opacity-75">
-                                 <div class="check-box checked" @click.stop="confirmRestore(task)"><span class="material-icons-round">check</span></div>
-                                 <div class="task-body">
-                                     <div class="task-title text-done" v-html="renderTaskTitle(task.desc)"></div>
-                                     <div class="task-meta">{{task.doneDate}}</div>
-                                 </div>
-                                 <button class="btn-icon text-danger" @click.stop="confirmDelete(task)"><span class="material-icons-round" style="font-size:18px">delete</span></button>
-                             </div>
-                        </div>
-                    </div>
-                </div>
+                <button class="btn-icon" @click="toggleDarkMode"><span class="material-icons-round">{{ darkMode ?
+                        'light_mode' : 'dark_mode' }}</span></button>
             </div>
 
-            <div class="view-panel" v-show="isPC || currentTab==='calendar'">
-                 <div class="d-flex justify-content-between align-items-center mb-2 px-1 flex-shrink-0">
-                     <div class="btn-group border rounded overflow-hidden"><button class="btn btn-sm btn-light rounded-0" :class="{active: calendarMode==='week'}" @click="setCalendarMode('week')">週</button><button class="btn btn-sm btn-light rounded-0" :class="{active: calendarMode==='month'}" @click="setCalendarMode('month')">月</button></div>
-                     <div class="d-flex align-items-center gap-2 bg-white rounded border px-1"><button class="btn-icon p-1" @click="changeDateRange(-1)"><span class="material-icons-round">chevron_left</span></button><span class="fw-bold small">{{ calendarTitle }}</span><button class="btn-icon p-1" @click="changeDateRange(1)"><span class="material-icons-round">chevron_right</span></button></div>
-                 </div>
+            <div class="mobile-nav" v-if="!isPC">
+                <button class="nav-link" :class="{active: currentTab==='active'}" @click="setTab('active')">未完了</button>
+                <button class="nav-link" :class="{active: currentTab==='completed'}"
+                    @click="setTab('completed')">完了済</button>
+                <button class="nav-link" :class="{active: currentTab==='calendar'}"
+                    @click="setTab('calendar')">カレンダー</button>
+                <button class="nav-link" :class="{active: currentTab==='settings'}"
+                    @click="setTab('settings')">設定</button>
+            </div>
 
-                 <div v-if="calendarMode==='week'" class="calendar-container">
-                     <div class="cal-row cal-header" :style="{paddingRight: scrollbarWidth+'px'}">
-                         <div class="cal-col-time"></div>
-                         <div v-for="day in calendarDays" :key="'h'+day.date" class="cal-col-day header-cell" :class="{sun:day.dayOfWeek==0, sat:day.dayOfWeek==6, selected: day.date===selectedDate}" @click="selectDate(day.date)">
-                             <div style="font-size:1.1rem; line-height:1">{{day.dayNum}}</div>
-                             <div style="font-size:0.7rem; font-weight:normal">{{['日','月','火','水','木','金','土'][day.dayOfWeek]}}</div>
-                         </div>
-                     </div>
-                     
-                     <div class="cal-row cal-allday" :style="{paddingRight: scrollbarWidth+'px'}">
-                         <div class="cal-col-time allday-label">終日</div>
-                         <div v-for="day in calendarDays" :key="'ad'+day.date" class="cal-col-day allday-content" @dragover.prevent @drop="onDrop($event, day.date, null)">
-                             <div v-for="item in day.items.filter(x=>x.isGCal && x.isAllDay)" class="ad-event" :style="{background: item.color}" draggable="true" @dragstart="dragStart($event, item)" @click="openEditPanel(item)">{{item.title}}</div>
-                         </div>
-                     </div>
-                     
-                     <div class="cal-body" ref="calBody">
-                         <div class="cal-body-content">
-                             <div class="cal-col-time">
-                                 <div v-for="h in timelineHours" :key="'tl'+h" class="time-slot-label">{{h}}:00</div>
-                             </div>
-                             <div v-for="day in calendarDays" :key="'col'+day.date" class="cal-col-day" @dragover.prevent @drop="onDrop($event, day.date)">
-                                 <div v-for="h in timelineHours" :key="'s'+h" class="time-slot" @drop.stop="onDrop($event, day.date, h)"></div>
-                                 <div v-for="item in day.items.filter(x=>!x.isAllDay && x.isGCal && getEventPos(x))" 
-                                      :key="item.id" class="event-chip" 
-                                      :style="{ 
+            <div class="main-content">
+                <div class="split-layout">
+
+                    <div class="view-panel" v-show="!isPC && currentTab !== 'calendar' || isPC">
+                        <div class="nav-tabs d-flex" v-if="isPC">
+                            <button class="nav-link" :class="{active: currentTab==='active'}"
+                                @click="setTab('active')">未完了</button>
+                            <button class="nav-link" :class="{active: currentTab==='completed'}"
+                                @click="setTab('completed')">完了済</button>
+                            <button class="nav-link" :class="{active: currentTab==='settings'}"
+                                @click="setTab('settings')">設定</button>
+                        </div>
+
+                        <div class="scroll-y">
+                            <div v-if="currentTab==='settings'" class="p-1 d-flex flex-column gap-3">
+                                <div class="card p-3 border shadow-sm">
+                                    <h6 class="fw-bold small mb-3">GitHub連携</h6>
+                                    <input type="password" v-model="settings.token" class="form-control mb-2"
+                                        placeholder="Token">
+                                    <div class="d-flex gap-2 mb-2"><input v-model="settings.owner" class="form-control"
+                                            placeholder="Owner"><input v-model="settings.repo" class="form-control"
+                                            placeholder="Repo"></div>
+                                    <input v-model="settings.path" class="form-control mb-2" placeholder="Tasks.md">
+                                    <button class="btn btn-sm btn-primary w-100" @click="saveSettings">保存</button>
+                                </div>
+                                <div class="card p-3 border shadow-sm">
+                                    <h6 class="fw-bold small mb-2">カレンダー設定</h6>
+                                    <div v-for="cal in availableCalendars" :key="cal.id" class="form-check"><input
+                                            class="form-check-input" type="checkbox" :value="cal.id"
+                                            v-model="settings.calendarIds"><label
+                                            class="form-check-label small">{{cal.name}}</label></div>
+                                </div>
+                                <div class="card p-3 border shadow-sm">
+                                    <h6 class="fw-bold small mb-2">アーカイブ設定</h6>
+                                    <input v-model="settings.archivePath" class="form-control mb-2"
+                                        placeholder="Archive.md">
+                                    <button class="btn btn-sm btn-outline-warning w-100"
+                                        @click="runArchiveProcess">完了タスクを移動</button>
+                                </div>
+                            </div>
+
+                            <div v-else class="p-1">
+                                <div v-if="currentTab==='active'" class="d-flex justify-content-end mb-3">
+                                    <select class="form-select form-select-sm"
+                                        style="width: auto; max-width: 100%; min-width: 120px;" v-model="filterTag">
+                                        <option value="">すべてのタグ</option>
+                                        <option v-for="t in allTagsList" :value="t">{{t}}</option>
+                                    </select>
+                                </div>
+
+                                <div v-if="(currentTab==='active' && groupedActiveTasks.length===0) || (currentTab==='completed' && displayCompletedTasks.length===0)"
+                                    class="text-center py-5 text-muted small">タスクはありません</div>
+
+                                <div v-if="currentTab==='active'">
+                                    <div v-for="group in groupedActiveTasks" :key="group.title" class="mb-4">
+                                        <div class="small fw-bold text-secondary ms-1 mb-2">{{ group.title }}</div>
+                                        <div v-for="task in group.tasks" :key="task.lineIndex" class="task-card"
+                                            :class="'priority-'+task.priority" @click="openEditPanel(task)">
+                                            <div class="check-box" @click.stop="toggleTask(task)"><span
+                                                    class="material-icons-round">check</span></div>
+                                            <div class="task-body">
+                                                <div class="task-title" v-html="renderTaskTitle(task.desc)"></div>
+                                                <div class="task-meta">
+                                                    <span v-for="tag in task.tags"
+                                                        class="tag-badge">#{{tag.replace('#','')}}</span>
+                                                    <span v-if="task.recurrence" class="due-badge"><span
+                                                            class="material-icons-round"
+                                                            style="font-size:12px">repeat</span>{{task.recurrence}}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div v-if="currentTab==='completed'">
+                                    <div v-if="displayCompletedTasks.length===0"
+                                        class="text-center py-5 text-muted small">未アーカイブの完了タスクはありません</div>
+                                    <div v-for="task in displayCompletedTasks" :key="task.uniqueId"
+                                        class="task-card opacity-75">
+                                        <div class="check-box checked" @click.stop="confirmRestore(task)"><span
+                                                class="material-icons-round">check</span></div>
+                                        <div class="task-body">
+                                            <div class="task-title text-done" v-html="renderTaskTitle(task.desc)"></div>
+                                            <div class="task-meta">{{task.doneDate}}</div>
+                                        </div>
+                                        <button class="btn-icon text-danger" @click.stop="confirmDelete(task)"><span
+                                                class="material-icons-round"
+                                                style="font-size:18px">delete</span></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="view-panel" v-show="isPC || currentTab==='calendar'">
+                        <div class="d-flex justify-content-between align-items-center mb-2 px-1 flex-shrink-0">
+                            <div class="btn-group border rounded overflow-hidden"><button
+                                    class="btn btn-sm btn-light rounded-0" :class="{active: calendarMode==='week'}"
+                                    @click="setCalendarMode('week')">週</button><button
+                                    class="btn btn-sm btn-light rounded-0" :class="{active: calendarMode==='month'}"
+                                    @click="setCalendarMode('month')">月</button></div>
+                            <div class="d-flex align-items-center gap-2 bg-white rounded border px-1"><button
+                                    class="btn-icon p-1" @click="changeDateRange(-1)"><span
+                                        class="material-icons-round">chevron_left</span></button><span
+                                    class="fw-bold small">{{ calendarTitle }}</span><button class="btn-icon p-1"
+                                    @click="changeDateRange(1)"><span
+                                        class="material-icons-round">chevron_right</span></button></div>
+                        </div>
+
+                        <div v-if="calendarMode==='week'" class="calendar-container">
+                            <div class="cal-row cal-header" :style="{paddingRight: scrollbarWidth+'px'}">
+                                <div class="cal-col-time"></div>
+                                <div v-for="day in calendarDays" :key="'h'+day.date" class="cal-col-day header-cell"
+                                    :class="{sun:day.dayOfWeek==0, sat:day.dayOfWeek==6, selected: day.date===selectedDate}"
+                                    @click="selectDate(day.date)">
+                                    <div style="font-size:1.1rem; line-height:1">{{day.dayNum}}</div>
+                                    <div style="font-size:0.7rem; font-weight:normal">
+                                        {{['日','月','火','水','木','金','土'][day.dayOfWeek]}}</div>
+                                </div>
+                            </div>
+
+                            <div class="cal-row cal-allday" :style="{paddingRight: scrollbarWidth+'px'}">
+                                <div class="cal-col-time allday-label">終日</div>
+                                <div v-for="day in calendarDays" :key="'ad'+day.date" class="cal-col-day allday-content"
+                                    @dragover.prevent @drop="onDrop($event, day.date, null)">
+                                    <div v-for="item in day.items.filter(x=>x.isGCal && x.isAllDay)" class="ad-event"
+                                        :style="{background: item.color}" draggable="true"
+                                        @dragstart="dragStart($event, item)" @click="openEditPanel(item)">{{item.title}}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="cal-body" ref="calBody">
+                                <div class="cal-body-content">
+                                    <div class="cal-col-time">
+                                        <div v-for="h in timelineHours" :key="'tl'+h" class="time-slot-label">{{h}}:00
+                                        </div>
+                                    </div>
+                                    <div v-for="day in calendarDays" :key="'col'+day.date" class="cal-col-day"
+                                        @dragover.prevent @drop="onDrop($event, day.date)">
+                                        <div v-for="h in timelineHours" :key="'s'+h" class="time-slot"
+                                            @drop.stop="onDrop($event, day.date, h)"></div>
+                                        <div v-for="item in day.items.filter(x=>!x.isAllDay && x.isGCal && getEventPos(x))"
+                                            :key="item.id" class="event-chip" :style="{ 
                                           top: getEventPos(item).top, 
                                           height: getEventPos(item).height,
                                           background: item.color 
-                                      }"
-                                      draggable="true" @dragstart="dragStart($event, item)" @click.stop="openEditPanel(item)">{{ item.title }}</div>
-                             </div>
-                         </div>
-                     </div>
-                 </div>
+                                      }" draggable="true" @dragstart="dragStart($event, item)"
+                                            @click.stop="openEditPanel(item)">{{ item.title }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                 <div v-else class="month-grid mb-3 flex-shrink-0" style="height: 350px;">
-                     <div v-for="d in ['日','月','火','水','木','金','土']" class="p-2 text-center small fw-bold bg-light">{{d}}</div>
-                     <div v-for="day in calendarDays" :key="day.date" class="m-cell" :class="{selected: selectedDate===day.date}" @click="selectDate(day.date)">
-                         <div class="date-badge" :class="{today: day.isToday}">{{day.dayNum}}</div>
-                         <div class="d-flex flex-wrap gap-1 mt-1"><div v-for="item in day.items" class="dot" :style="{background: item.isGCal?item.color:'var(--text-sub)'}"></div></div>
-                     </div>
-                 </div>
+                        <div v-else class="month-grid mb-3 flex-shrink-0" style="height: 350px;">
+                            <div v-for="d in ['日','月','火','水','木','金','土']"
+                                class="p-2 text-center small fw-bold bg-light">{{d}}</div>
+                            <div v-for="day in calendarDays" :key="day.date" class="m-cell"
+                                :class="{selected: selectedDate===day.date}" @click="selectDate(day.date)">
+                                <div class="date-badge" :class="{today: day.isToday}">{{day.dayNum}}</div>
+                                <div class="d-flex flex-column gap-1 mt-1 overflow-hidden" style="max-height: 60px;">
+                                    <div v-for="item in day.items.slice(0,4)" class="cal-event-text"
+                                        :class="{done: item.completed}"
+                                        :style="item.isGCal ? {background: item.color, color:'white'} : {}">
+                                        {{ item.isGCal ? item.title : renderTaskTitle(item.desc) }}
+                                    </div>
+                                    <div v-if="day.items.length > 4" class="text-center"
+                                        style="font-size:8px; color:var(--text-sub);">+{{day.items.length-4}}</div>
+                                </div>
+                            </div>
+                        </div>
 
-                 <div class="bottom-list mt-3" v-if="selectedDate">
-                     <div class="p-2 border-bottom bg-light fw-bold d-flex justify-content-between align-items-center flex-shrink-0">
-                         <span>{{selectedDate}}</span>
-                     </div>
-                     <div class="scroll-y p-2">
-                         <div v-if="selectedDateItems.length===0" class="text-center text-muted small py-4">予定はありません</div>
-                         <div v-for="item in selectedDateItems" :key="item.uniqueId" class="task-card border-0 mb-1" :style="item.isGCal?{background:'var(--hover-bg)'}:{}" @click="openEditPanel(item)">
-                             <div v-if="item.isGCal" class="me-2 text-primary" style="font-size:10px;">●</div>
-                             <div v-else class="check-box me-2" :class="{checked:item.completed}" @click.stop="toggleTask(item)"><span class="material-icons-round">check</span></div>
-                             <div class="flex-grow-1">
-                                 <div class="fw-bold small" v-html="renderTaskTitle(item.isGCal?item.title:item.desc)"></div>
-                                 <div class="small text-muted">{{ item.isGCal ? (item.isAllDay?'終日':item.timeStr) : '#Task' }}</div>
-                             </div>
-                         </div>
-                     </div>
-                 </div>
+                        <div class="bottom-list mt-3" v-if="selectedDate">
+                            <div
+                                class="p-2 border-bottom bg-light fw-bold d-flex justify-content-between align-items-center flex-shrink-0">
+                                <span>{{selectedDate}}</span>
+                            </div>
+                            <div class="scroll-y p-2">
+                                <div v-if="selectedDateItems.length===0" class="text-center text-muted small py-4">
+                                    予定はありません</div>
+                                <div v-for="item in selectedDateItems" :key="item.uniqueId"
+                                    class="task-card border-0 mb-1"
+                                    :style="item.isGCal?{background:'var(--hover-bg)'}:{}" @click="openEditPanel(item)">
+                                    <div v-if="item.isGCal" class="me-2 text-primary" style="font-size:10px;">●</div>
+                                    <div v-else class="check-box me-2" :class="{checked:item.completed}"
+                                        @click.stop="toggleTask(item)"><span class="material-icons-round">check</span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold small"
+                                            v-html="renderTaskTitle(item.isGCal?item.title:item.desc)"></div>
+                                        <div class="small text-muted">{{ item.isGCal ? (item.isAllDay?'終日':item.timeStr)
+                                            : '#Task' }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <div class="side-panel" :class="{open: showPanel}">
+                <div class="d-flex justify-content-between mb-3">
+                    <h5 class="m-0 fw-bold">{{isEditMode?'編集':'新規作成'}}</h5><button class="btn-icon"
+                        @click="closePanel"><span class="material-icons-round">close</span></button>
+                </div>
+
+                <div class="mode-switcher" v-if="!isEditMode">
+                    <button class="mode-btn" :class="{active: !panelData.isGCal}"
+                        @click="panelData.isGCal=false">タスク</button>
+                    <button class="mode-btn" :class="{active: panelData.isGCal}"
+                        @click="panelData.isGCal=true">カレンダー</button>
+                </div>
+
+                <div v-if="panelData.isGCal" class="d-flex flex-column h-100 gap-3">
+                    <div v-if="panelData.isNew"><label class="small text-muted">カレンダー</label><select
+                            v-model="panelData.targetCalendarId" class="form-select">
+                            <option v-for="c in availableCalendars" :value="c.id">{{c.name}}</option>
+                        </select></div>
+                    <div v-else class="small text-muted mb-1"><span
+                            class="badge bg-light text-dark border">{{panelData.calendarName}}</span></div>
+                    <div><label class="small text-muted">タイトル</label><input v-model="panelData.title"
+                            class="form-control fw-bold" @blur="onTitleBlur"></div>
+
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <label class="small text-muted m-0">日時</label>
+                            <div class="form-check m-0 ms-auto">
+                                <input class="form-check-input" type="checkbox" id="checkAllDay"
+                                    v-model="panelData.isAllDay">
+                                <label class="form-check-label small" for="checkAllDay">終日</label>
+                            </div>
+                        </div>
+                        <input type="date" v-model="panelData.dateInput" class="form-control mb-2">
+                        <div class="d-flex gap-2 align-items-center" v-if="!panelData.isAllDay">
+                            <select v-model="panelData.startHour" class="form-select">
+                                <option v-for="h in hours" :value="h">{{h}}</option>
+                            </select>:
+                            <select v-model="panelData.startMin" class="form-select">
+                                <option v-for="m in minutes" :value="m">{{m}}</option>
+                            </select> ～
+                            <select v-model="panelData.endHour" class="form-select">
+                                <option value="">--</option>
+                                <option v-for="h in hours" :value="h">{{h}}</option>
+                            </select>:
+                            <select v-model="panelData.endMin" class="form-select">
+                                <option value="">--</option>
+                                <option v-for="m in minutes" :value="m">{{m}}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div><label class="small text-muted">会議URL</label><input v-model="panelData.meetingUrl"
+                            class="form-control" placeholder="https://..."></div>
+                    <div class="flex-grow-1"><label class="small text-muted">メモ</label><textarea
+                            v-model="panelData.desc" class="form-control h-100"></textarea></div>
+                    <div class="d-flex gap-2"><button class="btn btn-light flex-grow-1"
+                            @click="closePanel">キャンセル</button><button class="btn btn-primary flex-grow-1"
+                            @click="saveGCalEvent">保存</button></div>
+                </div>
+
+                <div v-else class="d-flex flex-column h-100 gap-3">
+                    <div><label class="small text-muted">タスク名</label><textarea v-model="panelData.desc"
+                            class="form-control fw-bold" rows="3" @blur="onTitleBlur"></textarea></div>
+                    <div><label class="small text-muted">日付</label>
+                        <div class="d-flex gap-2"><input type="date" v-model="panelData.due"
+                                class="form-control"><button class="btn btn-sm btn-light border"
+                                @click="setDateShortcut(0)">今日</button><button class="btn btn-sm btn-light border"
+                                @click="setDateShortcut(1)">明日</button></div>
+                    </div>
+                    <div><label class="small text-muted">繰り返し</label><input v-model="panelData.recurrence"
+                            class="form-control" placeholder="every week" list="recOpts"></div>
+                    <div><label class="small text-muted">優先度</label>
+                        <div class="btn-group-custom w-100"><button class="btn-opt"
+                                :class="{active:panelData.priority==='high'}" @click="panelData.priority='high'"
+                                style="color:var(--danger)">高</button><button class="btn-opt"
+                                :class="{active:panelData.priority==='medium'}" @click="panelData.priority='medium'"
+                                style="color:#f59e0b">中</button><button class="btn-opt"
+                                :class="{active:panelData.priority==='low'}" @click="panelData.priority='low'"
+                                style="color:var(--primary)">低</button><button class="btn-opt"
+                                :class="{active:panelData.priority==='none'}"
+                                @click="panelData.priority='none'">なし</button></div>
+                    </div>
+                    <div><label class="small text-muted">タグ</label><input v-model="tagInput" class="form-control"
+                            placeholder="#tag" @keydown.enter.prevent="addTag">
+                        <div class="mt-2"><span v-for="t in panelData.tags" :key="t"
+                                class="tag-chip bg-primary text-white" @click="removeTag(t)">{{t}} ×</span></div>
+                        <div class="mt-2 pt-2 border-top"><small class="text-muted">履歴: </small><span
+                                v-for="t in suggestedTags" :key="t" class="tag-chip"
+                                @click="addTagFromHistory(t)">#{{t.replace('#','')}}</span></div>
+                    </div>
+                    <div><label class="small text-muted">URL</label><input v-model="panelData.url" class="form-control"
+                            placeholder="https://..."></div>
+                    <div class="mt-auto d-flex gap-2"><button v-if="isEditMode" class="btn btn-light text-danger"
+                            @click="confirmDelete(panelData.taskRef)">削除</button><button
+                            class="btn btn-light flex-grow-1" @click="closePanel">キャンセル</button><button
+                            class="btn btn-primary flex-grow-1" @click="saveTaskChanges">保存</button></div>
+                </div>
+            </div>
+
+            <button v-if="!showPanel && (!isPC || currentTab==='active'||currentTab==='calendar')" class="fab-btn"
+                @click="openAddPanel"><span class="material-icons-round">add</span></button>
+            <datalist id="recOpts">
+                <option value="every day"></option>
+                <option value="every week"></option>
+                <option value="every month"></option>
+            </datalist>
         </div>
     </div>
 
-    <div class="side-panel" :class="{open: showPanel}">
-        <div class="d-flex justify-content-between mb-3"><h5 class="m-0 fw-bold">{{isEditMode?'編集':'新規作成'}}</h5><button class="btn-icon" @click="closePanel"><span class="material-icons-round">close</span></button></div>
-        
-        <div class="mode-switcher" v-if="!isEditMode">
-            <button class="mode-btn" :class="{active: !panelData.isGCal}" @click="panelData.isGCal=false">タスク</button>
-            <button class="mode-btn" :class="{active: panelData.isGCal}" @click="panelData.isGCal=true">カレンダー</button>
-        </div>
+    <script>
+        const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycbw7dGJqhfhCCOD4FArTu2zhmRijTYuhIqcqi6l-Ij3JMJ43NkzLzw-8IJPFt5AylgrTqw/exec";
+        async function callGAS(a, p = {}) { const r = await fetch(CONST_GAS_URL, { method: 'POST', body: JSON.stringify({ ...p, action: a }) }); const j = await r.json(); if (j.error) throw new Error(j.error); return j; }
 
-        <div v-if="panelData.isGCal" class="d-flex flex-column h-100 gap-3">
-             <div v-if="panelData.isNew"><label class="small text-muted">カレンダー</label><select v-model="panelData.targetCalendarId" class="form-select"><option v-for="c in availableCalendars" :value="c.id">{{c.name}}</option></select></div>
-             <div v-else class="small text-muted mb-1"><span class="badge bg-light text-dark border">{{panelData.calendarName}}</span></div>
-             <div><label class="small text-muted">タイトル</label><input v-model="panelData.title" class="form-control fw-bold"></div>
-             
-             <div>
-                 <div class="d-flex align-items-center gap-2 mb-2">
-                     <label class="small text-muted m-0">日時</label>
-                     <div class="form-check m-0 ms-auto">
-                         <input class="form-check-input" type="checkbox" id="checkAllDay" v-model="panelData.isAllDay">
-                         <label class="form-check-label small" for="checkAllDay">終日</label>
-                     </div>
-                 </div>
-                 <input type="date" v-model="panelData.dateInput" class="form-control mb-2">
-                 <div class="d-flex gap-2 align-items-center" v-if="!panelData.isAllDay">
-                     <select v-model="panelData.startHour" class="form-select"><option v-for="h in hours" :value="h">{{h}}</option></select>:
-                     <select v-model="panelData.startMin" class="form-select"><option v-for="m in minutes" :value="m">{{m}}</option></select> ～ 
-                     <select v-model="panelData.endHour" class="form-select"><option value="">--</option><option v-for="h in hours" :value="h">{{h}}</option></select>:
-                     <select v-model="panelData.endMin" class="form-select"><option value="">--</option><option v-for="m in minutes" :value="m">{{m}}</option></select>
-                 </div>
-             </div>
+        const { createApp } = Vue;
+        createApp({
+            data() {
+                return {
+                    status: { visible: false, type: 'idle', message: '' },
+                    currentTab: 'active', isPC: window.innerWidth >= 992,
+                    settings: { token: '', owner: '', repo: '', path: '', archivePath: '', calendarIds: [] },
+                    lines: [], tasks: [], archiveTasks: [],
+                    calendarMode: 'week', selectedDate: '', currentCalStart: new Date(), gcalEvents: [], availableCalendars: [],
+                    showPanel: false, isEditMode: false, panelData: {}, tagInput: '', allTagsList: [], filterTag: '',
+                    modal: { show: false }, toast: { show: false },
+                    // ★ FIXED: 9:00 - 20:00
+                    timelineHours: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                    hours: Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')), minutes: ['00', '15', '30', '45'],
+                    scrollbarWidth: 0, loading: false
+                }
+            },
+            computed: {
+                activeCount() { return this.tasks.filter(t => !t.completed).length; },
+                allCompletedTasks() {
+                    // ★ FIX: Only tasks from Main File
+                    const m = this.tasks.filter(t => t.completed).map(t => ({ ...t, isArchived: false, uniqueId: 'm-' + t.lineIndex }));
+                    return m.sort((a, b) => a.doneDate < b.doneDate ? 1 : -1);
+                },
+                displayCompletedTasks() { return this.allCompletedTasks.slice(0, 50); },
+                groupedActiveTasks() {
+                    const today = this.getTodayStr();
+                    const todayGroup = { title: '今日 & 期限切れ', tasks: [] };
+                    const futureGroups = {};
+                    const noDateGroup = { title: '期限なし', tasks: [] };
 
-             <div><label class="small text-muted">会議URL</label><input v-model="panelData.meetingUrl" class="form-control" placeholder="https://..."></div>
-             <div class="flex-grow-1"><label class="small text-muted">メモ</label><textarea v-model="panelData.desc" class="form-control h-100"></textarea></div>
-             <div class="d-flex gap-2"><button class="btn btn-light flex-grow-1" @click="closePanel">キャンセル</button><button class="btn btn-primary flex-grow-1" @click="saveGCalEvent">保存</button></div>
-        </div>
+                    this.tasks.filter(t => !t.completed && (!this.filterTag || t.tags.includes(this.filterTag))).forEach(t => {
+                        if (!t.due) noDateGroup.tasks.push(t);
+                        else if (t.due <= today) todayGroup.tasks.push(t);
+                        else {
+                            if (!futureGroups[t.due]) futureGroups[t.due] = [];
+                            futureGroups[t.due].push(t);
+                        }
+                    });
+                    const res = [];
+                    if (todayGroup.tasks.length > 0) res.push(todayGroup);
+                    Object.keys(futureGroups).sort().map(d => res.push({ title: d, tasks: futureGroups[d] }));
+                    if (noDateGroup.tasks.length > 0) res.push(noDateGroup);
+                    return res;
+                },
+                suggestedTags() { return this.allTagsList.filter(t => !this.panelData.tags?.includes(t)); },
+                calendarTitle() { const d = new Date(this.currentCalStart); return `${d.getFullYear()}年${d.getMonth() + 1}月`; },
+                calendarDays() {
+                    const days = []; const start = new Date(this.currentCalStart);
+                    if (this.calendarMode === 'week') start.setDate(start.getDate() - start.getDay());
+                    else { start.setDate(1); start.setDate(start.getDate() - start.getDay()); }
+                    const cnt = this.calendarMode === 'week' ? 7 : 42;
+                    for (let i = 0; i < cnt; i++) {
+                        const d = new Date(start); d.setDate(start.getDate() + i); const ds = this.getLocalYMD(d);
+                        const evs = this.gcalEvents.filter(e => this.convertIsoToYMD(e.start) === ds).map(e => ({ ...e, isGCal: true }));
+                        const tks = this.tasks.filter(t => t.due === ds).map(t => ({ ...t, isGCal: false }));
+                        days.push({ date: ds, dayNum: d.getDate(), dayOfWeek: d.getDay(), isToday: ds === this.getTodayStr(), items: [...tks, ...evs] });
+                    }
+                    return days;
+                },
+                selectedDateItems() { return this.calendarDays.find(d => d.date === this.selectedDate)?.items.sort((a, b) => { if (a.isGCal !== b.isGCal) return a.isGCal ? -1 : 1; return (a.start || '0') > (b.start || '0') ? 1 : -1; }) || []; },
+                selectedDateDisplay() { return this.selectedDate; }
+            },
+            mounted() {
+                this.selectedDate = this.getTodayStr();
+                this.measureScrollbar();
+                window.addEventListener('resize', () => {
+                    this.isPC = window.innerWidth >= 992; if (this.isPC && this.currentTab === 'calendar') this.currentTab = 'active';
+                    this.measureScrollbar(); // Recalc scrollbar on resize
+                });
+                const s = localStorage.getItem('gh_tasks_settings');
+                if (s) { this.settings = JSON.parse(s); this.loadData(); } else { this.currentTab = 'settings'; }
+                if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
 
-        <div v-else class="d-flex flex-column h-100 gap-3">
-             <div><label class="small text-muted">タスク名</label><textarea v-model="panelData.desc" class="form-control fw-bold" rows="3"></textarea></div>
-             <div><label class="small text-muted">日付</label>
-             <div class="d-flex gap-2"><input type="date" v-model="panelData.due" class="form-control"><button class="btn btn-sm btn-light border" @click="setDateShortcut(0)">今日</button><button class="btn btn-sm btn-light border" @click="setDateShortcut(1)">明日</button></div></div>
-             <div><label class="small text-muted">繰り返し</label><input v-model="panelData.recurrence" class="form-control" placeholder="every week" list="recOpts"></div>
-             <div><label class="small text-muted">優先度</label>
-             <div class="btn-group-custom w-100"><button class="btn-opt" :class="{active:panelData.priority==='high'}" @click="panelData.priority='high'" style="color:var(--danger)">高</button><button class="btn-opt" :class="{active:panelData.priority==='medium'}" @click="panelData.priority='medium'" style="color:#f59e0b">中</button><button class="btn-opt" :class="{active:panelData.priority==='low'}" @click="panelData.priority='low'" style="color:var(--primary)">低</button><button class="btn-opt" :class="{active:panelData.priority==='none'}" @click="panelData.priority='none'">なし</button></div></div>
-             <div><label class="small text-muted">タグ</label><input v-model="tagInput" class="form-control" placeholder="#tag" @keydown.enter.prevent="addTag">
-             <div class="mt-2"><span v-for="t in panelData.tags" :key="t" class="tag-chip bg-primary text-white" @click="removeTag(t)">{{t}} ×</span></div>
-             <div class="mt-2 pt-2 border-top"><small class="text-muted">履歴: </small><span v-for="t in suggestedTags" :key="t" class="tag-chip" @click="addTagFromHistory(t)">#{{t.replace('#','')}}</span></div></div>
-             <div><label class="small text-muted">URL</label><input v-model="panelData.url" class="form-control" placeholder="https://..."></div>
-             <div class="mt-auto d-flex gap-2"><button v-if="isEditMode" class="btn btn-light text-danger" @click="confirmDelete(panelData.taskRef)">削除</button><button class="btn btn-light flex-grow-1" @click="closePanel">キャンセル</button><button class="btn btn-primary flex-grow-1" @click="saveTaskChanges">保存</button></div>
-        </div>
-    </div>
+                this.$nextTick(() => { const body = this.$refs.calBody; if (body) body.scrollTop = 9 * 60; });
+            },
+            methods: {
+                updateStatus(type, msg) {
+                    this.status = { visible: true, type: type, message: msg };
+                    if (type !== 'loading') setTimeout(() => { this.status.visible = false; }, 3000);
+                },
+                saveSettings() {
+                    localStorage.setItem('gh_tasks_settings', JSON.stringify(this.settings));
+                    this.updateStatus('success', '設定を保存しました');
+                    this.loadData();
+                },
+                measureScrollbar() { const el = document.createElement('div'); el.style.cssText = 'overflow:scroll;visibility:hidden;position:absolute;'; document.body.appendChild(el); this.scrollbarWidth = el.offsetWidth - el.clientWidth; el.remove(); },
+                setTab(t) { this.currentTab = t; if (t === 'completed' && !this.archiveTasks.length) this.loadArchiveData(); },
+                toggleDarkMode() { document.body.classList.toggle('dark-mode'); localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light'); },
+                async loadData() {
+                    this.updateStatus('loading', '読み込み中...');
+                    try {
+                        const res = await callGAS('getFileContent', this.settings);
+                        this.sha = res.sha; this.lines = res.content.split('\n'); this.parseContent(res.content);
+                        await this.fetchGCal();
+                        this.availableCalendars = await callGAS('getAvailableCalendars');
+                        this.updateStatus('success', '完了');
+                    } catch (e) { this.updateStatus('error', 'エラー: ' + e.message); }
+                },
+                async fetchGCal() {
+                    if (!this.settings.calendarIds.length) return;
+                    const res = await callGAS('getCalendarEvents', { startStr: this.calendarDays[0].date, endStr: this.calendarDays[this.calendarDays.length - 1].date, calendarIds: JSON.stringify(this.settings.calendarIds) });
+                    if (res.events) this.gcalEvents = res.events;
+                },
+                async loadArchiveData() {
+                    if (!this.settings.archivePath) return;
+                    try {
+                        const res = await callGAS('getFileContent', { ...this.settings, path: this.settings.archivePath });
+                        if (res.content) {
+                            const lines = res.content.split('\n');
+                            this.archiveTasks = lines.map(l => { const m = l.match(/^[-*]\s*\[x\]\s*(.*)/i); return m ? { desc: m[1], doneDate: '', completed: true, originalLine: l } : null; }).filter(t => t);
+                        }
+                    } catch (e) { console.error(e); }
+                },
+                // ★ FIX: Restored Archive Logic
+                async runArchiveProcess() {
+                    if (!this.settings.archivePath) { this.showInfo('設定エラー', 'アーカイブファイルのパスを設定してください'); return; }
+                    this.updateStatus('loading', 'アーカイブ中...');
+                    try {
+                        // 1. Fetch Current Main
+                        const mainRes = await callGAS('getFileContent', this.settings);
+                        const mainLines = mainRes.content.split('\n');
+                        const activeLines = [];
+                        const completedLines = [];
+                        mainLines.forEach(l => {
+                            if (l.match(/^[-*]\s*\[x\]/i)) completedLines.push(l);
+                            else activeLines.push(l);
+                        });
 
-    <button v-if="!showPanel && (!isPC || currentTab==='active'||currentTab==='calendar')" class="fab-btn" @click="openAddPanel"><span class="material-icons-round">add</span></button>
-    <datalist id="recOpts"><option value="every day"></option><option value="every week"></option><option value="every month"></option></datalist>
-  </div>
-</div>
+                        if (completedLines.length === 0) { this.updateStatus('success', '完了タスクはありません'); return; }
 
-<script>
-const CONST_GAS_URL = "https://script.google.com/macros/s/AKfycbw7dGJqhfhCCOD4FArTu2zhmRijTYuhIqcqi6l-Ij3JMJ43NkzLzw-8IJPFt5AylgrTqw/exec"; 
-async function callGAS(a, p={}) { const r=await fetch(CONST_GAS_URL,{method:'POST',body:JSON.stringify({...p,action:a})}); const j=await r.json(); if(j.error)throw new Error(j.error); return j; }
+                        // 2. Fetch Archive
+                        const arcRes = await callGAS('getFileContent', { ...this.settings, path: this.settings.archivePath });
+                        let arcContent = arcRes.content || '';
+                        if (arcContent && !arcContent.endsWith('\n')) arcContent += '\n';
+                        arcContent += completedLines.join('\n');
 
-const { createApp } = Vue;
-createApp({
-  data() { return {
-      status: { visible: false, type: 'idle', message: '' },
-      currentTab: 'active', isPC: window.innerWidth >= 992,
-      settings: { token:'', owner:'', repo:'', path:'', archivePath:'', calendarIds:[] },
-      lines: [], tasks: [], archiveTasks: [],
-      calendarMode: 'week', selectedDate: '', currentCalStart: new Date(), gcalEvents: [], availableCalendars: [],
-      showPanel: false, isEditMode: false, panelData: {}, tagInput: '', allTagsList: [], filterTag: '',
-      modal: { show: false }, toast: { show: false },
-      // ★ FIXED: 9:00 - 20:00
-      timelineHours: [9,10,11,12,13,14,15,16,17,18,19,20],
-      hours: Array.from({length:24},(_,i)=>String(i).padStart(2,'0')), minutes: ['00','15','30','45'],
-      scrollbarWidth: 0, loading: false 
-  }},
-  computed: {
-    activeCount() { return this.tasks.filter(t=>!t.completed).length; },
-    allCompletedTasks() {
-        // ★ FIX: Only tasks from Main File
-        const m = this.tasks.filter(t=>t.completed).map(t=>({...t, isArchived:false, uniqueId:'m-'+t.lineIndex}));
-        return m.sort((a,b)=>a.doneDate<b.doneDate?1:-1);
-    },
-    displayCompletedTasks() { return this.allCompletedTasks.slice(0, 50); },
-    groupedActiveTasks() {
-        const today = this.getTodayStr();
-        const todayGroup = { title: '今日 & 期限切れ', tasks: [] };
-        const futureGroups = {};
-        const noDateGroup = { title: '期限なし', tasks: [] };
+                        // 3. Save Archive
+                        await callGAS('saveFileContent', { ...this.settings, path: this.settings.archivePath, content: arcContent, sha: arcRes.sha });
 
-        this.tasks.filter(t=>!t.completed && (!this.filterTag || t.tags.includes(this.filterTag))).forEach(t=>{
-            if(!t.due) noDateGroup.tasks.push(t);
-            else if(t.due <= today) todayGroup.tasks.push(t);
-            else { 
-                if(!futureGroups[t.due]) futureGroups[t.due]=[]; 
-                futureGroups[t.due].push(t); 
+                        // 4. Save Main
+                        await callGAS('saveFileContent', { ...this.settings, content: activeLines.join('\n'), sha: mainRes.sha });
+
+                        // 5. Reload
+                        await this.loadData();
+                        this.updateStatus('success', completedLines.length + '件をアーカイブしました');
+                    } catch (e) { this.updateStatus('error', 'アーカイブ失敗: ' + e.message); }
+                },
+                parseContent(txt) {
+                    this.tasks = []; const tags = new Set();
+                    txt.split('\n').forEach((l, i) => {
+                        const m = l.match(/^(\s*)[-*]\s*\[([xX ])\]\s*(.*)/);
+                        if (m) {
+                            let d = m[3]; const comp = m[2].toLowerCase() === 'x';
+                            const indent = m[1] || '';
+                            const due = (d.match(/📅\s*(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
+                            const rec = (d.match(/🔁\s*([^✅➕📅#]+)/) || [])[1]?.trim() || '';
+                            let pri = 'none'; if (d.includes('⏫')) pri = 'high'; else if (d.includes('🔼')) pri = 'medium'; else if (d.includes('🔽')) pri = 'low';
+                            const tempText = d.replace(/https?:\/\/[^\s]+/g, '');
+                            const tks = []; (tempText.match(/#[^\s#]+/g) || []).forEach(t => { if (t !== '#todo') { tks.push(t); tags.add(t); } });
+                            this.tasks.push({ lineIndex: i, desc: d.trim(), completed: comp, due, recurrence: rec, priority: pri, tags: tks, indent: indent });
+                        }
+                    });
+                    this.allTagsList = Array.from(tags).sort();
+                },
+                cleanRawTitle(t) {
+                    if (!t) return { clean: '', url: '' };
+                    let url = '';
+                    const linkMatch = t.match(/\[(.*?)\]\((.*?)\)/);
+                    if (linkMatch) { t = linkMatch[1]; url = linkMatch[2]; }
+
+                    let clean = t.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, '')
+                        .replace(/[➕+]\s*\d{4}-\d{2}-\d{2}/g, '')
+                        .replace(/✅\s*\d{4}-\d{2}-\d{2}/g, '')
+                        .replace(/🔁\s*[^✅➕+📅#\n]+/g, '')
+                        .replace(/[⏫🔼🔽]/g, '')
+                        .replace(/#todo/gi, '');
+
+                    const tags = (t.match(/#[^\s#]+/g) || []);
+                    tags.forEach(tag => { if (tag !== '#todo') clean = clean.replace(tag, ''); });
+
+                    return { clean: clean.trim(), url: url };
+                },
+                renderTaskTitle(t) { return this.cleanRawTitle(t).clean; },
+
+                // Actions
+                openAddPanel() {
+                    this.isEditMode = false; this.showPanel = true;
+                    // ★ FIX: Initial values for switching
+                    this.panelData = { isGCal: false, isNew: true, targetCalendarId: this.settings.calendarIds[0], desc: '', due: this.selectedDate || this.getTodayStr(), tags: [], priority: 'none', recurrence: '', isAllDay: false };
+                    this.tagInput = '';
+                },
+                openEditPanel(i) {
+                    this.isEditMode = true; this.showPanel = true;
+                    if (i.isGCal) {
+                        let d = i.desc || '', u = ''; const m = d.match(/^【会議URL】:\s*(\S+)(\n\n)?/); if (m) { u = m[1]; d = d.replace(m[0], ''); }
+                        const s = new Date(i.start); const e = new Date(i.end);
+                        this.panelData = { isGCal: true, eid: i.id, calendarId: i.calendarId, calendarName: i.calendarName, title: i.title, desc: d, meetingUrl: u, dateInput: this.convertIsoToYMD(i.start), isAllDay: i.isAllDay || false, startHour: String(s.getHours()).padStart(2, '0'), startMin: String(s.getMinutes()).padStart(2, '0'), endHour: String(e.getHours()).padStart(2, '0'), endMin: String(e.getMinutes()).padStart(2, '0') };
+                    } else {
+                        const t = this.tasks.find(x => x.lineIndex === i.lineIndex) || i;
+                        const cleaned = this.cleanRawTitle(t.desc);
+                        this.panelData = { ...t, taskRef: t, isGCal: false, desc: cleaned.clean, url: cleaned.url, tags: [...(t.tags || [])] };
+                    }
+                },
+                // ★ FIX: Offset for 9:00 start (0px at 9:00)
+                getEventPos(i) {
+                    const s = new Date(i.start); const e = new Date(i.end);
+                    const startH = s.getHours() + s.getMinutes() / 60;
+                    const endH = e.getHours() + e.getMinutes() / 60;
+
+                    if (endH <= 9 || startH >= 21) return null;
+
+                    // Clamp logic
+                    const effectiveStart = Math.max(9, startH);
+                    const effectiveEnd = Math.min(21, endH);
+
+                    const top = (effectiveStart - 9) * 60;
+                    const height = (effectiveEnd - effectiveStart) * 60;
+
+                    return { top: top + 'px', height: height + 'px' };
+                },
+                async saveGCalEvent() {
+                    this.updateStatus('loading', '保存中...');
+                    let d = this.panelData.desc || ''; if (this.panelData.meetingUrl) d = `【会議URL】: ${this.panelData.meetingUrl}\n\n${d}`;
+                    // ★ FIX: Calendar ID Selection
+                    const calId = this.panelData.isNew ? this.panelData.targetCalendarId : this.panelData.calendarId;
+                    if (!calId) { this.updateStatus('error', 'カレンダー未選択'); return; }
+
+                    const params = {
+                        ...this.panelData,
+                        calendarId: calId,
+                        description: d,
+                        dateStr: this.panelData.dateInput
+                    };
+                    if (this.panelData.isAllDay) {
+                        params.startTime = null; params.endTime = null;
+                    } else {
+                        params.startTime = `${this.panelData.startHour}:${this.panelData.startMin}`;
+                        params.endTime = `${this.panelData.endHour}:${this.panelData.endMin}`;
+                    }
+
+                    try {
+                        await callGAS(this.panelData.isNew ? 'createCalendarEvent' : 'updateCalendarEvent', params);
+                        this.showPanel = false; this.fetchGCal();
+                        this.updateStatus('success', '保存しました');
+                    } catch (e) { this.updateStatus('error', e.message); }
+                },
+                async saveTaskChanges() {
+                    if (this.isEditMode) { const t = this.panelData.taskRef; t.desc = this.panelData.desc; t.due = this.panelData.due; t.priority = this.panelData.priority; t.tags = [...this.panelData.tags]; t.recurrence = this.panelData.recurrence; }
+                    else { this.tasks.push({ lineIndex: -1, desc: this.panelData.desc, due: this.panelData.due, priority: this.panelData.priority, recurrence: this.panelData.recurrence, completed: false, tags: [...this.panelData.tags] }); }
+                    this.showPanel = false; this.pushChanges();
+                },
+                // ★ FIX: Recurrence Logic & Indent Support
+                pushChanges() {
+                    this.updateStatus('loading', '保存中...');
+                    const newLines = [...this.lines];
+
+                    // Handle new tasks logic first (simplified append)
+                    // Note: For complex recurrence logic involving appending NEW lines, we need to process tasks carefully.
+                    // We will reconstruct the file based on existing tasks and append needed ones.
+
+                    // Find tasks that need a NEXT instance generated
+                    const newRecurringTasks = [];
+
+                    this.tasks.forEach(t => {
+                        // Check if just completed and has recurrence
+                        if (t.completed && t.recurrence && !t.hasRecurred) {
+                            // Determine if this completion happened just now? 
+                            // Currently toggleTask() toggles state then calls pushChanges().
+                            // We rely on checking if it DOESN'T have a done date in original line but is now completed?
+                            // Or simply: In this simple app, we might just check if we need to generate one?
+                            // Logic: If completed, has recurrence, and we are saving... 
+                            // Issue: If we reload, we don't want to duplicate.
+                            // Solution: We only generate if it's an action. But pushChanges is state-based.
+                            // Better approach for this text-file based system:
+                            // When toggling, we should have generated the new task object then.
+                            // BUT, let's do it here: If completed, assume we might need a next one.
+                            // HOWEVER, standard Obsidian Tasks appends the new task to the file.
+
+                            // Let's implement the generation logic in a method triggered by toggleTask instead?
+                            // NO, existing plan said update pushChanges.
+                            // Let's check logic: We'll add a flag 'justCompleted' or similar?
+                            // Or simpler: We calculate next due date. If we find a task with that due date already, we skip? No, multiple same tasks allowed.
+
+                            // REVISED STRATEGY: Move logic to `toggleTask`.
+                            // `pushChanges` allows saving specific state.
+                            // Updating `pushChanges` to handle formatting is SAFE.
+                            // Generating task inside pushChanges runs risk of infinite loop or duplicate generation on repeated saves.
+                        }
+
+                        const cleanObj = this.cleanRawTitle(t.desc);
+                        const title = this.isEditMode && this.panelData.taskRef === t ? this.panelData.desc : cleanObj.clean;
+                        const url = this.isEditMode && this.panelData.taskRef === t ? this.panelData.url : cleanObj.url;
+                        const urlPart = url ? `[${title}](${url})` : title;
+
+                        // Allow manual override or auto-date
+                        let donePart = '';
+                        if (t.completed) {
+                            const existingDone = t.desc.match(/✅\s*\d{4}-\d{2}-\d{2}/);
+                            donePart = existingDone ? existingDone[0] : `✅ ${this.getTodayStr()}`;
+                        }
+
+                        const indent = t.indent || ''; // Use preserved indent
+                        const l = `${indent}- [${t.completed ? 'x' : ' '}] ${urlPart} ${t.priority === 'high' ? '⏫' : t.priority === 'medium' ? '🔼' : t.priority === 'low' ? '🔽' : ''} ${t.recurrence ? '🔁 ' + t.recurrence : ''} ${t.due ? '📅 ' + t.due : ''} ${donePart} ${t.tags.join(' ')} #todo`.replace(/\s+/g, ' ').trim();
+                        // Restore indent at start (trim removed it)
+                        const finalLine = indent + l.replace(indent, '');
+
+                        if (t.lineIndex >= 0) newLines[t.lineIndex] = finalLine;
+                        else newLines.push(finalLine);
+                    });
+
+                    // Appending any new lines from externally added tasks (like recurring instances handled in toggleTask)
+                    // Not needed if we push to this.tasks first.
+
+                    callGAS('saveFileContent', { ...this.settings, content: newLines.join('\n'), sha: this.sha }).then(r => { this.sha = r.newSha; this.lines = newLines; this.updateStatus('success', '保存しました'); }).catch(e => this.updateStatus('error', e.message));
+                },
+                dragStart(e, i) { if (!item.isGCal && !item.isAllDay) return; e.dataTransfer.setData('json', JSON.stringify(i)); },
+                onDrop(e, date, hour) {
+                    const item = JSON.parse(e.dataTransfer.getData('json'));
+                    if (!item.isGCal) return;
+
+                    // ★ FIX: D&D Logic (Requires End Time)
+                    const oldStart = new Date(item.start); const oldEnd = new Date(item.end);
+                    const durationMs = oldEnd - oldStart;
+
+                    const newStart = new Date(`${date}T${String(9 + hour).padStart(2, '0')}:00:00`);
+                    const newEnd = new Date(newStart.getTime() + durationMs);
+
+                    const startTime = `${String(newStart.getHours()).padStart(2, '0')}:${String(newStart.getMinutes()).padStart(2, '0')}`;
+                    const endTime = `${String(newEnd.getHours()).padStart(2, '0')}:${String(newEnd.getMinutes()).padStart(2, '0')}`;
+
+                    this.updateStatus('loading', '移動中...');
+                    callGAS('updateCalendarEvent', { calendarId: item.calendarId, eventId: item.id, dateStr: date, startTime: startTime, endTime: endTime })
+                        .then(() => { this.fetchGCal(); this.updateStatus('success', '移動しました'); }).catch(e => this.updateStatus('error', e.message));
+                },
+                closePanel() { this.showPanel = false; },
+                toggleTask(t) {
+                    t.completed = !t.completed;
+
+                    // Recurrence Logic
+                    if (t.completed && t.recurrence) {
+                        const nextDue = this.calculateNextDue(t.due, t.recurrence);
+                        if (nextDue) {
+                            // Create next task
+                            // We keep original as valid task, and append a NEW one.
+                            const newTask = {
+                                ...t,
+                                lineIndex: -1, // New line
+                                completed: false,
+                                due: nextDue,
+                                // Remove done date from description if copied
+                                desc: t.desc.replace(/✅\s*\d{4}-\d{2}-\d{2}/g, ''),
+                                // Indent matches parent
+                                indent: t.indent || ''
+                            };
+
+                            // Add to list so it gets saved
+                            this.tasks.push(newTask);
+                            this.showToastNotification(`次回のタスクを作成しました: ${nextDue}`);
+                        }
+                    }
+
+                    this.pushChanges();
+                },
+                calculateNextDue(currentDue, rule) {
+                    if (!currentDue || !rule) return null;
+                    try {
+                        const d = new Date(currentDue);
+                        const r = rule.toLowerCase();
+                        if (r.includes('day')) d.setDate(d.getDate() + 1);
+                        else if (r.includes('week')) d.setDate(d.getDate() + 7);
+                        else if (r.includes('month')) d.setMonth(d.getMonth() + 1);
+                        else return null; // Unknown rule
+                        return this.getLocalYMD(d);
+                    } catch (e) { return null; }
+                },
+                confirmDelete(t) { this.modal = { show: true, title: '削除', message: '削除しますか？', type: 'confirm', isDanger: true, okText: '削除', resolve: r => { if (r) this.deleteTask(t) } }; },
+                deleteTask(t) {
+                    if (t.isArchived) {
+                        /* Archive deletion is implicit via display filtering now */
+                    } else {
+                        const idx = this.tasks.findIndex(x => x.lineIndex === t.lineIndex); if (idx > -1) { const org = this.tasks[idx]; this.tasks.splice(idx, 1); if (org.lineIndex >= 0) { this.lines.splice(org.lineIndex, 1); this.tasks.forEach(k => { if (k.lineIndex > org.lineIndex) k.lineIndex--; }); this.pushChanges(); this.closePanel(); } }
+                    }
+                },
+                confirmRestore(t) { this.modal = { show: true, title: '復元', message: '未完了に戻しますか？', type: 'confirm', okText: '復元', resolve: r => { this.modal.show = false; if (r) { const org = this.tasks.find(x => x.lineIndex === t.lineIndex); if (org) { org.completed = false; org.doneDate = ''; this.pushChanges(); } } } }; },
+
+                getLocalYMD(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; },
+                convertIsoToYMD(iso) { return iso ? this.getLocalYMD(new Date(iso)) : ''; },
+                getTodayStr() { return this.getLocalYMD(new Date()); },
+                formatTimeRange(item) { if (item.isAllDay) return '終日'; const d1 = new Date(item.start); const d2 = new Date(item.end); return `${String(d1.getHours()).padStart(2, '0')}:${String(d1.getMinutes()).padStart(2, '0')} - ${String(d2.getHours()).padStart(2, '0')}:${String(d2.getMinutes()).padStart(2, '0')}`; },
+                changeDateRange(d) { const dt = new Date(this.currentCalStart); if (this.calendarMode === 'week') dt.setDate(dt.getDate() + d * 7); else dt.setMonth(dt.getMonth() + d); this.currentCalStart = dt; this.fetchGCal(); }, // Added fetch
+                setCalendarMode(m) { this.calendarMode = m; this.fetchGCal(); }, // Added fetch
+                selectDate(d) { this.selectedDate = d; },
+                showToastNotification(m) { this.updateStatus('success', m); },
+                showInfo(t, m) { this.modal = { show: true, title: t, message: m, type: 'info', okText: 'OK' }; },
+                closeModal(r) { this.modal.show = false; if (this.modal.resolve) this.modal.resolve(r); },
+                loadMoreCompleted() { this.displayLimit += 50; },
+                setDateShortcut(d) { const dt = new Date(); dt.setDate(dt.getDate() + d); this.panelData.due = this.getLocalYMD(dt); },
+                addTagFromHistory(t) { if (!this.panelData.tags.includes(t)) this.panelData.tags.push(t); },
+                addTag() { let v = this.tagInput.trim(); if (!v) return; if (!v.startsWith('#')) v = '#' + v; if (!this.panelData.tags.includes(v)) this.panelData.tags.push(v); this.tagInput = ''; },
+                removeTag(t) { this.panelData.tags = this.panelData.tags.filter(x => x !== t); },
+                async fetchFileContent(path) { return callGAS('getFileContent', { ...this.settings, path: path }); },
+                async saveFileContentPromise(path, content, sha) { return callGAS('saveFileContent', { ...this.settings, path: path, content: content, sha: sha }); },
+
+                // Smart Input (NLP)
+                onTitleBlur() {
+                    const text = this.panelData.isGCal ? this.panelData.title : this.panelData.desc;
+                    if (!text) return;
+                    const parsed = this.parseSmartInput(text);
+                    if (parsed.hasChange) {
+                        if (this.panelData.isGCal) this.panelData.title = parsed.clean;
+                        else this.panelData.desc = parsed.clean;
+
+                        if (parsed.date) this.panelData.isGCal ? (this.panelData.dateInput = parsed.date) : (this.panelData.due = parsed.date);
+                        if (parsed.time) {
+                            // If time detected, unset All Day for GCal
+                            if (this.panelData.isGCal) {
+                                this.panelData.isAllDay = false;
+                                const parts = parsed.time.split(':');
+                                this.panelData.startHour = parts[0];
+                                this.panelData.startMin = parts[1];
+                                // Auto set end time to +1 hour
+                                const endD = new Date(); endD.setHours(parseInt(parts[0]) + 1);
+                                this.panelData.endHour = String(endD.getHours()).padStart(2, '0');
+                                this.panelData.endMin = parts[1];
+                            }
+                        }
+                        this.showToastNotification('日付・時刻を自動認識しました');
+                    }
+                },
+                parseSmartInput(text) {
+                    let clean = text;
+                    let date = '';
+                    let time = '';
+                    let changed = false;
+
+                    const now = new Date();
+
+                    // Date Keywords
+                    const keywords = {
+                        '今日': 0, 'tomorrow': 1, '明日': 1, '明後日': 2, '来週': 7
+                    };
+                    for (const [key, offset] of Object.entries(keywords)) {
+                        if (clean.includes(key)) {
+                            const d = new Date(); d.setDate(d.getDate() + offset);
+                            date = this.getLocalYMD(d);
+                            clean = clean.replace(key, '');
+                            changed = true;
+                            break; // One date only
+                        }
+                    }
+
+                    // Date Format: M/D or YYYY-MM-DD
+                    if (!date) {
+                        const m = clean.match(/(\d{4}[-/])?(\d{1,2})[-/](\d{1,2})/);
+                        if (m) {
+                            const y = m[1] ? m[1].replace(/[-/]/, '') : now.getFullYear();
+                            const mo = String(m[2]).padStart(2, '0');
+                            const da = String(m[3]).padStart(2, '0');
+                            date = `${y}-${mo}-${da}`;
+                            clean = clean.replace(m[0], '');
+                            changed = true;
+                        }
+                    }
+
+                    // Time Format: HH:mm or H時
+                    const tm = clean.match(/(\d{1,2})[:：](\d{2})/);
+                    if (tm) {
+                        time = `${String(tm[1]).padStart(2, '0')}:${tm[2]}`;
+                        clean = clean.replace(tm[0], '');
+                        changed = true;
+                    } else {
+                        const tm2 = clean.match(/(\d{1,2})時/);
+                        if (tm2) {
+                            time = `${String(tm2[1]).padStart(2, '0')}:00`;
+                            clean = clean.replace(tm2[0], '');
+                            changed = true;
+                        }
+                    }
+
+                    // Cleanup whitespace
+                    return { clean: clean.replace(/\s+/g, ' ').trim(), date, time, hasChange: changed };
+                }
             }
-        });
-        const res = [];
-        if(todayGroup.tasks.length>0) res.push(todayGroup);
-        Object.keys(futureGroups).sort().map(d=>res.push({title:d, tasks:futureGroups[d]}));
-        if(noDateGroup.tasks.length>0) res.push(noDateGroup);
-        return res;
-    },
-    suggestedTags() { return this.allTagsList.filter(t=>!this.panelData.tags?.includes(t)); },
-    calendarTitle() { const d=new Date(this.currentCalStart); return `${d.getFullYear()}年${d.getMonth()+1}月`; },
-    calendarDays() {
-        const days=[]; const start=new Date(this.currentCalStart);
-        if(this.calendarMode==='week') start.setDate(start.getDate()-start.getDay());
-        else { start.setDate(1); start.setDate(start.getDate()-start.getDay()); }
-        const cnt = this.calendarMode==='week'?7:42;
-        for(let i=0; i<cnt; i++) {
-            const d=new Date(start); d.setDate(start.getDate()+i); const ds=this.getLocalYMD(d);
-            const evs=this.gcalEvents.filter(e=>this.convertIsoToYMD(e.start)===ds).map(e=>({...e, isGCal:true}));
-            const tks=this.tasks.filter(t=>t.due===ds).map(t=>({...t, isGCal:false}));
-            days.push({date:ds, dayNum:d.getDate(), dayOfWeek:d.getDay(), isToday:ds===this.getTodayStr(), items:[...tks, ...evs]});
-        }
-        return days;
-    },
-    selectedDateItems() { return this.calendarDays.find(d=>d.date===this.selectedDate)?.items.sort((a,b)=>{ if(a.isGCal!==b.isGCal) return a.isGCal?-1:1; return (a.start||'0')>(b.start||'0')?1:-1; }) || []; },
-    selectedDateDisplay() { return this.selectedDate; }
-  },
-  mounted() {
-      this.selectedDate = this.getTodayStr();
-      this.measureScrollbar();
-      window.addEventListener('resize', ()=>{ 
-          this.isPC=window.innerWidth>=992; if(this.isPC && this.currentTab==='calendar')this.currentTab='active'; 
-          this.measureScrollbar(); // Recalc scrollbar on resize
-      });
-      const s = localStorage.getItem('gh_tasks_settings');
-      if(s) { this.settings=JSON.parse(s); this.loadData(); } else { this.currentTab='settings'; }
-      if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode');
-      
-      this.$nextTick(() => { const body = this.$refs.calBody; if(body) body.scrollTop = 9 * 60; });
-  },
-  methods: {
-    updateStatus(type, msg) {
-        this.status = { visible: true, type: type, message: msg };
-        if(type !== 'loading') setTimeout(() => { this.status.visible = false; }, 3000);
-    },
-    saveSettings() {
-        localStorage.setItem('gh_tasks_settings', JSON.stringify(this.settings));
-        this.updateStatus('success', '設定を保存しました');
-        this.loadData();
-    },
-    measureScrollbar() { const el=document.createElement('div'); el.style.cssText='overflow:scroll;visibility:hidden;position:absolute;'; document.body.appendChild(el); this.scrollbarWidth=el.offsetWidth-el.clientWidth; el.remove(); },
-    setTab(t) { this.currentTab=t; if(t==='completed' && !this.archiveTasks.length) this.loadArchiveData(); },
-    toggleDarkMode() { document.body.classList.toggle('dark-mode'); localStorage.setItem('theme', document.body.classList.contains('dark-mode')?'dark':'light'); },
-    async loadData() {
-        this.updateStatus('loading', '読み込み中...');
-        try {
-            const res = await callGAS('getFileContent', this.settings);
-            this.sha = res.sha; this.lines = res.content.split('\n'); this.parseContent(res.content);
-            await this.fetchGCal();
-            this.availableCalendars = await callGAS('getAvailableCalendars');
-            this.updateStatus('success', '完了');
-        } catch(e) { this.updateStatus('error', 'エラー: ' + e.message); }
-    },
-    async fetchGCal() {
-        if(!this.settings.calendarIds.length) return;
-        const res = await callGAS('getCalendarEvents', {startStr:this.calendarDays[0].date, endStr:this.calendarDays[this.calendarDays.length-1].date, calendarIds:JSON.stringify(this.settings.calendarIds)});
-        if(res.events) this.gcalEvents = res.events;
-    },
-    async loadArchiveData() {
-        if(!this.settings.archivePath) return;
-        try {
-            const res = await callGAS('getFileContent', {...this.settings, path:this.settings.archivePath});
-            if(res.content) {
-                const lines = res.content.split('\n');
-                this.archiveTasks = lines.map(l=>{ const m=l.match(/^[-*]\s*\[x\]\s*(.*)/i); return m?{desc:m[1], doneDate:'', completed:true, originalLine:l}:null; }).filter(t=>t);
-            }
-        } catch(e) { console.error(e); }
-    },
-    // ★ FIX: Restored Archive Logic
-    async runArchiveProcess() {
-        if(!this.settings.archivePath) { this.showInfo('設定エラー', 'アーカイブファイルのパスを設定してください'); return; }
-        this.updateStatus('loading', 'アーカイブ中...');
-        try {
-            // 1. Fetch Current Main
-            const mainRes = await callGAS('getFileContent', this.settings);
-            const mainLines = mainRes.content.split('\n');
-            const activeLines = [];
-            const completedLines = [];
-            mainLines.forEach(l => {
-                if(l.match(/^[-*]\s*\[x\]/i)) completedLines.push(l);
-                else activeLines.push(l);
-            });
-
-            if(completedLines.length === 0) { this.updateStatus('success', '完了タスクはありません'); return; }
-
-            // 2. Fetch Archive
-            const arcRes = await callGAS('getFileContent', {...this.settings, path: this.settings.archivePath});
-            let arcContent = arcRes.content || '';
-            if(arcContent && !arcContent.endsWith('\n')) arcContent += '\n';
-            arcContent += completedLines.join('\n');
-
-            // 3. Save Archive
-            await callGAS('saveFileContent', {...this.settings, path: this.settings.archivePath, content: arcContent, sha: arcRes.sha});
-
-            // 4. Save Main
-            await callGAS('saveFileContent', {...this.settings, content: activeLines.join('\n'), sha: mainRes.sha});
-
-            // 5. Reload
-            await this.loadData();
-            this.updateStatus('success', completedLines.length + '件をアーカイブしました');
-        } catch(e) { this.updateStatus('error', 'アーカイブ失敗: ' + e.message); }
-    },
-    parseContent(txt) {
-        this.tasks=[]; const tags=new Set();
-        txt.split('\n').forEach((l,i)=>{
-            const m=l.match(/^[-*]\s*\[([xX ])\]\s*(.*)/);
-            if(m) {
-                let d=m[2]; const comp=m[1].toLowerCase()==='x';
-                const due=(d.match(/📅\s*(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
-                const rec=(d.match(/🔁\s*([^✅➕📅#]+)/) || [])[1]?.trim() || '';
-                let pri='none'; if(d.includes('⏫'))pri='high'; else if(d.includes('🔼'))pri='medium'; else if(d.includes('🔽'))pri='low';
-                const tempText = d.replace(/https?:\/\/[^\s]+/g, '');
-                const tks=[]; (tempText.match(/#[^\s#]+/g)||[]).forEach(t=>{ if(t!=='#todo') {tks.push(t); tags.add(t);} });
-                this.tasks.push({lineIndex:i, desc:d.trim(), completed:comp, due, recurrence:rec, priority:pri, tags:tks});
-            }
-        });
-        this.allTagsList=Array.from(tags).sort();
-    },
-    cleanRawTitle(t) {
-        if(!t) return { clean: '', url: '' };
-        let url = '';
-        const linkMatch = t.match(/\[(.*?)\]\((.*?)\)/);
-        if (linkMatch) { t = linkMatch[1]; url = linkMatch[2]; }
-        
-        let clean = t.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, '')
-                     .replace(/[➕+]\s*\d{4}-\d{2}-\d{2}/g, '')
-                     .replace(/✅\s*\d{4}-\d{2}-\d{2}/g, '')
-                     .replace(/🔁\s*[^✅➕+📅#\n]+/g, '')
-                     .replace(/[⏫🔼🔽]/g, '')
-                     .replace(/#todo/gi, '');
-        
-        const tags = (t.match(/#[^\s#]+/g)||[]);
-        tags.forEach(tag => { if(tag!=='#todo') clean = clean.replace(tag, ''); });
-        
-        return { clean: clean.trim(), url: url };
-    },
-    renderTaskTitle(t) { return this.cleanRawTitle(t).clean; },
-    
-    // Actions
-    openAddPanel() { 
-        this.isEditMode=false; this.showPanel=true; 
-        // ★ FIX: Initial values for switching
-        this.panelData={isGCal:false, isNew:true, targetCalendarId:this.settings.calendarIds[0], desc:'', due:this.selectedDate||this.getTodayStr(), tags:[], priority:'none', recurrence:'', isAllDay:false}; 
-        this.tagInput='';
-    },
-    openEditPanel(i) {
-        this.isEditMode=true; this.showPanel=true;
-        if(i.isGCal) {
-            let d=i.desc||'', u=''; const m=d.match(/^【会議URL】:\s*(\S+)(\n\n)?/); if(m){u=m[1]; d=d.replace(m[0],'');}
-            const s = new Date(i.start); const e = new Date(i.end);
-            this.panelData={isGCal:true, eid:i.id, calendarId:i.calendarId, calendarName:i.calendarName, title:i.title, desc:d, meetingUrl:u, dateInput:this.convertIsoToYMD(i.start), isAllDay: i.isAllDay || false, startHour:String(s.getHours()).padStart(2,'0'), startMin:String(s.getMinutes()).padStart(2,'0'), endHour:String(e.getHours()).padStart(2,'0'), endMin:String(e.getMinutes()).padStart(2,'0')};
-        } else {
-            const t=this.tasks.find(x=>x.lineIndex===i.lineIndex)||i;
-            const cleaned = this.cleanRawTitle(t.desc);
-            this.panelData={...t, taskRef:t, isGCal:false, desc: cleaned.clean, url: cleaned.url, tags:[...(t.tags||[])]};
-        }
-    },
-    // ★ FIX: Offset for 9:00 start (0px at 9:00)
-    getEventPos(i) { 
-        const s=new Date(i.start); const e=new Date(i.end); 
-        const startH = s.getHours() + s.getMinutes()/60;
-        const endH = e.getHours() + e.getMinutes()/60;
-        
-        if (endH <= 9 || startH >= 21) return null; 
-        
-        // Clamp logic
-        const effectiveStart = Math.max(9, startH);
-        const effectiveEnd = Math.min(21, endH);
-        
-        const top = (effectiveStart - 9) * 60; 
-        const height = (effectiveEnd - effectiveStart) * 60;
-        
-        return { top: top+'px', height: height+'px' };
-    },
-    async saveGCalEvent() {
-        this.updateStatus('loading', '保存中...');
-        let d=this.panelData.desc||''; if(this.panelData.meetingUrl) d=`【会議URL】: ${this.panelData.meetingUrl}\n\n${d}`;
-        // ★ FIX: Calendar ID Selection
-        const calId = this.panelData.isNew ? this.panelData.targetCalendarId : this.panelData.calendarId;
-        if (!calId) { this.updateStatus('error', 'カレンダー未選択'); return; }
-
-        const params = {
-            ...this.panelData, 
-            calendarId: calId,
-            description:d, 
-            dateStr:this.panelData.dateInput
-        };
-        if(this.panelData.isAllDay) {
-            params.startTime = null; params.endTime = null;
-        } else {
-            params.startTime = `${this.panelData.startHour}:${this.panelData.startMin}`;
-            params.endTime = `${this.panelData.endHour}:${this.panelData.endMin}`;
-        }
-
-        try {
-            await callGAS(this.panelData.isNew?'createCalendarEvent':'updateCalendarEvent', params);
-            this.showPanel=false; this.fetchGCal();
-            this.updateStatus('success', '保存しました');
-        } catch(e){this.updateStatus('error', e.message);}
-    },
-    async saveTaskChanges() {
-        if(this.isEditMode) { const t=this.panelData.taskRef; t.desc=this.panelData.desc; t.due=this.panelData.due; t.priority=this.panelData.priority; t.tags=[...this.panelData.tags]; t.recurrence=this.panelData.recurrence; }
-        else { this.tasks.push({lineIndex:-1, desc:this.panelData.desc, due:this.panelData.due, priority:this.panelData.priority, recurrence:this.panelData.recurrence, completed:false, tags:[...this.panelData.tags]}); }
-        this.showPanel=false; this.pushChanges();
-    },
-    // ★ FIX: Auto-append ✅ YYYY-MM-DD on complete
-    pushChanges() {
-        this.updateStatus('loading', '保存中...');
-        const newLines=[...this.lines];
-        this.tasks.forEach(t=>{
-            const cleanObj = this.cleanRawTitle(t.desc);
-            const title = this.isEditMode && this.panelData.taskRef === t ? this.panelData.desc : cleanObj.clean;
-            const url = this.isEditMode && this.panelData.taskRef === t ? this.panelData.url : cleanObj.url;
-            const urlPart = url ? `[${title}](${url})` : title;
-            
-            const donePart = t.completed ? `✅ ${this.getTodayStr()}` : '';
-
-            const l=`- [${t.completed?'x':' '}] ${urlPart} ${t.priority==='high'?'⏫':t.priority==='medium'?'🔼':t.priority==='low'?'🔽':''} ${t.recurrence?'🔁 '+t.recurrence:''} ${t.due?'📅 '+t.due:''} ${donePart} ${t.tags.join(' ')} #todo`.replace(/\s+/g,' ').trim();
-            if(t.lineIndex>=0)newLines[t.lineIndex]=l; else newLines.push(l);
-        });
-        callGAS('saveFileContent', {...this.settings, content:newLines.join('\n'), sha:this.sha}).then(r=>{this.sha=r.newSha; this.lines=newLines; this.updateStatus('success', '保存しました');}).catch(e=>this.updateStatus('error', e.message));
-    },
-    dragStart(e, i) { if(!item.isGCal && !item.isAllDay) return; e.dataTransfer.setData('json', JSON.stringify(i)); },
-    onDrop(e, date, hour) {
-        const item = JSON.parse(e.dataTransfer.getData('json'));
-        if(!item.isGCal) return; 
-        
-        // ★ FIX: D&D Logic (Requires End Time)
-        const oldStart = new Date(item.start); const oldEnd = new Date(item.end);
-        const durationMs = oldEnd - oldStart;
-        
-        const newStart = new Date(`${date}T${String(9+hour).padStart(2,'0')}:00:00`);
-        const newEnd = new Date(newStart.getTime() + durationMs);
-        
-        const startTime = `${String(newStart.getHours()).padStart(2,'0')}:${String(newStart.getMinutes()).padStart(2,'0')}`;
-        const endTime = `${String(newEnd.getHours()).padStart(2,'0')}:${String(newEnd.getMinutes()).padStart(2,'0')}`;
-
-        this.updateStatus('loading', '移動中...');
-        callGAS('updateCalendarEvent', {calendarId:item.calendarId, eventId:item.id, dateStr:date, startTime:startTime, endTime:endTime})
-        .then(()=>{this.fetchGCal(); this.updateStatus('success', '移動しました');}).catch(e=>this.updateStatus('error', e.message));
-    },
-    closePanel() { this.showPanel=false; },
-    toggleTask(t) { t.completed=!t.completed; this.pushChanges(); },
-    confirmDelete(t) { this.modal={show:true, title:'削除', message:'削除しますか？', type:'confirm', isDanger:true, okText:'削除', resolve:r=>{if(r)this.deleteTask(t)}}; },
-    deleteTask(t) { 
-        if(t.isArchived) {
-             /* Archive deletion is implicit via display filtering now */
-        } else {
-            const idx=this.tasks.findIndex(x=>x.lineIndex===t.lineIndex); if(idx>-1){const org=this.tasks[idx]; this.tasks.splice(idx,1); if(org.lineIndex>=0){this.lines.splice(org.lineIndex,1); this.tasks.forEach(k=>{if(k.lineIndex>org.lineIndex)k.lineIndex--;}); this.pushChanges(); this.closePanel();}}
-        }
-    },
-    confirmRestore(t) { this.modal={show:true, title:'復元', message:'未完了に戻しますか？', type:'confirm', okText:'復元', resolve: r=>{this.modal.show=false; if(r){const org=this.tasks.find(x=>x.lineIndex===t.lineIndex); if(org){org.completed=false; org.doneDate=''; this.pushChanges();}}}}; },
-    
-    getLocalYMD(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; },
-    convertIsoToYMD(iso) { return iso ? this.getLocalYMD(new Date(iso)) : ''; },
-    getTodayStr() { return this.getLocalYMD(new Date()); },
-    formatTimeRange(item) { if(item.isAllDay) return '終日'; const d1=new Date(item.start); const d2=new Date(item.end); return `${String(d1.getHours()).padStart(2,'0')}:${String(d1.getMinutes()).padStart(2,'0')} - ${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`; },
-    changeDateRange(d) { const dt=new Date(this.currentCalStart); if(this.calendarMode==='week')dt.setDate(dt.getDate()+d*7); else dt.setMonth(dt.getMonth()+d); this.currentCalStart=dt; this.fetchGCal(); }, // Added fetch
-    setCalendarMode(m) { this.calendarMode = m; this.fetchGCal(); }, // Added fetch
-    selectDate(d) { this.selectedDate=d; },
-    showToastNotification(m) { this.updateStatus('success', m); },
-    showInfo(t,m) { this.modal={show:true, title:t, message:m, type:'info', okText:'OK'}; },
-    closeModal(r) { this.modal.show=false; if(this.modal.resolve)this.modal.resolve(r); },
-    loadMoreCompleted() { this.displayLimit+=50; },
-    setDateShortcut(d) { const dt=new Date(); dt.setDate(dt.getDate()+d); this.panelData.due=this.getLocalYMD(dt); },
-    addTagFromHistory(t) { if(!this.panelData.tags.includes(t))this.panelData.tags.push(t); },
-    addTag() { let v=this.tagInput.trim(); if(!v)return; if(!v.startsWith('#'))v='#'+v; if(!this.panelData.tags.includes(v))this.panelData.tags.push(v); this.tagInput=''; },
-    removeTag(t) { this.panelData.tags=this.panelData.tags.filter(x=>x!==t); },
-    async fetchFileContent(path) { return callGAS('getFileContent', { ...this.settings, path: path }); },
-    async saveFileContentPromise(path, content, sha) { return callGAS('saveFileContent', { ...this.settings, path: path, content: content, sha: sha }); }
-  }
-}).mount('#app');
-</script>
+        }).mount('#app');
+    </script>
 </body>
+
 </html>
