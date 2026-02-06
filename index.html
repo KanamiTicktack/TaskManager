@@ -901,7 +901,9 @@
                                     <div v-for="group in groupedActiveTasks" :key="group.title" class="mb-4">
                                         <div class="small fw-bold text-secondary ms-1 mb-2">{{ group.title }}</div>
                                         <div v-for="task in group.tasks" :key="task.lineIndex" class="task-card"
-                                            :class="'priority-'+task.priority" @click="openEditPanel(task)">
+                                            :class="'priority-'+task.priority"
+                                            :style="{ marginLeft: (task.level * 20) + 'px' }"
+                                            @click="openEditPanel(task)">
                                             <div class="check-box" @click.stop="toggleTask(task)"><span
                                                     class="material-icons-round">check</span></div>
                                             <div class="task-body">
@@ -1402,7 +1404,7 @@
                 openAddPanel() {
                     this.isEditMode = false; this.showPanel = true;
                     // ★ FIX: Initial values for switching
-                    this.panelData = { isGCal: false, isNew: true, targetCalendarId: this.settings.calendarIds[0], desc: '', due: this.selectedDate || this.getTodayStr(), tags: [], priority: 'none', recurrence: '', isAllDay: false };
+                    this.panelData = { isGCal: false, isNew: true, targetCalendarId: this.settings.calendarIds[0], desc: '', due: this.selectedDate || this.getTodayStr(), tags: [], priority: 'none', recurrence: '', isAllDay: false, indent: '' };
                     this.tagInput = '';
                 },
                 openEditPanel(i) {
@@ -1480,8 +1482,8 @@
                     } catch (e) { this.updateStatus('error', e.message); }
                 },
                 async saveTaskChanges() {
-                    if (this.isEditMode) { const t = this.panelData.taskRef; t.desc = this.panelData.desc; t.due = this.panelData.due; t.priority = this.panelData.priority; t.tags = [...this.panelData.tags]; t.recurrence = this.panelData.recurrence; }
-                    else { this.tasks.push({ lineIndex: -1, desc: this.panelData.desc, due: this.panelData.due, priority: this.panelData.priority, recurrence: this.panelData.recurrence, completed: false, tags: [...this.panelData.tags] }); }
+                    if (this.isEditMode) { const t = this.panelData.taskRef; t.desc = this.panelData.desc; t.due = this.panelData.due; t.priority = this.panelData.priority; t.tags = [...this.panelData.tags]; t.recurrence = this.panelData.recurrence; t.indent = this.panelData.indent; }
+                    else { this.tasks.push({ lineIndex: -1, desc: this.panelData.desc, due: this.panelData.due, priority: this.panelData.priority, recurrence: this.panelData.recurrence, completed: false, tags: [...this.panelData.tags], indent: this.panelData.indent || '' }); }
                     this.showPanel = false; this.pushChanges();
                 },
                 // ★ FIX: Recurrence Logic & Indent Support
