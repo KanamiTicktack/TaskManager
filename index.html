@@ -1371,9 +1371,7 @@
                             const tks = []; (tempText.match(/#[^\s#]+/g) || []).forEach(t => { if (t !== '#todo') { tks.push(t); tags.add(t); } });
 
                             // Calc level (2 spaces = 1 level, but let's be flexible: 1 tab or >=2 spaces)
-                            let level = 0;
-                            if (indent.includes('\t')) level = indent.length;
-                            else level = Math.floor(indent.length / 2);
+                            const level = this.calculateLevel(indent);
 
                             this.tasks.push({ lineIndex: i, desc: d.trim(), completed: comp, due, recurrence: rec, priority: pri, tags: tks, indent: indent, level: level });
                         }
@@ -1482,8 +1480,8 @@
                     } catch (e) { this.updateStatus('error', e.message); }
                 },
                 async saveTaskChanges() {
-                    if (this.isEditMode) { const t = this.panelData.taskRef; t.desc = this.panelData.desc; t.due = this.panelData.due; t.priority = this.panelData.priority; t.tags = [...this.panelData.tags]; t.recurrence = this.panelData.recurrence; t.indent = this.panelData.indent; }
-                    else { this.tasks.push({ lineIndex: -1, desc: this.panelData.desc, due: this.panelData.due, priority: this.panelData.priority, recurrence: this.panelData.recurrence, completed: false, tags: [...this.panelData.tags], indent: this.panelData.indent || '' }); }
+                    if (this.isEditMode) { const t = this.panelData.taskRef; t.desc = this.panelData.desc; t.due = this.panelData.due; t.priority = this.panelData.priority; t.tags = [...this.panelData.tags]; t.recurrence = this.panelData.recurrence; t.indent = this.panelData.indent; t.level = this.calculateLevel(t.indent); }
+                    else { const indent = this.panelData.indent || ''; this.tasks.push({ lineIndex: -1, desc: this.panelData.desc, due: this.panelData.due, priority: this.panelData.priority, recurrence: this.panelData.recurrence, completed: false, tags: [...this.panelData.tags], indent: indent, level: this.calculateLevel(indent) }); }
                     this.showPanel = false; this.pushChanges();
                 },
                 // ★ FIX: Recurrence Logic & Indent Support
@@ -1597,6 +1595,11 @@
                     }
 
                     this.pushChanges();
+                },
+                calculateLevel(indent) {
+                    if (!indent) return 0;
+                    if (indent.includes('\t')) return indent.length;
+                    return Math.floor(indent.length / 2);
                 },
                 calculateNextDue(currentDue, rule) {
                     if (!currentDue || !rule) return null;
