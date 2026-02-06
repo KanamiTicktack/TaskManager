@@ -1540,7 +1540,7 @@
                         const finalLine = indent + l.replace(indent, '');
 
                         if (t.lineIndex >= 0) newLines[t.lineIndex] = finalLine;
-                        else newLines.push(finalLine);
+                        else { newLines.push(finalLine); t.lineIndex = newLines.length - 1; }
                     });
 
                     // Appending any new lines from externally added tasks (like recurring instances handled in toggleTask)
