@@ -998,9 +998,11 @@
                             </div>
                         </div>
 
-                        <div v-else class="month-grid mb-3 flex-shrink-0" style="height: 350px;">
+                        <div v-else class="month-grid mb-3" style="flex: 1; overflow-y: auto; min-height: 0;">
                             <div v-for="d in ['日','月','火','水','木','金','土']"
-                                class="p-2 text-center small fw-bold bg-light">{{d}}</div>
+                                class="p-2 text-center small fw-bold bg-light"
+                                style="position: sticky; top: 0; z-index: 10; background: var(--bg-card) !important; border-bottom: 1px solid var(--border-color);">
+                                {{d}}</div>
                             <div v-for="day in calendarDays" :key="day.date" class="m-cell"
                                 :class="{selected: selectedDate===day.date}"
                                 :style="day.specialColor ? {background: day.specialColor + '40'} : {}"
