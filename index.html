@@ -46,9 +46,31 @@
             --bg-card: #1e293b;
             --bg-input: #334155;
             --text-main: #f1f5f9;
-            --text-sub: #94a3b8;
+            --text-sub: #cbd5e1;
             --border-color: #334155;
             --hover-bg: #334155;
+        }
+
+        body.dark-mode .text-muted {
+            color: #94a3b8 !important;
+        }
+
+        body.dark-mode .btn-close {
+            filter: invert(1);
+        }
+
+        body.dark-mode .form-control::placeholder {
+            color: #64748b;
+        }
+
+        body.dark-mode .nav-link {
+            color: #cbd5e1;
+        }
+
+        body.dark-mode .modal-content,
+        body.dark-mode .modal-box {
+            background: var(--bg-card);
+            color: var(--text-main);
         }
 
         body {
@@ -531,7 +553,12 @@
         }
 
         .dot {
-            display: none;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-sub);
+            margin: 1px;
+            display: inline-block;
         }
 
         /* Replaced by text */
@@ -539,12 +566,13 @@
             font-size: 10px;
             padding: 1px 4px;
             border-radius: 4px;
-            margin-bottom: 1px;
+            margin-bottom: 2px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             background: var(--hover-bg);
             color: var(--text-main);
+            line-height: 1.2;
         }
 
         .cal-event-text.done {
@@ -974,16 +1002,29 @@
                             <div v-for="d in ['日','月','火','水','木','金','土']"
                                 class="p-2 text-center small fw-bold bg-light">{{d}}</div>
                             <div v-for="day in calendarDays" :key="day.date" class="m-cell"
-                                :class="{selected: selectedDate===day.date}" @click="selectDate(day.date)">
+                                :class="{selected: selectedDate===day.date}"
+                                :style="day.specialColor ? {background: day.specialColor + '40'} : {}"
+                                @click="selectDate(day.date)">
                                 <div class="date-badge" :class="{today: day.isToday}">{{day.dayNum}}</div>
-                                <div class="d-flex flex-column gap-1 mt-1 overflow-hidden" style="max-height: 60px;">
-                                    <div v-for="item in day.items.slice(0,4)" class="cal-event-text"
-                                        :class="{done: item.completed}"
-                                        :style="item.isGCal ? {background: item.color, color:'white'} : {}">
-                                        {{ item.isGCal ? item.title : renderTaskTitle(item.desc) }}
+                                <div class="d-flex flex-column gap-0 mt-1 overflow-hidden" style="max-height: 60px;">
+                                    <!-- GCal Events as Text -->
+                                    <div v-for="item in day.items.filter(x=>x.isGCal).slice(0,3)" class="cal-event-text"
+                                        :style="{background: item.color, color:'white'}">
+                                        {{ item.title }}
                                     </div>
-                                    <div v-if="day.items.length > 4" class="text-center"
-                                        style="font-size:8px; color:var(--text-sub);">+{{day.items.length-4}}</div>
+                                    <!-- Tasks as Dots -->
+                                    <div v-if="day.items.some(x=>!x.isGCal)" class="d-flex flex-wrap gap-1 px-1">
+                                        <div v-for="item in day.items.filter(x=>!x.isGCal).slice(0,10)" class="dot"
+                                            :class="{done: item.completed}"
+                                            :style="{background: item.completed ? 'var(--text-sub)' : (item.priority==='high'?'#ef4444':item.priority==='medium'?'#f59e0b':'var(--primary)')}">
+                                        </div>
+                                        <span v-if="day.items.filter(x=>!x.isGCal).length > 10"
+                                            style="font-size:8px; color:var(--text-sub)">+</span>
+                                    </div>
+
+                                    <div v-if="day.items.filter(x=>x.isGCal).length > 3" class="text-center"
+                                        style="font-size:8px; color:var(--text-sub);">
+                                        +{{day.items.filter(x=>x.isGCal).length-3}}</div>
                                 </div>
                             </div>
                         </div>
@@ -1185,7 +1226,14 @@
                         const d = new Date(start); d.setDate(start.getDate() + i); const ds = this.getLocalYMD(d);
                         const evs = this.gcalEvents.filter(e => this.convertIsoToYMD(e.start) === ds).map(e => ({ ...e, isGCal: true }));
                         const tks = this.tasks.filter(t => t.due === ds).map(t => ({ ...t, isGCal: false }));
-                        days.push({ date: ds, dayNum: d.getDate(), dayOfWeek: d.getDay(), isToday: ds === this.getTodayStr(), items: [...tks, ...evs] });
+
+                        // Check "Rest" (休み)
+                        let specialColor = null;
+                        evs.forEach(e => {
+                            if (e.title === '休み') specialColor = e.color;
+                        });
+
+                        days.push({ date: ds, dayNum: d.getDate(), dayOfWeek: d.getDay(), isToday: ds === this.getTodayStr(), items: [...tks, ...evs], specialColor });
                     }
                     return days;
                 },
