@@ -324,8 +324,11 @@
 
                         const response = await fetch(this.settings.gasUrl, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
+                            headers: {
+                                'Content-Type': 'text/plain;charset=utf-8' // GASのCORS制約回避のため text/plain を使用
+                            },
+                            body: JSON.stringify(payload),
+                            redirect: 'follow'
                         });
 
                         const result = await response.json();
