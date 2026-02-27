@@ -3,8 +3,20 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover, maximum-scale=1.0">
     <title>Voice Task Entry</title>
+    <!-- PWA Settings -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    <meta name="theme-color" content="#4f46e5"> <!-- Tailwindのindigo-600に近似 -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(console.error);
+            });
+        }
+    </script>
     <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Vue 3 (CDN) -->
@@ -242,7 +254,11 @@
                     this.recognition.onerror = (e) => {
                         console.error("Speech recognition error", e.error);
                         this.isRecording = false;
-                        if (e.error !== 'no-speech') this.showToast('音声認識エラー: ' + e.error, 'error');
+                        if (e.error === 'network') {
+                            this.showToast('エラー: 音声認識はローカルサーバー (http://localhost) または HTTPS 上で実行する必要があります', 'error');
+                        } else if (e.error !== 'no-speech') {
+                            this.showToast('音声認識エラー: ' + e.error, 'error');
+                        }
                     };
                 } else {
                     console.warn("Speech Recognition API is not supported in this browser.");
