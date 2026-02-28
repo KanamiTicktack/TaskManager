@@ -256,16 +256,15 @@
                         this.isRecording = false;
 
                         if (e.error === 'network') {
-                            // セキュアコンテキスト（HTTPS/localhost）かチェック
                             if (!window.isSecureContext) {
                                 this.showToast('エラー: 音声認識は HTTPS または localhost 上で実行する必要があります', 'error');
                             } else {
-                                this.showToast('ネットワークエラー: 認識サーバーに接続できません。通信状態やマイク設定を確認してください。', 'error');
+                                this.showToast('ネットワークエラー: 認識を開始できません。OSのプライバシー設定で「アプリがマイクにアクセスすること」および「デスクトップアプリによるアクセス（Chrome等）」が許可されているか確認し、ブラウザを再起動してください。', 'error');
                             }
                         } else if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-                            this.showToast('マイクの使用が許可されていません。ブラウザの設定（鍵アイコン）を確認してください。', 'error');
+                            this.showToast('マイクの使用が許可されていません。ブラウザの鍵アイコン、またはOSの設定を確認してください。', 'error');
                         } else if (e.error === 'no-speech') {
-                            // 何もしない（または静かに終了）
+                            // 何もしない
                         } else {
                             this.showToast('音声認識エラー: ' + e.error, 'error');
                         }
