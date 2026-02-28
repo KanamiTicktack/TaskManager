@@ -318,7 +318,20 @@
                     const day = String(today.getDate()).padStart(2, '0');
                     const dateStr = `${year}-${month}-${day}`;
 
-                    const newTaskLine = `- [ ] ${this.taskText.trim()} 📅 ${dateStr} #todo`;
+                    // 入力テキストからハッシュタグを抽出
+                    let rawText = this.taskText.trim();
+                    const tagRegex = /[#＃]\S+/g;
+                    let extractedTags = rawText.match(tagRegex) || [];
+
+                    // 全角ハッシュタグを半角に変換
+                    extractedTags = extractedTags.map(tag => tag.replace('＃', '#'));
+
+                    // 本文からタグを削除し、余分なスペースを整える
+                    const bodyText = rawText.replace(tagRegex, '').replace(/\s+/g, ' ').trim();
+
+                    // デフォルトの #todo タグの後に、抽出したタグをスペース区切りで付加する
+                    const customTagsString = extractedTags.length > 0 ? ' ' + extractedTags.join(' ') : '';
+                    const newTaskLine = `- [ ] ${bodyText} 📅 ${dateStr} #todo${customTagsString}`;
 
                     try {
                         // GAS経由で追記のみを行う "appendFileContent" アクションを呼び出す。
