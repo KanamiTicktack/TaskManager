@@ -254,9 +254,19 @@
                     this.recognition.onerror = (e) => {
                         console.error("Speech recognition error", e.error);
                         this.isRecording = false;
+
                         if (e.error === 'network') {
-                            this.showToast('エラー: 音声認識はローカルサーバー (http://localhost) または HTTPS 上で実行する必要があります', 'error');
-                        } else if (e.error !== 'no-speech') {
+                            // セキュアコンテキスト（HTTPS/localhost）かチェック
+                            if (!window.isSecureContext) {
+                                this.showToast('エラー: 音声認識は HTTPS または localhost 上で実行する必要があります', 'error');
+                            } else {
+                                this.showToast('ネットワークエラー: 認識サーバーに接続できません。通信状態やマイク設定を確認してください。', 'error');
+                            }
+                        } else if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+                            this.showToast('マイクの使用が許可されていません。ブラウザの設定（鍵アイコン）を確認してください。', 'error');
+                        } else if (e.error === 'no-speech') {
+                            // 何もしない（または静かに終了）
+                        } else {
                             this.showToast('音声認識エラー: ' + e.error, 'error');
                         }
                     };
