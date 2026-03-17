@@ -2,11 +2,14 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
+  <!-- PWA・スマホアプリ化のためのビューポート設定 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Obsidian Tasks Sync</title>
   
+  <!-- Tailwind CSS の読み込み -->
   <script src="https://cdn.tailwindcss.com"></script>
   
+  <!-- Babel (ブラウザ上でReactのJSXを変換するため) -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
@@ -23,8 +26,8 @@
 <body>
   <div id="root"></div>
 
+  <!-- アプリケーション本体 (Reactモジュールとして実行) -->
   <script type="text/babel" data-type="module">
-    // 外部CDN (esm.sh) から React と アイコン を直接インポート
     import React, { useState, useEffect, useMemo, useRef } from 'https://esm.sh/react@18.2.0';
     import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
     import { 
@@ -155,8 +158,33 @@
         setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
       };
 
-      // --- PWA化ロジック (マウント時に動的生成) ---
+      // --- PWA化＆極限までシンプルなアイコン生成ロジック ---
       useEffect(() => {
+        // 1. Canvasを使ってシンプルな紫背景＋白チェックのアイコン画像を動的生成
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        
+        // 背景 (テーマカラーの紫。スマホOS側で自動的に角丸に切り抜かれます)
+        ctx.fillStyle = '#8a5cf5';
+        ctx.fillRect(0, 0, 512, 512);
+        
+        // シンプルな白いチェックマーク
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 50;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(140, 260);
+        ctx.lineTo(220, 340);
+        ctx.lineTo(370, 180);
+        ctx.stroke();
+        
+        // 生成した画像をData URL(Base64)に変換
+        const iconDataUrl = canvas.toDataURL('image/png');
+
+        // 2. Manifestの動的生成
         const manifest = {
           name: "Obsidian Tasks Sync",
           short_name: "Tasks",
@@ -165,7 +193,7 @@
           background_color: "#1e1e1e",
           theme_color: "#1e1e1e",
           icons: [{
-            src: "https://cdn-icons-png.flaticon.com/512/833/833602.png",
+            src: iconDataUrl,
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable"
@@ -183,6 +211,16 @@
         }
         manifestLink.href = manifestURL;
 
+        // 3. iOS (iPhone) 用のアプリアイコン設定
+        let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+        if (!appleIcon) {
+          appleIcon = document.createElement('link');
+          appleIcon.rel = 'apple-touch-icon';
+          document.head.appendChild(appleIcon);
+        }
+        appleIcon.href = iconDataUrl;
+
+        // 4. その他のメタタグ設定
         const metas = [
           { name: 'theme-color', content: '#1e1e1e' },
           { name: 'apple-mobile-web-app-capable', content: 'yes' },
@@ -199,16 +237,9 @@
           meta.content = content;
         });
 
-        if ('serviceWorker' in navigator) {
-          const swCode = `
-            self.addEventListener('install', (e) => { self.skipWaiting(); });
-            self.addEventListener('activate', (e) => { e.waitUntil(self.clients.claim()); });
-            self.addEventListener('fetch', (e) => { });
-          `;
-          const swBlob = new Blob([swCode], { type: 'application/javascript' });
-          const swUrl = URL.createObjectURL(swBlob);
-          navigator.serviceWorker.register(swUrl).catch(console.error);
-        }
+        // ※ ブラウザのセキュリティ制約（Blob URL経由でのスクリプト実行制限）により、
+        // 1ファイル運用における Blob URL での ServiceWorker 登録を削除しました。
+        // iOS Safari等の「ホーム画面に追加」はManifestとapple-touch-iconがあれば問題なく機能します。
       }, []);
 
       // --- GitHub API 連携処理 ---
@@ -444,7 +475,7 @@
                     <div className="flex items-center justify-between px-3 mb-2"><h3 className="text-xs font-semibold text-[#8b8b8b] uppercase tracking-wider">Smart Lists (Tags)</h3></div>
                     <ul className="space-y-1">
                         {allTags.map(tag => (
-                          <li key={tag}><button onClick={() => { setCurrentFilter({type: 'tag', value: tag}); setIsDrawerOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${currentFilter.type === 'tag' && currentFilter.value === tag ? 'bg-[#2a1f42]/50 text-[#8a5cf5]' : 'text-[#dcddde] hover:bg-[#1e1e1e]'}`}><Hash size={18} className={currentFilter.type === 'tag' && currentFilter.value === tag ? 'text-[#8a5cf5]' : 'text-blue-400/80'} /><span className="flex-1 text-left capitalize">{tag}</span><span className="text-[10px] text-[#8b8b8b]">#{tag}</span></button></li>
+                          <li key={tag}><button onClick={() => { setCurrentFilter({type: 'tag', value: tag}); setIsDrawerOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${currentFilter.type === 'tag' && currentFilter.value === tag ? 'bg-[#2a1f42]/50 text-[#8a5cf5]' : 'text-[#dcddde] hover:bg-[#1e1e1e]'}`}><Hash size={18} className={currentFilter.type === 'tag' && currentFilter.value === tag ? 'text-[#8a5cf5]' : 'text-gray-400'} /><span className="flex-1 text-left capitalize">{tag}</span><span className="text-[10px] text-[#8b8b8b]">#{tag}</span></button></li>
                         ))}
                     </ul>
                 </div>
