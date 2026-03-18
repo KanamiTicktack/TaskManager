@@ -141,6 +141,7 @@
       const [selectedTask, setSelectedTask] = useState(null);
       const [currentFilter, setCurrentFilter] = useState({ type: 'all', value: null });
       const [inputValue, setInputValue] = useState('');
+      const [newTagInput, setNewTagInput] = useState(''); // タグ手動入力用
       
       const [isInitialLoaded, setIsInitialLoaded] = useState(false); 
       const [isSyncing, setIsSyncing] = useState(false);
@@ -160,17 +161,14 @@
 
       // --- PWA化＆極限までシンプルなアイコン生成ロジック ---
       useEffect(() => {
-        // 1. Canvasを使ってシンプルな紫背景＋白チェックのアイコン画像を動的生成
         const canvas = document.createElement('canvas');
         canvas.width = 512;
         canvas.height = 512;
         const ctx = canvas.getContext('2d');
         
-        // 背景 (テーマカラーの紫。スマホOS側で自動的に角丸に切り抜かれます)
         ctx.fillStyle = '#8a5cf5';
         ctx.fillRect(0, 0, 512, 512);
         
-        // シンプルな白いチェックマーク
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 50;
         ctx.lineCap = 'round';
@@ -181,10 +179,8 @@
         ctx.lineTo(370, 180);
         ctx.stroke();
         
-        // 生成した画像をData URL(Base64)に変換
         const iconDataUrl = canvas.toDataURL('image/png');
 
-        // 2. Manifestの動的生成
         const manifest = {
           name: "Obsidian Tasks Sync",
           short_name: "Tasks",
@@ -211,7 +207,6 @@
         }
         manifestLink.href = manifestURL;
 
-        // 3. iOS (iPhone) 用のアプリアイコン設定
         let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
         if (!appleIcon) {
           appleIcon = document.createElement('link');
@@ -220,7 +215,6 @@
         }
         appleIcon.href = iconDataUrl;
 
-        // 4. その他のメタタグ設定
         const metas = [
           { name: 'theme-color', content: '#1e1e1e' },
           { name: 'apple-mobile-web-app-capable', content: 'yes' },
@@ -237,9 +231,6 @@
           meta.content = content;
         });
 
-        // ※ ブラウザのセキュリティ制約（Blob URL経由でのスクリプト実行制限）により、
-        // 1ファイル運用における Blob URL での ServiceWorker 登録を削除しました。
-        // iOS Safari等の「ホーム画面に追加」はManifestとapple-touch-iconがあれば問題なく機能します。
       }, []);
 
       // --- GitHub API 連携処理 ---
@@ -340,7 +331,11 @@
         triggerAutoSave(newTasks);
       };
 
-      const handleOpenDetail = (task) => { setSelectedTask(task); setIsDetailOpen(true); };
+      const handleOpenDetail = (task) => { 
+        setSelectedTask(task);
+        setNewTagInput(''); 
+        setIsDetailOpen(true); 
+      };
       
       const handleUpdateTask = (updatedTask) => {
         const newTasks = tasks.map(t => t.id === updatedTask.id ? updatedTask : t);
@@ -423,12 +418,22 @@
                   {task.notes && (
                     <p className="text-xs text-[#8b8b8b] line-clamp-2 mb-2 break-words whitespace-pre-wrap">{renderTextWithLinks(task.notes)}</p>
                   )}
-                  <div className="flex flex-wrap items-center gap-2.5 mt-1.5">
-                      {task.dueDate && <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${dateColorClass}`}><CalendarBlankIcon className={iconColorClass} /> {task.dueDate}</span>}
-                      {task.recurrence && <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#48dbfb]"><Repeat size={12} /> {task.recurrence}</span>}
-                      {task.priority === 'high' && <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#ff6b6b]"><ChevronsUp size={12} /> High</span>}
-                      {task.priority === 'medium' && <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#feca57]"><ChevronUp size={12} /> Medium</span>}
-                      {task.tags?.map(tag => <span key={tag} className="inline-flex items-center gap-1 text-[11px] font-medium bg-[#1e1e1e] border border-[#363636] text-[#dcddde] px-1.5 py-0.5 rounded-md ml-auto"><span className="text-[#8a5cf5]">#</span> {tag}</span>)}
+                  <div className="flex flex-wrap items-start justify-between gap-2 mt-2">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                          {task.dueDate && <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${dateColorClass}`}><CalendarBlankIcon className={iconColorClass} /> {task.dueDate}</span>}
+                          {task.recurrence && <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#48dbfb]"><Repeat size={12} /> {task.recurrence}</span>}
+                          {task.priority === 'high' && <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#ff6b6b]"><ChevronsUp size={12} /> High</span>}
+                          {task.priority === 'medium' && <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#feca57]"><ChevronUp size={12} /> Medium</span>}
+                      </div>
+                      {task.tags && task.tags.length > 0 && (
+                          <div className="flex flex-wrap items-center justify-end gap-1.5 ml-auto">
+                              {task.tags.map(tag => (
+                                  <span key={tag} className="inline-flex items-center gap-1 text-[11px] font-medium bg-[#1e1e1e] border border-[#363636] text-[#dcddde] px-1.5 py-0.5 rounded-md">
+                                      <span className="text-[#8a5cf5]">#</span> {tag}
+                                  </span>
+                              ))}
+                          </div>
+                      )}
                   </div>
               </div>
           </div>
@@ -666,13 +671,35 @@
                                 <div className="w-8 flex justify-center text-[#8b8b8b]"><Hash size={18} /></div>
                                 <div className="flex-1 text-[15px] text-white">Tags</div>
                             </div>
-                            <div className="pl-8 pt-2 flex flex-wrap gap-2">
+                            <div className="pl-8 pt-2 flex flex-wrap items-center gap-2">
                                 {selectedTask.tags?.length === 0 && <span className="text-sm text-[#8b8b8b] italic">No tags selected</span>}
                                 {selectedTask.tags?.map(tag => (
                                    <button key={tag} onClick={() => handleUpdateTask({...selectedTask, tags: selectedTask.tags.filter(t => t !== tag)})} className="bg-[#8a5cf5] text-white px-2 py-1 rounded-md text-[13px] font-medium flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform">
                                      <span className="opacity-70">#</span>{tag} <X size={12} className="opacity-70 hover:opacity-100" />
                                    </button>
                                 ))}
+                                {/* ★ 新規タグ手動入力フォーム */}
+                                <form 
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        const tag = newTagInput.trim().replace(/^#/, '');
+                                        if (tag && !selectedTask.tags?.includes(tag)) {
+                                            handleUpdateTask({...selectedTask, tags: [...(selectedTask.tags || []), tag]});
+                                        }
+                                        setNewTagInput('');
+                                    }}
+                                    className="flex items-center bg-[#1e1e1e] border border-[#363636] rounded-md px-2 py-1 focus-within:border-[#8a5cf5] transition-colors"
+                                >
+                                    <span className="text-[#8b8b8b] text-[13px] mr-1 opacity-70">#</span>
+                                    <input 
+                                        type="text"
+                                        value={newTagInput}
+                                        onChange={(e) => setNewTagInput(e.target.value)}
+                                        placeholder="Add"
+                                        enterKeyHint="done"
+                                        className="bg-transparent text-[13px] text-white focus:outline-none w-16 placeholder-[#8b8b8b]"
+                                    />
+                                </form>
                             </div>
                             {allTags.filter(t => !selectedTask.tags?.includes(t)).length > 0 && (
                               <div className="pl-8 pt-3 mt-1 border-t border-[#363636] flex flex-wrap gap-1.5">
