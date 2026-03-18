@@ -87,10 +87,11 @@
           const dateMatch = content.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
           if (dateMatch) { dueDate = dateMatch[1]; content = content.replace(dateMatch[0], ''); }
           
-          const tagRegex = /(?:^|\s)#([a-zA-Z0-9_\-]+)/g;
+          // ★修正ポイント: 日本語（マルチバイト文字）やスラッシュ等を含むタグを正しく認識するように正規表現を強化
+          const tagRegex = /(?:^|\s)#([\p{L}\p{N}_\-\/]+)/gu;
           let tMatch;
           while ((tMatch = tagRegex.exec(content)) !== null) { tags.push(tMatch[1]); }
-          content = content.replace(/(?:^|\s)#[a-zA-Z0-9_\-]+/g, '');
+          content = content.replace(/(?:^|\s)#([\p{L}\p{N}_\-\/]+)/gu, '');
           
           currentTask = {
             id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -320,10 +321,11 @@
         if (!inputValue.trim()) return;
         const tags = [];
         let title = inputValue;
-        const tagRegex = /(?:^|\s)#([a-zA-Z0-9_\-]+)/g;
+        // ★修正ポイント: タスク追加時のタグ抽出も日本語に対応
+        const tagRegex = /(?:^|\s)#([\p{L}\p{N}_\-\/]+)/gu;
         let match;
         while ((match = tagRegex.exec(inputValue)) !== null) { tags.push(match[1]); }
-        title = title.replace(/(?:^|\s)#[a-zA-Z0-9_\-]+/g, '').trim();
+        title = title.replace(/(?:^|\s)#([\p{L}\p{N}_\-\/]+)/gu, '').trim();
         const newTask = { id: Date.now().toString(), title, status: 'todo', priority: 'normal', dueDate: '', recurrence: '', tags, notes: '' };
         const newTasks = [newTask, ...tasks];
         setTasks(newTasks);
@@ -682,9 +684,17 @@
                                 <form 
                                     onSubmit={(e) => {
                                         e.preventDefault();
-                                        const tag = newTagInput.trim().replace(/^#/, '');
-                                        if (tag && !selectedTask.tags?.includes(tag)) {
-                                            handleUpdateTask({...selectedTask, tags: [...(selectedTask.tags || []), tag]});
+                                        // ★ 修正ポイント: スペース区切りで複数のタグを一度に追加できるように拡張
+                                        const inputTags = newTagInput.trim().replace(/^#/, '').split(/\s+/).filter(Boolean);
+                                        const currentTags = selectedTask.tags || [];
+                                        const newTags = [...currentTags];
+                                        
+                                        inputTags.forEach(tag => {
+                                            if (!newTags.includes(tag)) newTags.push(tag);
+                                        });
+                                        
+                                        if (newTags.length > currentTags.length) {
+                                            handleUpdateTask({...selectedTask, tags: newTags});
                                         }
                                         setNewTagInput('');
                                     }}
