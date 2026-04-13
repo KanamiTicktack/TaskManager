@@ -8,24 +8,19 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // ダークモードの設定をクラスベースで切り替え可能にする
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        // デジタル庁デザインシステムを意識した基本色
                         brand: {
                             blue: '#005BAC', lightblue: '#E6F2FA',
                             green: '#008851', lightgreen: '#E6F4ED',
                             orange: '#E67A00',
                             red: '#E60000', lightred: '#FCE8E8',
                             gray: '#767676', lightgray: '#F3F4F6',
-                            // ダークモード時のアクセント調整用
-                            darkblue: '#1e3a8a',
-                            darkbg: '#111827',
-                            darkcard: '#1f2937',
-                            darkborder: '#374151'
+                            darkblue: '#1e3a8a', darkbg: '#111827',
+                            darkcard: '#1f2937', darkborder: '#374151'
                         }
                     }
                 }
@@ -40,19 +35,13 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
-        body {
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        /* スクロールバーのカスタマイズ (ダークモード対応) */
+        body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .dark ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         .chart-container { position: relative; height: 120px; width: 120px; }
     </style>
 </head>
@@ -63,12 +52,37 @@
         import React, { useState, useEffect, useMemo, useRef } from 'https://esm.sh/react@18.2.0';
         import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
         import { 
-            Kanban, Search, Calendar, Inbox, Clock, Edit2, ChevronLeft, ChevronDown, 
+            Kanban, Search, Calendar, Inbox, Clock, Edit2, ChevronLeft, ChevronDown, ChevronRight,
             PlusCircle, Plus, Send, Github, Settings, X, Check, Save, RefreshCw, 
-            Info, Loader2, Cloud, AlertCircle, LayoutList, Hash, User, Moon, Sun
+            Info, Loader2, Cloud, AlertCircle, LayoutList, Hash, User, Moon, Sun, Repeat, FolderPlus
         } from 'https://esm.sh/lucide-react@0.292.0';
 
         const getTodayString = () => new Date().toISOString().split('T')[0];
+
+        // 次の期日を計算する関数 (繰り返し処理用)
+        const calculateNextDate = (currentDateStr, recurrenceRule) => {
+            if (!currentDateStr || !recurrenceRule) return '';
+            const date = new Date(currentDateStr);
+            if (isNaN(date.getTime())) return '';
+            const rule = recurrenceRule.toLowerCase().trim();
+            
+            if (rule.includes('day')) {
+                date.setDate(date.getDate() + 1);
+                // weekday指定なら土日を飛ばす
+                if (rule.includes('weekday')) {
+                    while (date.getDay() === 0 || date.getDay() === 6) {
+                        date.setDate(date.getDate() + 1);
+                    }
+                }
+            } else if (rule.includes('week')) {
+                date.setDate(date.getDate() + 7);
+            } else if (rule.includes('month')) {
+                date.setMonth(date.getMonth() + 1);
+            } else if (rule.includes('year')) {
+                date.setFullYear(date.getFullYear() + 1);
+            }
+            return date.toISOString().split('T')[0];
+        };
 
         // ==========================================
         // ユーティリティ: Markdown ⇔ タスク (Parser)
@@ -112,6 +126,10 @@
                     else if (content.includes('🔼')) { priority = 'medium'; content = content.replace('🔼', ''); }
                     else if (content.includes('🔽')) { priority = 'low'; content = content.replace('🔽', ''); }
                     
+                    // 繰り返しの抽出
+                    const recMatch = content.match(/🔁\s*([^⏫🔼🔽📅#]+)/);
+                    if (recMatch) { recurrence = recMatch[1].trim(); content = content.replace(recMatch[0], ''); }
+
                     const dateMatch = content.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
                     if (dateMatch) { dueDate = dateMatch[1]; content = content.replace(dateMatch[0], ''); }
                     
@@ -156,6 +174,7 @@
                         if (task.priority === 'high') line += ' ⏫';
                         if (task.priority === 'medium') line += ' 🔼';
                         if (task.priority === 'low') line += ' 🔽';
+                        if (task.recurrence) line += ` 🔁 ${task.recurrence}`;
                         if (task.dueDate) line += ` 📅 ${task.dueDate}`;
                         if (task.assignee) line += ` #担当者(${task.assignee})`;
                         if (task.tags && task.tags.length > 0) {
@@ -186,7 +205,7 @@
 
 # Inbox
 
-- [ ] 定例会議の議事録作成 📅 2026-04-15 #meeting
+- [ ] 日報の提出 🔁 every weekday 📅 2026-04-13 #routine
 `;
 
         // ==========================================
@@ -199,8 +218,6 @@
             useEffect(() => {
                 if (chartRef.current) chartRef.current.destroy();
                 const ctx = canvasRef.current.getContext('2d');
-                
-                // ダークモード対応: 背景に馴染むようにボーダー色を変更
                 const borderColor = isDarkMode ? '#1f2937' : '#f9fafb';
 
                 chartRef.current = new window.Chart(ctx, {
@@ -209,17 +226,13 @@
                         labels: ['完了', '進行中', '未着手', '遅延'],
                         datasets: [{
                             data: dataValues,
-                            // ブランドカラーはダークでも視認できるためそのまま使用
                             backgroundColor: ['#008851', '#005BAC', isDarkMode ? '#4b5563' : '#A0AEC0', '#E60000'],
                             borderColor: borderColor,
                             borderWidth: 2,
                             hoverOffset: 4
                         }]
                     },
-                    options: {
-                        responsive: true, maintainAspectRatio: false, cutout: '70%',
-                        plugins: { legend: { display: false } }
-                    }
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
                 });
                 return () => { if (chartRef.current) chartRef.current.destroy(); };
             }, [dataValues, isDarkMode]);
@@ -233,27 +246,19 @@
         function App() {
             const today = getTodayString();
             
-            // --- ダークモードの状態管理 ---
+            // --- States ---
             const [isDarkMode, setIsDarkMode] = useState(() => {
                 if (localStorage.getItem('theme') === 'dark') return true;
                 if (localStorage.getItem('theme') === 'light') return false;
                 return window.matchMedia('(prefers-color-scheme: dark)').matches;
             });
-
+            const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
             useEffect(() => {
                 const root = window.document.documentElement;
-                if (isDarkMode) {
-                    root.classList.add('dark');
-                    localStorage.setItem('theme', 'dark');
-                } else {
-                    root.classList.remove('dark');
-                    localStorage.setItem('theme', 'light');
-                }
+                if (isDarkMode) { root.classList.add('dark'); localStorage.setItem('theme', 'dark'); } 
+                else { root.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
             }, [isDarkMode]);
 
-            const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
-
-            // --- State ---
             const [tasks, setTasks] = useState([]);
             const [projects, setProjects] = useState(['Inbox']);
             const [activeProject, setActiveProject] = useState(null);
@@ -265,7 +270,12 @@
 
             const [selectedTask, setSelectedTask] = useState(null);
             const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+            const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
             const [newTaskTitle, setNewTaskTitle] = useState('');
+            const [newProjectName, setNewProjectName] = useState('');
+
+            // 追加: 完了タスクの表示フラグ
+            const [showCompleted, setShowCompleted] = useState(false);
 
             const [isInitialLoaded, setIsInitialLoaded] = useState(false); 
             const [isSyncing, setIsSyncing] = useState(false);
@@ -329,12 +339,34 @@
             useEffect(() => { handleFetchFromGithub(true); }, []);
 
             // --- Handlers ---
+            const changeTaskStatus = (task, nextStatus) => {
+                let newTasks = [...tasks];
+                
+                // 繰り返し処理の適用: 未完了から完了に変わった場合
+                if (nextStatus === 'done' && task.status !== 'done' && task.recurrence) {
+                    const nextDate = calculateNextDate(task.dueDate || today, task.recurrence);
+                    const newTask = {
+                        ...task,
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                        status: 'todo',
+                        dueDate: nextDate
+                    };
+                    newTasks.push(newTask);
+                }
+                
+                newTasks = newTasks.map(t => t.id === task.id ? { ...t, status: nextStatus } : t);
+                setTasks(newTasks);
+                if(selectedTask && selectedTask.id === task.id) {
+                    setSelectedTask({...selectedTask, status: nextStatus});
+                }
+                triggerAutoSave(newTasks, projects);
+            };
+
             const handleToggleTaskStatus = (task) => {
                 let nextStatus = 'done';
                 if (task.status === 'done') nextStatus = 'todo';
                 else if (task.status === 'todo') nextStatus = 'in_progress';
-                const newTasks = tasks.map(t => t.id === task.id ? { ...t, status: nextStatus } : t);
-                setTasks(newTasks); triggerAutoSave(newTasks);
+                changeTaskStatus(task, nextStatus);
             };
 
             const handleQuickAdd = (e) => {
@@ -344,7 +376,7 @@
                     id: Date.now().toString(),
                     projectId: activeProject || 'Inbox',
                     title: newTaskTitle, status: 'todo', priority: 'normal',
-                    dueDate: '', tags: [], assignee: null, notes: ''
+                    dueDate: '', recurrence: '', tags: [], assignee: null, notes: ''
                 };
                 const newTasks = [...tasks, newTask];
                 setTasks(newTasks); setNewTaskTitle(''); triggerAutoSave(newTasks);
@@ -355,14 +387,29 @@
                 setTasks(newTasks); setSelectedTask(updated); triggerAutoSave(newTasks);
             };
 
+            const handleCreateProject = (e) => {
+                e.preventDefault();
+                const name = newProjectName.trim();
+                if (!name) return;
+                if (!projects.includes(name)) {
+                    const newProjects = [...projects, name];
+                    setProjects(newProjects);
+                    setActiveProject(name);
+                    triggerAutoSave(tasks, newProjects);
+                }
+                setNewProjectName('');
+                setIsNewProjectOpen(false);
+                setIsMobileListOpen(false);
+            };
+
             const selectProject = (projName) => {
                 setActiveProject(projName);
                 setIsMobileListOpen(false);
+                setShowCompleted(false); // プロジェクト切り替え時に完了タスクは再度閉じる
             };
 
             // --- Selectors & Computed Data ---
             const isOverdue = (task) => task.dueDate && task.dueDate < today && task.status !== 'done';
-            
             const uniqueAssignees = useMemo(() => Array.from(new Set(tasks.map(t => t.assignee).filter(Boolean))).sort(), [tasks]);
             const uniqueTags = useMemo(() => {
                 const tags = new Set();
@@ -397,6 +444,9 @@
                 });
             }, [tasks, activeProject, searchQuery, filterAssignee, filterTag]);
 
+            const uncompletedTasks = displayTasks.filter(t => t.status !== 'done');
+            const completedTasks = displayTasks.filter(t => t.status === 'done');
+
             const activeProjectTasks = tasks.filter(t => t.projectId === activeProject);
             const chartData = useMemo(() => {
                 let done=0, inProgress=0, todo=0, overdue=0;
@@ -414,13 +464,58 @@
                 return <div className="h-full flex items-center justify-center bg-gray-100 dark:bg-brand-darkbg"><Loader2 className="animate-spin text-brand-blue" size={32} /></div>;
             }
 
-            // ==========================================
-            // Render
-            // ==========================================
+            // テーブル行描画用の共通関数
+            const renderTaskRow = (task) => {
+                const overdue = isOverdue(task);
+                const rowBg = overdue ? 'bg-red-50 dark:bg-red-900/10' : task.status === 'done' ? 'bg-gray-50 dark:bg-gray-800/50 opacity-60' : 'hover:bg-gray-50 dark:hover:bg-gray-800';
+                return (
+                    <tr key={task.id} className={`${rowBg} transition cursor-pointer block md:table-row py-3 md:py-0 border-b md:border-b-0 border-gray-100 dark:border-gray-800`} onClick={() => setSelectedTask(task)}>
+                        <td className="px-4 md:py-3 text-center align-middle inline-block md:table-cell" onClick={e=>e.stopPropagation()}>
+                            <div className="relative flex items-center justify-center cursor-pointer" onClick={() => handleToggleTaskStatus(task)}>
+                                <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-colors ${task.status === 'done' ? 'bg-brand-green border-brand-green' : task.status === 'in_progress' ? 'bg-brand-blue border-brand-blue' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'}`}>
+                                    {task.status === 'done' && <Check size={14} className="text-white" strokeWidth={3} />}
+                                    {task.status === 'in_progress' && <div className="w-2.5 h-0.5 bg-white rounded"></div>}
+                                </div>
+                            </div>
+                        </td>
+                        <td className="px-4 md:py-3 align-middle inline-block md:table-cell w-[calc(100%-3rem)] md:w-auto">
+                            <span className={`font-medium ${task.status === 'done' ? 'line-through text-gray-500' : ''} ${overdue ? 'font-bold' : ''}`}>{task.title}</span>
+                            {task.recurrence && <span className="ml-2 inline-flex items-center text-[10px] text-brand-blue dark:text-blue-400 border border-brand-blue/30 px-1 rounded"><Repeat size={10} className="mr-0.5"/>{task.recurrence}</span>}
+                        </td>
+                        {!activeProject && (
+                            <td className="px-4 py-1 md:py-3 text-xs md:text-sm block md:table-cell ml-8 md:ml-0 text-gray-500 dark:text-gray-400">
+                                <span className="md:hidden mr-1 text-[10px]">Project:</span>{task.projectId}
+                            </td>
+                        )}
+                        <td className="px-4 py-1 md:py-3 text-xs md:text-sm block md:table-cell ml-8 md:ml-0">
+                            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                <span className="md:hidden mr-1 text-[10px]">担当:</span>
+                                {task.assignee ? <><User size={14}/>{task.assignee}</> : <span>-</span>}
+                            </div>
+                        </td>
+                        <td className="px-4 py-1 md:py-3 block md:table-cell ml-8 md:ml-0">
+                            <span className="md:hidden text-gray-400 mr-1 text-[10px]">状態:</span>
+                            {overdue ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-white dark:bg-gray-800 text-brand-red dark:text-red-400 border border-brand-red dark:border-red-500/50">遅延</span>
+                             : task.status === 'done' ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-brand-lightgreen dark:bg-green-900/30 text-brand-green dark:text-green-400 border border-brand-green dark:border-green-500/50">完了</span>
+                             : task.status === 'in_progress' ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-brand-lightblue dark:bg-blue-900/30 text-brand-blue dark:text-blue-400 border border-brand-blue dark:border-blue-500/50">進行中</span>
+                             : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600">未着手</span>}
+                        </td>
+                        <td className="px-4 py-1 md:py-3 block md:table-cell ml-8 md:ml-0">
+                            <span className="md:hidden text-gray-400 mr-1 text-[10px]">期限:</span>
+                            {task.dueDate ? (
+                                <span className={`font-bold flex items-center gap-1 text-sm ${overdue ? 'text-brand-red dark:text-red-400' : task.dueDate === today ? 'text-brand-orange dark:text-orange-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                                    {overdue && <AlertCircle size={14}/>} {task.dueDate}
+                                </span>
+                            ) : <span className="text-gray-400 dark:text-gray-500">-</span>}
+                        </td>
+                    </tr>
+                );
+            };
+
             return (
                 <div className="flex flex-col h-full font-sans bg-gray-100 dark:bg-brand-darkbg text-gray-900 dark:text-gray-100 transition-colors duration-200">
                     
-                    {/* Global Header */}
+                    {/* Header */}
                     <header className="bg-white dark:bg-brand-darkcard border-b border-gray-300 dark:border-brand-darkborder px-4 py-3 flex justify-between items-center shrink-0 shadow-sm z-10 transition-colors">
                         <div className="flex items-center gap-2">
                             {!isMobileListOpen && (
@@ -430,7 +525,6 @@
                             <h1 className="text-lg md:text-xl font-bold hidden sm:block">TaskBoard</h1>
                         </div>
                         
-                        {/* Filters & Actions */}
                         <div className="flex flex-1 max-w-2xl mx-4 gap-2">
                             <div className="relative flex-1 hidden md:block">
                                 <Search className="absolute left-2.5 top-2 text-gray-400" size={16} />
@@ -458,33 +552,23 @@
                         </div>
                     </header>
 
-                    {/* Main Layout (2 Column) */}
+                    {/* Main Layout */}
                     <div className="flex flex-1 overflow-hidden">
                         
-                        {/* Left Sidebar: Projects */}
+                        {/* Sidebar: Projects */}
                         <aside className={`w-full md:w-80 bg-gray-50 dark:bg-[#18212f] border-r border-gray-300 dark:border-brand-darkborder flex flex-col shrink-0 transition-colors ${isMobileListOpen ? 'flex' : 'hidden md:flex'}`}>
-                            
                             <div className="p-3 border-b border-gray-200 dark:border-brand-darkborder">
-                                <button 
-                                    onClick={() => selectProject(null)}
-                                    className={`w-full flex items-center gap-2 p-3 rounded-lg border transition ${activeProject === null ? 'bg-brand-lightblue dark:bg-blue-900/30 border-brand-blue text-brand-blue dark:text-blue-400 font-bold shadow-sm' : 'bg-white dark:bg-brand-darkcard border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-                                >
-                                    <LayoutList size={20} />
-                                    <span>すべてのタスク</span>
+                                <button onClick={() => selectProject(null)} className={`w-full flex items-center gap-2 p-3 rounded-lg border transition ${activeProject === null ? 'bg-brand-lightblue dark:bg-blue-900/30 border-brand-blue text-brand-blue dark:text-blue-400 font-bold shadow-sm' : 'bg-white dark:bg-brand-darkcard border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                                    <LayoutList size={20} /><span>すべてのタスク</span>
                                 </button>
                             </div>
-
-                            <div className="p-3 pb-1">
-                                <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Projects</h2>
+                            <div className="p-3 pb-1 flex justify-between items-center">
+                                <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Projects</h2>
                             </div>
-
                             <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-2">
                                 {projectStats.map(stat => (
-                                    <div 
-                                        key={stat.name} 
-                                        onClick={() => selectProject(stat.name)}
-                                        className={`p-3 rounded-lg border cursor-pointer transition ${activeProject === stat.name ? 'bg-white dark:bg-brand-darkcard border-brand-blue shadow-md' : 'bg-white dark:bg-brand-darkcard border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'} ${stat.overdue && activeProject !== stat.name ? 'border-brand-lightred dark:border-red-900/50' : ''}`}
-                                    >
+                                    <div key={stat.name} onClick={() => selectProject(stat.name)}
+                                        className={`p-3 rounded-lg border cursor-pointer transition ${activeProject === stat.name ? 'bg-white dark:bg-brand-darkcard border-brand-blue shadow-md' : 'bg-white dark:bg-brand-darkcard border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'} ${stat.overdue && activeProject !== stat.name ? 'border-brand-lightred dark:border-red-900/50' : ''}`}>
                                         <div className="flex justify-between items-start mb-1.5">
                                             <h3 className={`font-bold text-sm ${activeProject === stat.name ? 'text-brand-blue dark:text-blue-400' : ''}`}>{stat.name}</h3>
                                             {stat.overdue && <span className="bg-brand-red text-white text-[10px] px-1.5 py-0.5 rounded font-bold">遅延</span>}
@@ -499,12 +583,16 @@
                                     </div>
                                 ))}
                             </div>
+                            {/* 追加: プロジェクト作成ボタン */}
+                            <div className="p-3 border-t border-gray-200 dark:border-brand-darkborder bg-white dark:bg-brand-darkcard">
+                                <button onClick={() => setIsNewProjectOpen(true)} className="w-full flex items-center justify-center gap-2 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-brand-blue dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition border border-dashed border-gray-300 dark:border-gray-600">
+                                    <FolderPlus size={18}/> 新規プロジェクト
+                                </button>
+                            </div>
                         </aside>
 
-                        {/* Right Content: Tasks List / Dashboard */}
+                        {/* Right Content */}
                         <main className={`flex-1 flex flex-col bg-white dark:bg-brand-darkbg overflow-hidden relative transition-colors ${!isMobileListOpen ? 'flex' : 'hidden md:flex'}`}>
-                            
-                            {/* Dashboard Header */}
                             {activeProject && (
                                 <div className="bg-white dark:bg-brand-darkcard px-6 py-5 border-b border-gray-200 dark:border-brand-darkborder shrink-0 transition-colors">
                                     <div className="flex flex-col xl:flex-row justify-between gap-6">
@@ -520,7 +608,6 @@
                                                 <div className="flex justify-between gap-4 text-sm"><span className="text-gray-600 dark:text-gray-400"><span className="inline-block w-2.5 h-2.5 rounded-full bg-brand-green mr-1.5"></span>完了</span><span className="font-bold">{chartData[0]}</span></div>
                                                 <div className="flex justify-between gap-4 text-sm"><span className="text-gray-600 dark:text-gray-400"><span className="inline-block w-2.5 h-2.5 rounded-full bg-brand-blue mr-1.5"></span>進行中</span><span className="font-bold">{chartData[1]}</span></div>
                                                 <div className="flex justify-between gap-4 text-sm"><span className="text-gray-600 dark:text-gray-400"><span className={`inline-block w-2.5 h-2.5 rounded-full ${isDarkMode ? 'bg-gray-600' : 'bg-gray-400'} mr-1.5`}></span>未着手</span><span className="font-bold">{chartData[2]}</span></div>
-                                                <div className="flex justify-between gap-4 text-sm border-t border-gray-200 dark:border-gray-700 pt-1 mt-0.5"><span className="text-brand-red dark:text-red-400 font-bold"><span className="inline-block w-2.5 h-2.5 rounded-full bg-brand-red mr-1.5"></span>遅延</span><span className="font-bold text-brand-red dark:text-red-400">{chartData[3]}</span></div>
                                             </div>
                                         </div>
                                     </div>
@@ -530,88 +617,64 @@
                             {!activeProject && (
                                 <div className="bg-white dark:bg-brand-darkcard px-6 py-4 border-b border-gray-200 dark:border-brand-darkborder shrink-0 flex items-center gap-3 transition-colors">
                                     <LayoutList className="text-gray-400" size={24} />
-                                    <div>
-                                        <h2 className="text-lg font-bold">すべてのタスク</h2>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">対応日付順にソートされています</p>
-                                    </div>
+                                    <div><h2 className="text-lg font-bold">すべてのタスク</h2><p className="text-xs text-gray-500 dark:text-gray-400">対応日付順にソートされています</p></div>
                                 </div>
                             )}
 
-                            {/* Task List Area */}
                             <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 dark:bg-brand-darkbg transition-colors">
                                 
                                 <form onSubmit={handleQuickAdd} className="bg-white dark:bg-brand-darkcard p-2 rounded-lg border border-brand-blue dark:border-blue-500/50 shadow-sm mb-6 flex items-center gap-3 transition-colors">
                                     <Plus className="text-brand-blue dark:text-blue-400 ml-2" size={20} />
                                     <input type="text" placeholder={`${activeProject || 'Inbox'} にタスクを追加...`} value={newTaskTitle} onChange={e=>setNewTaskTitle(e.target.value)} 
                                         className="flex-1 border-none focus:ring-0 text-sm bg-transparent outline-none py-1 placeholder-gray-400 dark:placeholder-gray-500" />
-                                    <button type="submit" disabled={!newTaskTitle} className="bg-brand-blue dark:bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-md hover:bg-blue-700 dark:hover:bg-blue-500 disabled:opacity-50 transition">追加</button>
+                                    <button type="submit" disabled={!newTaskTitle} className="bg-brand-blue dark:bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 transition">追加</button>
                                 </form>
 
-                                <div className="bg-white dark:bg-brand-darkcard rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-colors">
-                                    <table className="min-w-full text-left text-sm">
-                                        <thead className="bg-brand-lightgray dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 hidden md:table-header-group">
-                                            <tr>
-                                                <th className="w-12 px-4 py-3 text-center"></th>
-                                                <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">タスク名</th>
-                                                {!activeProject && <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">プロジェクト</th>}
-                                                <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">担当者</th>
-                                                <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">ステータス</th>
-                                                <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">期限日</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800 block md:table-row-group">
-                                            {displayTasks.map(task => {
-                                                const overdue = isOverdue(task);
-                                                const rowBg = overdue ? 'bg-red-50 dark:bg-red-900/10' : task.status === 'done' ? 'bg-gray-50 dark:bg-gray-800/50 opacity-60' : 'hover:bg-gray-50 dark:hover:bg-gray-800';
-                                                
-                                                return (
-                                                    <tr key={task.id} className={`${rowBg} transition cursor-pointer block md:table-row py-3 md:py-0 border-b md:border-b-0`} onClick={() => setSelectedTask(task)}>
-                                                        <td className="px-4 md:py-3 text-center align-middle inline-block md:table-cell" onClick={e=>e.stopPropagation()}>
-                                                            <div className="relative flex items-center justify-center cursor-pointer" onClick={() => handleToggleTaskStatus(task)}>
-                                                                <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-colors ${task.status === 'done' ? 'bg-brand-green border-brand-green' : task.status === 'in_progress' ? 'bg-brand-blue border-brand-blue' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'}`}>
-                                                                    {task.status === 'done' && <Check size={14} className="text-white" strokeWidth={3} />}
-                                                                    {task.status === 'in_progress' && <div className="w-2.5 h-0.5 bg-white rounded"></div>}
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 md:py-3 align-middle inline-block md:table-cell w-[calc(100%-3rem)] md:w-auto">
-                                                            <span className={`font-medium ${task.status === 'done' ? 'line-through text-gray-500' : ''} ${overdue ? 'font-bold' : ''}`}>{task.title}</span>
-                                                        </td>
-                                                        {!activeProject && (
-                                                            <td className="px-4 py-1 md:py-3 text-xs md:text-sm block md:table-cell ml-8 md:ml-0 text-gray-500 dark:text-gray-400">
-                                                                <span className="md:hidden mr-1 text-[10px]">Project:</span>{task.projectId}
-                                                            </td>
-                                                        )}
-                                                        <td className="px-4 py-1 md:py-3 text-xs md:text-sm block md:table-cell ml-8 md:ml-0">
-                                                            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
-                                                                <span className="md:hidden mr-1 text-[10px]">担当:</span>
-                                                                {task.assignee ? <><User size={14}/>{task.assignee}</> : <span>-</span>}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-1 md:py-3 block md:table-cell ml-8 md:ml-0">
-                                                            <span className="md:hidden text-gray-400 mr-1 text-[10px]">状態:</span>
-                                                            {overdue ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-white dark:bg-gray-800 text-brand-red dark:text-red-400 border border-brand-red dark:border-red-500/50">遅延</span>
-                                                             : task.status === 'done' ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-brand-lightgreen dark:bg-green-900/30 text-brand-green dark:text-green-400 border border-brand-green dark:border-green-500/50">完了</span>
-                                                             : task.status === 'in_progress' ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-brand-lightblue dark:bg-blue-900/30 text-brand-blue dark:text-blue-400 border border-brand-blue dark:border-blue-500/50">進行中</span>
-                                                             : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600">未着手</span>}
-                                                        </td>
-                                                        <td className="px-4 py-1 md:py-3 block md:table-cell ml-8 md:ml-0">
-                                                            <span className="md:hidden text-gray-400 mr-1 text-[10px]">期限:</span>
-                                                            {task.dueDate ? (
-                                                                <span className={`font-bold flex items-center gap-1 text-sm ${overdue ? 'text-brand-red dark:text-red-400' : task.dueDate === today ? 'text-brand-orange dark:text-orange-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                                                                    {overdue && <AlertCircle size={14}/>} {task.dueDate}
-                                                                </span>
-                                                            ) : <span className="text-gray-400 dark:text-gray-500">-</span>}
-                                                        </td>
-                                                    </tr>
-                                                )
-                                            })}
-                                            {displayTasks.length === 0 && (
-                                                <tr><td colSpan="6" className="text-center py-8 text-gray-500">タスクが見つかりません</td></tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                {/* 未完了タスク */}
+                                {uncompletedTasks.length > 0 ? (
+                                    <div className="bg-white dark:bg-brand-darkcard rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-8">
+                                        <table className="min-w-full text-left text-sm">
+                                            <thead className="bg-brand-lightgray dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 hidden md:table-header-group">
+                                                <tr>
+                                                    <th className="w-12 px-4 py-3 text-center"></th>
+                                                    <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">タスク名</th>
+                                                    {!activeProject && <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">プロジェクト</th>}
+                                                    <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">担当者</th>
+                                                    <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">ステータス</th>
+                                                    <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">期限日</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800 block md:table-row-group">
+                                                {uncompletedTasks.map(renderTaskRow)}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-10 text-gray-500 dark:text-gray-400 mb-8">未完了のタスクはありません 🎉</div>
+                                )}
+
+                                {/* 追加: 完了タスク (アコーディオン形式で折りたたみ) */}
+                                {completedTasks.length > 0 && (
+                                    <div>
+                                        <button 
+                                            onClick={() => setShowCompleted(!showCompleted)} 
+                                            className="flex items-center gap-2 text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                                        >
+                                            {showCompleted ? <ChevronDown size={18}/> : <ChevronRight size={18}/>}
+                                            完了済みタスク ({completedTasks.length})
+                                        </button>
+                                        
+                                        {showCompleted && (
+                                            <div className="bg-white dark:bg-brand-darkcard rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden opacity-80">
+                                                <table className="min-w-full text-left text-sm">
+                                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800 block md:table-row-group">
+                                                        {completedTasks.map(renderTaskRow)}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </main>
                     </div>
@@ -624,18 +687,27 @@
                             <>
                                 <header className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 shrink-0">
                                     <h3 className="font-bold">タスク詳細の編集</h3>
-                                    <button onClick={()=>setSelectedTask(null)} className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"><X size={20}/></button>
+                                    <button onClick={()=>setSelectedTask(null)} className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"><X size={20}/></button>
                                 </header>
                                 <div className="p-5 overflow-y-auto flex-1 space-y-5">
+                                    {/* Project (追加) */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">プロジェクト</label>
+                                        <select value={selectedTask.projectId} onChange={e=>handleUpdateTask({...selectedTask, projectId:e.target.value})} 
+                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none">
+                                            {projects.map(p => <option key={p} value={p}>{p}</option>)}
+                                        </select>
+                                    </div>
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">タスク名</label>
                                         <textarea value={selectedTask.title} onChange={e=>handleUpdateTask({...selectedTask, title:e.target.value})} 
-                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none resize-none" rows="2" />
+                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none resize-none" rows="2" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">ステータス</label>
-                                            <select value={selectedTask.status} onChange={e=>handleUpdateTask({...selectedTask, status:e.target.value})} 
+                                            <select value={selectedTask.status} 
+                                                onChange={e => changeTaskStatus(selectedTask, e.target.value)} 
                                                 className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none">
                                                 <option value="todo">未着手 ( - [ ] )</option>
                                                 <option value="in_progress">進行中 ( - [/] )</option>
@@ -646,18 +718,27 @@
                                             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">担当者</label>
                                             <input type="text" value={selectedTask.assignee || ''} onChange={e=>handleUpdateTask({...selectedTask, assignee:e.target.value})} placeholder="例: 佐藤" 
                                                 className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none" />
-                                            <p className="text-[10px] text-gray-400 mt-0.5">#担当者(名前) で保存</p>
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">期限日</label>
-                                        <input type="date" value={selectedTask.dueDate || ''} onChange={e=>handleUpdateTask({...selectedTask, dueDate:e.target.value})} 
-                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none text-brand-blue dark:text-blue-400" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">その他のタグ</label>
-                                        <input type="text" value={selectedTask.tags?.join(' ') || ''} onChange={e=>handleUpdateTask({...selectedTask, tags: e.target.value.split(/\s+/).filter(Boolean)})} placeholder="design front-end (スペース区切り)" 
-                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none" />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">期限日</label>
+                                            <input type="date" value={selectedTask.dueDate || ''} onChange={e=>handleUpdateTask({...selectedTask, dueDate:e.target.value})} 
+                                                className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none text-brand-blue dark:text-blue-400" />
+                                        </div>
+                                        {/* 繰り返し設定 (追加) */}
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Repeat size={12}/> 繰り返し</label>
+                                            <select value={selectedTask.recurrence || ''} onChange={e=>handleUpdateTask({...selectedTask, recurrence:e.target.value})} 
+                                                className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none">
+                                                <option value="">なし</option>
+                                                <option value="every day">毎日 (every day)</option>
+                                                <option value="every weekday">平日 (every weekday)</option>
+                                                <option value="every week">毎週 (every week)</option>
+                                                <option value="every month">毎月 (every month)</option>
+                                                <option value="every year">毎年 (every year)</option>
+                                            </select>
+                                        </div>
                                     </div>
                                     <div className="flex-1 flex flex-col">
                                         <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">ノート・詳細 (Markdown)</label>
@@ -670,36 +751,60 @@
                     </div>
 
                     {/* ==========================================
+                        Create Project Modal
+                    ========================================== */}
+                    <div className={`fixed inset-0 bg-black/60 z-50 flex items-center justify-center transition-opacity ${isNewProjectOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+                        <div className="bg-white dark:bg-brand-darkcard rounded-lg shadow-xl w-full max-w-sm overflow-hidden m-4">
+                            <header className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                                <h3 className="font-bold flex items-center gap-2"><FolderPlus size={18}/> 新規プロジェクトの作成</h3>
+                                <button onClick={()=>setIsNewProjectOpen(false)}><X size={20} className="text-gray-500"/></button>
+                            </header>
+                            <form onSubmit={handleCreateProject} className="p-5 space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">プロジェクト名</label>
+                                    <input type="text" value={newProjectName} onChange={e=>setNewProjectName(e.target.value)} placeholder="例: デザインリニューアル" autoFocus
+                                        className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm focus:border-brand-blue outline-none" />
+                                    <p className="text-[10px] text-gray-500 mt-2">Markdownの <code># 見出し</code> として保存されます。</p>
+                                </div>
+                                <div className="flex gap-2 justify-end pt-2">
+                                    <button type="button" onClick={()=>setIsNewProjectOpen(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">キャンセル</button>
+                                    <button type="submit" disabled={!newProjectName.trim()} className="bg-brand-blue dark:bg-blue-600 text-white font-bold px-4 py-2 text-sm rounded disabled:opacity-50 hover:bg-blue-700">作成</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    {/* ==========================================
                         Settings Modal
                     ========================================== */}
-                    <div className={`fixed inset-0 bg-black/60 z-50 flex items-center justify-center transition-opacity ${isSettingsOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+                    <div className={`fixed inset-0 bg-black/60 z-[60] flex items-center justify-center transition-opacity ${isSettingsOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                         <div className="bg-white dark:bg-brand-darkcard rounded-lg shadow-xl w-full max-w-md overflow-hidden m-4 transition-colors">
                             <header className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
                                 <h3 className="font-bold flex items-center gap-2"><Github size={20}/> GitHub Sync 設定</h3>
-                                <button onClick={()=>setIsSettingsOpen(false)}><X size={20} className="text-gray-500 dark:text-gray-400"/></button>
+                                <button onClick={()=>setIsSettingsOpen(false)}><X size={20} className="text-gray-500"/></button>
                             </header>
                             <div className="p-5 space-y-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Personal Access Token</label>
                                     <input type="password" value={githubConfig.token} onChange={e=>setGithubConfig({...githubConfig, token:e.target.value})} 
-                                        className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm" />
+                                        className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm outline-none" />
                                 </div>
                                 <div className="flex gap-3">
                                     <div className="flex-1">
                                         <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Owner</label>
                                         <input type="text" value={githubConfig.owner} onChange={e=>setGithubConfig({...githubConfig, owner:e.target.value})} 
-                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm" />
+                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm outline-none" />
                                     </div>
                                     <div className="flex-1">
                                         <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Repo</label>
                                         <input type="text" value={githubConfig.repo} onChange={e=>setGithubConfig({...githubConfig, repo:e.target.value})} 
-                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm" />
+                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm outline-none" />
                                     </div>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">File Path</label>
                                     <input type="text" value={githubConfig.path} onChange={e=>setGithubConfig({...githubConfig, path:e.target.value})} placeholder="Tasks.md" 
-                                        className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm" />
+                                        className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm outline-none" />
                                 </div>
                                 <button onClick={() => { localStorage.setItem('obsidian_github_config', JSON.stringify(githubConfig)); setIsSettingsOpen(false); handleFetchFromGithub(false); }} 
                                     className="w-full bg-brand-blue dark:bg-blue-600 text-white font-bold py-2 rounded mt-2 flex items-center justify-center gap-2 hover:bg-blue-700 dark:hover:bg-blue-500">
