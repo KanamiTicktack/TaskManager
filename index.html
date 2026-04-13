@@ -1,788 +1,720 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <!-- PWA・スマホアプリ化のためのビューポート設定 -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Obsidian Tasks Sync</title>
-  
-  <!-- Tailwind CSS の読み込み -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Babel (ブラウザ上でReactのJSXを変換するため) -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>タスク管理ダッシュボード (Obsidian Sync)</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // ダークモードの設定をクラスベースで切り替え可能にする
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        // デジタル庁デザインシステムを意識した基本色
+                        brand: {
+                            blue: '#005BAC', lightblue: '#E6F2FA',
+                            green: '#008851', lightgreen: '#E6F4ED',
+                            orange: '#E67A00',
+                            red: '#E60000', lightred: '#FCE8E8',
+                            gray: '#767676', lightgray: '#F3F4F6',
+                            // ダークモード時のアクセント調整用
+                            darkblue: '#1e3a8a',
+                            darkbg: '#111827',
+                            darkcard: '#1f2937',
+                            darkborder: '#374151'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <style>
-    /* スクロールバー非表示・セーフエリア対応の補助スタイル */
-    body {
-      background-color: #1e1e1e;
-      overscroll-behavior-y: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .scrollbar-hide::-webkit-scrollbar { display: none; }
-    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-  </style>
+    <style>
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* スクロールバーのカスタマイズ (ダークモード対応) */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .chart-container { position: relative; height: 120px; width: 120px; }
+    </style>
 </head>
-<body>
-  <div id="root"></div>
+<body class="h-screen flex flex-col overflow-hidden text-sm bg-gray-100 dark:bg-brand-darkbg text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <div id="root" class="h-full"></div>
 
-  <!-- アプリケーション本体 (Reactモジュールとして実行) -->
-  <script type="text/babel" data-type="module">
-    import React, { useState, useEffect, useMemo, useRef } from 'https://esm.sh/react@18.2.0';
-    import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
-    import { 
-      Menu, Search, CalendarDays, Calendar, Inbox, Hash, Clock, 
-      ChevronRight, ChevronDown, PlusCircle, Plus, CalendarPlus, 
-      Send, Github, Settings, ChevronsUp, ChevronUp, Tag, AlignLeft, 
-      X, Check, Save, RefreshCw, Info, Loader2, Cloud, Repeat, 
-      AlertCircle, CalendarClock, ListTodo
-    } from 'https://esm.sh/lucide-react@0.292.0';
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useMemo, useRef } from 'https://esm.sh/react@18.2.0';
+        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
+        import { 
+            Kanban, Search, Calendar, Inbox, Clock, Edit2, ChevronLeft, ChevronDown, 
+            PlusCircle, Plus, Send, Github, Settings, X, Check, Save, RefreshCw, 
+            Info, Loader2, Cloud, AlertCircle, LayoutList, Hash, User, Moon, Sun
+        } from 'https://esm.sh/lucide-react@0.292.0';
 
-    // ==========================================
-    // ユーティリティ: Markdown ⇔ タスク (Parser)
-    // ==========================================
-    const serializeTaskToMarkdown = (task) => {
-      let line = `- [${task.status === 'done' ? 'x' : ' '}] ${task.title}`;
-      if (task.priority === 'high') line += ' ⏫';
-      if (task.priority === 'medium') line += ' 🔼';
-      if (task.priority === 'low') line += ' 🔽';
-      if (task.recurrence) line += ` 🔁 ${task.recurrence}`;
-      if (task.dueDate) line += ` 📅 ${task.dueDate}`;
-      if (task.tags && task.tags.length > 0) {
-        task.tags.forEach(tag => { line += ` #${tag}`; });
-      }
-      let result = line;
-      if (task.notes) {
-        const indentedNotes = task.notes.split('\n').map(n => `    ${n}`).join('\n');
-        result += `\n${indentedNotes}`;
-      }
-      return result;
-    };
+        const getTodayString = () => new Date().toISOString().split('T')[0];
 
-    const parseMarkdownToTasks = (markdown) => {
-      const lines = markdown.split('\n');
-      const tasks = [];
-      let currentTask = null;
+        // ==========================================
+        // ユーティリティ: Markdown ⇔ タスク (Parser)
+        // ==========================================
+        const parseMarkdownToTasks = (markdown) => {
+            const lines = markdown.split('\n');
+            const tasks = [];
+            const projects = [];
+            let currentProjectName = 'Inbox';
+            
+            if (!projects.includes(currentProjectName)) projects.push(currentProjectName);
+            let currentTask = null;
 
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const taskMatch = line.match(/^(\s*)-\s*\[([ xX])\]\s*(.*)/);
-        
-        if (taskMatch) {
-          const statusChar = taskMatch[2].toLowerCase();
-          let content = taskMatch[3];
-          const status = statusChar === 'x' ? 'done' : 'todo';
-          let priority = 'normal';
-          let dueDate = '';
-          let recurrence = '';
-          const tags = [];
-          
-          if (content.includes('⏫')) { priority = 'high'; content = content.replace('⏫', ''); }
-          else if (content.includes('🔼')) { priority = 'medium'; content = content.replace('🔼', ''); }
-          else if (content.includes('🔽')) { priority = 'low'; content = content.replace('🔽', ''); }
-          
-          const recMatch = content.match(/🔁\s*([^⏫🔼🔽📅#]+)/);
-          if (recMatch) { recurrence = recMatch[1].trim(); content = content.replace(recMatch[0], ''); }
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                
+                const headingMatch = line.match(/^(#{1,6})\s+(.*)/);
+                if (headingMatch) {
+                    currentProjectName = headingMatch[2].trim();
+                    if (!projects.includes(currentProjectName)) projects.push(currentProjectName);
+                    continue;
+                }
 
-          const dateMatch = content.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
-          if (dateMatch) { dueDate = dateMatch[1]; content = content.replace(dateMatch[0], ''); }
-          
-          // ★修正ポイント: 日本語（マルチバイト文字）やスラッシュ等を含むタグを正しく認識するように正規表現を強化
-          const tagRegex = /(?:^|\s)#([\p{L}\p{N}_\-\/]+)/gu;
-          let tMatch;
-          while ((tMatch = tagRegex.exec(content)) !== null) { tags.push(tMatch[1]); }
-          content = content.replace(/(?:^|\s)#([\p{L}\p{N}_\-\/]+)/gu, '');
-          
-          currentTask = {
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-            title: content.trim(), status, priority, dueDate, recurrence, tags, notes: ''
-          };
-          tasks.push(currentTask);
-        } else if (currentTask) {
-          const noteLine = line.replace(/^ {1,4}|\t/, '');
-          if (currentTask.notes === '') { currentTask.notes = noteLine; } 
-          else { currentTask.notes += '\n' + noteLine; }
-        }
-      }
-      tasks.forEach(t => { t.notes = t.notes.trimEnd(); });
-      return tasks;
-    };
-
-    const renderTextWithLinks = (text) => {
-      if (!text) return null;
-      const urlRegex = /(https?:\/\/[^\s]+)/g;
-      const parts = text.split(urlRegex);
-      return parts.map((part, i) => {
-        if (part.match(urlRegex)) {
-          return (
-            <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-[#8a5cf5] hover:underline break-all" onClick={(e) => e.stopPropagation()}>
-              {part}
-            </a>
-          );
-        }
-        return <span key={i} className="break-words">{part}</span>;
-      });
-    };
-
-    const initialWelcomeTasks = [
-      { id: 'w1', title: '左上のメニューからGitHub連携を設定する', status: 'todo', priority: 'high', dueDate: '', recurrence: '', tags: ['setup'], notes: '設定が完了すると、ここにあるサンプルタスクはあなたのObsidianデータで上書きされます！' },
-      { id: 'w2', title: 'スマホのホーム画面に追加する (PWA対応)', status: 'todo', priority: 'medium', dueDate: '', recurrence: '', tags: ['setup'], notes: 'Safariなら「共有ボタン」→「ホーム画面に追加」で、ネイティブアプリのように使えます。' }
-    ];
-
-    // ==========================================
-    // メインコンポーネント (v1.0)
-    // ==========================================
-    function App() {
-      const getTodayString = () => new Date().toISOString().split('T')[0];
-
-      const [tasks, setTasks] = useState(initialWelcomeTasks);
-      const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-      const [isDetailOpen, setIsDetailOpen] = useState(false);
-      const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-      const [selectedTask, setSelectedTask] = useState(null);
-      const [currentFilter, setCurrentFilter] = useState({ type: 'all', value: null });
-      const [inputValue, setInputValue] = useState('');
-      const [newTagInput, setNewTagInput] = useState(''); // タグ手動入力用
-      
-      const [isInitialLoaded, setIsInitialLoaded] = useState(false); 
-      const [isSyncing, setIsSyncing] = useState(false);
-      const [isFetching, setIsFetching] = useState(false);
-      const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-      const autoSaveTimerRef = useRef(null);
-
-      const [githubConfig, setGithubConfig] = useState(() => {
-        const saved = localStorage.getItem('obsidian_github_config');
-        return saved ? JSON.parse(saved) : { token: '', owner: '', repo: '', path: 'Tasks.md' };
-      });
-
-      const showToast = (message, type = 'success') => {
-        setToast({ show: true, message, type });
-        setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
-      };
-
-      // --- PWA化＆極限までシンプルなアイコン生成ロジック ---
-      useEffect(() => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 512;
-        const ctx = canvas.getContext('2d');
-        
-        ctx.fillStyle = '#8a5cf5';
-        ctx.fillRect(0, 0, 512, 512);
-        
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 50;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(140, 260);
-        ctx.lineTo(220, 340);
-        ctx.lineTo(370, 180);
-        ctx.stroke();
-        
-        const iconDataUrl = canvas.toDataURL('image/png');
-
-        const manifest = {
-          name: "Obsidian Tasks Sync",
-          short_name: "Tasks",
-          start_url: ".",
-          display: "standalone",
-          background_color: "#1e1e1e",
-          theme_color: "#1e1e1e",
-          icons: [{
-            src: iconDataUrl,
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "any maskable"
-          }]
+                const taskMatch = line.match(/^(\s*)-\s*\[([ xX\/])\]\s*(.*)/);
+                
+                if (taskMatch) {
+                    const statusChar = taskMatch[2].toLowerCase();
+                    let content = taskMatch[3];
+                    
+                    let status = 'todo';
+                    if (statusChar === 'x') status = 'done';
+                    else if (statusChar === '/') status = 'in_progress';
+                    
+                    let priority = 'normal';
+                    let dueDate = '';
+                    let recurrence = '';
+                    const tags = [];
+                    let assignee = null;
+                    
+                    if (content.includes('⏫')) { priority = 'high'; content = content.replace('⏫', ''); }
+                    else if (content.includes('🔼')) { priority = 'medium'; content = content.replace('🔼', ''); }
+                    else if (content.includes('🔽')) { priority = 'low'; content = content.replace('🔽', ''); }
+                    
+                    const dateMatch = content.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+                    if (dateMatch) { dueDate = dateMatch[1]; content = content.replace(dateMatch[0], ''); }
+                    
+                    const tagRegex = /(?:^|\s)#([\p{L}\p{N}_\-\/\(\)]+)/gu;
+                    let tMatch;
+                    while ((tMatch = tagRegex.exec(content)) !== null) { 
+                        const fullTag = tMatch[1];
+                        const assigneeMatch = fullTag.match(/^担当者\((.*)\)$/);
+                        if (assigneeMatch) assignee = assigneeMatch[1];
+                        else tags.push(fullTag); 
+                    }
+                    content = content.replace(/(?:^|\s)#([\p{L}\p{N}_\-\/\(\)]+)/gu, '');
+                    
+                    currentTask = {
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                        projectId: currentProjectName,
+                        title: content.trim(), status, priority, dueDate, recurrence, tags, assignee, notes: ''
+                    };
+                    tasks.push(currentTask);
+                } else if (currentTask && line.trim() !== '') {
+                    const noteLine = line.replace(/^ {1,4}|\t/, '');
+                    if (currentTask.notes === '') currentTask.notes = noteLine;
+                    else currentTask.notes += '\n' + noteLine;
+                }
+            }
+            tasks.forEach(t => { t.notes = t.notes.trimEnd(); });
+            return { tasks, projects };
         };
-        const stringManifest = JSON.stringify(manifest);
-        const blob = new Blob([stringManifest], {type: 'application/json'});
-        const manifestURL = URL.createObjectURL(blob);
-        
-        let manifestLink = document.querySelector('link[rel="manifest"]');
-        if (!manifestLink) {
-          manifestLink = document.createElement('link');
-          manifestLink.rel = 'manifest';
-          document.head.appendChild(manifestLink);
-        }
-        manifestLink.href = manifestURL;
 
-        let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
-        if (!appleIcon) {
-          appleIcon = document.createElement('link');
-          appleIcon.rel = 'apple-touch-icon';
-          document.head.appendChild(appleIcon);
-        }
-        appleIcon.href = iconDataUrl;
+        const serializeTasksToMarkdown = (tasks, projects) => {
+            let markdown = '';
+            projects.forEach(projName => {
+                const projTasks = tasks.filter(t => t.projectId === projName);
+                if (projTasks.length > 0 || projName !== 'Inbox') {
+                    markdown += `# ${projName}\n\n`;
+                    projTasks.forEach(task => {
+                        let statusChar = ' ';
+                        if (task.status === 'done') statusChar = 'x';
+                        else if (task.status === 'in_progress') statusChar = '/';
+                        
+                        let line = `- [${statusChar}] ${task.title}`;
+                        if (task.priority === 'high') line += ' ⏫';
+                        if (task.priority === 'medium') line += ' 🔼';
+                        if (task.priority === 'low') line += ' 🔽';
+                        if (task.dueDate) line += ` 📅 ${task.dueDate}`;
+                        if (task.assignee) line += ` #担当者(${task.assignee})`;
+                        if (task.tags && task.tags.length > 0) {
+                            task.tags.forEach(tag => { line += ` #${tag}`; });
+                        }
+                        markdown += `${line}\n`;
+                        if (task.notes) {
+                            const indentedNotes = task.notes.split('\n').map(n => `    ${n}`).join('\n');
+                            markdown += `${indentedNotes}\n`;
+                        }
+                    });
+                    markdown += '\n';
+                }
+            });
+            return markdown.trim();
+        };
 
-        const metas = [
-          { name: 'theme-color', content: '#1e1e1e' },
-          { name: 'apple-mobile-web-app-capable', content: 'yes' },
-          { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
-          { name: 'apple-mobile-web-app-title', content: 'Tasks' }
-        ];
-        metas.forEach(({name, content}) => {
-          let meta = document.querySelector(`meta[name="${name}"]`);
-          if (!meta) {
-            meta = document.createElement('meta');
-            meta.name = name;
-            document.head.appendChild(meta);
-          }
-          meta.content = content;
-        });
+        const initialSampleData = `# Webサイトリニューアル
 
-      }, []);
+- [ ] トップページデザイン初稿提出 📅 2026-04-10 ⏫ #担当者(佐藤) #design
+- [/] ワイヤーフレームの修正 📅 2026-04-14 🔼 #担当者(鈴木)
+- [x] 競合分析レポート作成 📅 2026-04-05 #担当者(佐藤)
 
-      // --- GitHub API 連携処理 ---
-      const handleFetchFromGithub = async (isInitial = false) => {
-        const { token, owner, repo, path } = githubConfig;
-        if (!token || !owner || !repo || !path) {
-          setIsInitialLoaded(true);
-          return;
-        }
-        setIsFetching(true);
-        try {
-          const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-          const res = await fetch(url, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
-          if (!res.ok) {
-            if (res.status === 404 && !isInitial) throw new Error("ファイルが見つかりません。");
-            else if (res.status === 404) { setIsInitialLoaded(true); return; } 
-            throw new Error(`API Error: ${res.statusText}`);
-          }
-          const data = await res.json();
-          const base64Content = data.content.replace(/\n/g, '');
-          const binaryString = atob(base64Content);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
-          const markdownContent = new TextDecoder().decode(bytes);
-          const parsedTasks = parseMarkdownToTasks(markdownContent);
-          setTasks(parsedTasks);
-          if (!isInitial) showToast("最新データを読み込みました");
-        } catch (error) {
-          console.error("Fetch Error:", error);
-          if (!isInitial) showToast(`読み込み失敗: ${error.message}`, "error");
-        } finally {
-          setIsFetching(false);
-          setIsInitialLoaded(true);
-        }
-      };
+# 社内基幹システム移行
 
-      const handleSaveToGithub = async (tasksToSave) => {
-        const { token, owner, repo, path } = githubConfig;
-        if (!token || !owner || !repo || !path) return;
-        setIsSyncing(true);
-        try {
-          const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-          const headers = { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' };
-          let fileSha = null;
-          try {
-            const getRes = await fetch(url, { headers });
-            if (getRes.ok) { const data = await getRes.json(); fileSha = data.sha; }
-          } catch (e) {}
-          const markdownContent = tasksToSave.map(t => serializeTaskToMarkdown(t)).join('\n\n');
-          const bytes = new TextEncoder().encode(markdownContent);
-          const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
-          const base64Content = btoa(binString);
-          const body = { message: 'Auto-sync from Tasks Web App', content: base64Content };
-          if (fileSha) body.sha = fileSha;
-          const putRes = await fetch(url, { method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-          if (!putRes.ok) throw new Error('保存失敗');
-          showToast("GitHubに自動保存しました", "success");
-        } catch (error) {
-          console.error("Save Error:", error);
-          showToast(`自動保存エラー`, "error");
-        } finally {
-          setIsSyncing(false);
-        }
-      };
+- [ ] CMSツールの選定 📅 2026-04-15 🔽 #担当者(高橋)
+- [/] 要件定義書のレビュー 📅 2026-04-12 #担当者(田中)
 
-      const triggerAutoSave = (newTasks) => {
-        if (!githubConfig.token || !githubConfig.repo) return;
-        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-        setIsSyncing(true);
-        autoSaveTimerRef.current = setTimeout(() => { handleSaveToGithub(newTasks); }, 2000);
-      };
+# Inbox
 
-      useEffect(() => {
-        handleFetchFromGithub(true);
-      }, []);
+- [ ] 定例会議の議事録作成 📅 2026-04-15 #meeting
+`;
 
-      // --- タスク操作 ---
-      const handleToggleTask = (id) => {
-        const newTasks = tasks.map(t => t.id === id ? { ...t, status: t.status === 'todo' ? 'done' : 'todo' } : t);
-        setTasks(newTasks);
-        if (selectedTask && selectedTask.id === id) { setSelectedTask({...selectedTask, status: selectedTask.status === 'todo' ? 'done' : 'todo'}); }
-        triggerAutoSave(newTasks);
-      };
+        // ==========================================
+        // Chart Component
+        // ==========================================
+        const StatusChart = ({ dataValues, isDarkMode }) => {
+            const canvasRef = useRef(null);
+            const chartRef = useRef(null);
 
-      const handleAddTask = (e) => {
-        e.preventDefault();
-        if (!inputValue.trim()) return;
-        const tags = [];
-        let title = inputValue;
-        // ★修正ポイント: タスク追加時のタグ抽出も日本語に対応
-        const tagRegex = /(?:^|\s)#([\p{L}\p{N}_\-\/]+)/gu;
-        let match;
-        while ((match = tagRegex.exec(inputValue)) !== null) { tags.push(match[1]); }
-        title = title.replace(/(?:^|\s)#([\p{L}\p{N}_\-\/]+)/gu, '').trim();
-        const newTask = { id: Date.now().toString(), title, status: 'todo', priority: 'normal', dueDate: '', recurrence: '', tags, notes: '' };
-        const newTasks = [newTask, ...tasks];
-        setTasks(newTasks);
-        setInputValue('');
-        triggerAutoSave(newTasks);
-      };
+            useEffect(() => {
+                if (chartRef.current) chartRef.current.destroy();
+                const ctx = canvasRef.current.getContext('2d');
+                
+                // ダークモード対応: 背景に馴染むようにボーダー色を変更
+                const borderColor = isDarkMode ? '#1f2937' : '#f9fafb';
 
-      const handleOpenDetail = (task) => { 
-        setSelectedTask(task);
-        setNewTagInput(''); 
-        setIsDetailOpen(true); 
-      };
-      
-      const handleUpdateTask = (updatedTask) => {
-        const newTasks = tasks.map(t => t.id === updatedTask.id ? updatedTask : t);
-        setTasks(newTasks); setSelectedTask(updatedTask); triggerAutoSave(newTasks);
-      };
-      
-      const handleDeleteTask = (id) => {
-        const newTasks = tasks.filter(t => t.id !== id);
-        setTasks(newTasks); setIsDetailOpen(false); triggerAutoSave(newTasks);
-      };
-      
-      const handleSaveSettings = () => {
-        localStorage.setItem('obsidian_github_config', JSON.stringify(githubConfig));
-        setIsSettingsOpen(false); 
-        showToast("設定を保存しました。データを取得します...");
-        handleFetchFromGithub(false);
-      };
+                chartRef.current = new window.Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['完了', '進行中', '未着手', '遅延'],
+                        datasets: [{
+                            data: dataValues,
+                            // ブランドカラーはダークでも視認できるためそのまま使用
+                            backgroundColor: ['#008851', '#005BAC', isDarkMode ? '#4b5563' : '#A0AEC0', '#E60000'],
+                            borderColor: borderColor,
+                            borderWidth: 2,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, cutout: '70%',
+                        plugins: { legend: { display: false } }
+                    }
+                });
+                return () => { if (chartRef.current) chartRef.current.destroy(); };
+            }, [dataValues, isDarkMode]);
 
-      // --- フィルターとグループ化計算 ---
-      const filteredTasks = useMemo(() => {
-        let filtered = tasks;
-        if (currentFilter.type === 'tag') { 
-          filtered = tasks.filter(t => t.tags?.includes(currentFilter.value)); 
-        } 
-        else if (currentFilter.type === 'today') { 
-          const today = getTodayString(); 
-          filtered = tasks.filter(t => t.dueDate === today); 
-        }
-        return filtered;
-      }, [tasks, currentFilter]);
+            return <canvas ref={canvasRef} />;
+        };
 
-      const activeTasks = filteredTasks.filter(t => t.status === 'todo');
-      const completedTasks = filteredTasks.filter(t => t.status === 'done');
-      
-      const allTags = useMemo(() => {
-        const tags = new Set();
-        tasks.forEach(t => t.tags?.forEach(tag => tags.add(tag)));
-        return Array.from(tags).sort();
-      }, [tasks]);
+        // ==========================================
+        // Main App Component
+        // ==========================================
+        function App() {
+            const today = getTodayString();
+            
+            // --- ダークモードの状態管理 ---
+            const [isDarkMode, setIsDarkMode] = useState(() => {
+                if (localStorage.getItem('theme') === 'dark') return true;
+                if (localStorage.getItem('theme') === 'light') return false;
+                return window.matchMedia('(prefers-color-scheme: dark)').matches;
+            });
 
-      const groupedTasks = useMemo(() => {
-        const today = getTodayString();
-        const groups = { overdue: [], today: [], upcoming: [], noDue: [] };
+            useEffect(() => {
+                const root = window.document.documentElement;
+                if (isDarkMode) {
+                    root.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    root.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                }
+            }, [isDarkMode]);
 
-        activeTasks.forEach(task => {
-          if (!task.dueDate) { groups.noDue.push(task); } 
-          else if (task.dueDate < today) { groups.overdue.push(task); } 
-          else if (task.dueDate === today) { groups.today.push(task); } 
-          else { groups.upcoming.push(task); }
-        });
+            const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
-        groups.overdue.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-        groups.upcoming.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-        return groups;
-      }, [activeTasks]);
+            // --- State ---
+            const [tasks, setTasks] = useState([]);
+            const [projects, setProjects] = useState(['Inbox']);
+            const [activeProject, setActiveProject] = useState(null);
+            const [isMobileListOpen, setIsMobileListOpen] = useState(true);
+            
+            const [searchQuery, setSearchQuery] = useState('');
+            const [filterAssignee, setFilterAssignee] = useState('');
+            const [filterTag, setFilterTag] = useState('');
+
+            const [selectedTask, setSelectedTask] = useState(null);
+            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+            const [newTaskTitle, setNewTaskTitle] = useState('');
+
+            const [isInitialLoaded, setIsInitialLoaded] = useState(false); 
+            const [isSyncing, setIsSyncing] = useState(false);
+            const [isFetching, setIsFetching] = useState(false);
+            const autoSaveTimerRef = useRef(null);
+
+            const [githubConfig, setGithubConfig] = useState(() => {
+                const saved = localStorage.getItem('obsidian_github_config');
+                return saved ? JSON.parse(saved) : { token: '', owner: '', repo: '', path: 'Tasks.md' };
+            });
+
+            // --- API / Data Sync ---
+            const handleFetchFromGithub = async (isInitial = false) => {
+                const { token, owner, repo, path } = githubConfig;
+                if (!token || !owner || !repo || !path) {
+                    if (tasks.length === 0) {
+                        const parsed = parseMarkdownToTasks(initialSampleData);
+                        setTasks(parsed.tasks); setProjects(parsed.projects);
+                    }
+                    setIsInitialLoaded(true); return;
+                }
+                setIsFetching(true);
+                try {
+                    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+                    const res = await fetch(url, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
+                    if (!res.ok) throw new Error("File not found");
+                    const data = await res.json();
+                    const base64Content = data.content.replace(/\n/g, '');
+                    const bytes = new Uint8Array(atob(base64Content).length);
+                    for (let i = 0; i < bytes.length; i++) bytes[i] = atob(base64Content).charCodeAt(i);
+                    const markdownContent = new TextDecoder().decode(bytes);
+                    const parsed = parseMarkdownToTasks(markdownContent);
+                    setTasks(parsed.tasks); setProjects(parsed.projects);
+                } catch (error) {
+                    console.error("Fetch Error:", error);
+                } finally {
+                    setIsFetching(false); setIsInitialLoaded(true);
+                }
+            };
+
+            const triggerAutoSave = (newTasks, newProjects = projects) => {
+                if (!githubConfig.token) return;
+                if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+                setIsSyncing(true);
+                autoSaveTimerRef.current = setTimeout(async () => {
+                    try {
+                        const url = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${githubConfig.path}`;
+                        const headers = { 'Authorization': `token ${githubConfig.token}`, 'Accept': 'application/vnd.github.v3+json' };
+                        let fileSha = null;
+                        try { const getRes = await fetch(url, { headers }); if (getRes.ok) fileSha = (await getRes.json()).sha; } catch(e){}
+                        const markdownContent = serializeTasksToMarkdown(newTasks, newProjects);
+                        const bytes = new TextEncoder().encode(markdownContent);
+                        const base64Content = btoa(Array.from(bytes, byte => String.fromCodePoint(byte)).join(""));
+                        const body = { message: 'Auto-sync from Dashboard', content: base64Content };
+                        if (fileSha) body.sha = fileSha;
+                        await fetch(url, { method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                    } catch(e) { console.error(e); } finally { setIsSyncing(false); }
+                }, 2000);
+            };
+
+            useEffect(() => { handleFetchFromGithub(true); }, []);
+
+            // --- Handlers ---
+            const handleToggleTaskStatus = (task) => {
+                let nextStatus = 'done';
+                if (task.status === 'done') nextStatus = 'todo';
+                else if (task.status === 'todo') nextStatus = 'in_progress';
+                const newTasks = tasks.map(t => t.id === task.id ? { ...t, status: nextStatus } : t);
+                setTasks(newTasks); triggerAutoSave(newTasks);
+            };
+
+            const handleQuickAdd = (e) => {
+                e.preventDefault();
+                if (!newTaskTitle.trim()) return;
+                const newTask = {
+                    id: Date.now().toString(),
+                    projectId: activeProject || 'Inbox',
+                    title: newTaskTitle, status: 'todo', priority: 'normal',
+                    dueDate: '', tags: [], assignee: null, notes: ''
+                };
+                const newTasks = [...tasks, newTask];
+                setTasks(newTasks); setNewTaskTitle(''); triggerAutoSave(newTasks);
+            };
+
+            const handleUpdateTask = (updated) => {
+                const newTasks = tasks.map(t => t.id === updated.id ? updated : t);
+                setTasks(newTasks); setSelectedTask(updated); triggerAutoSave(newTasks);
+            };
+
+            const selectProject = (projName) => {
+                setActiveProject(projName);
+                setIsMobileListOpen(false);
+            };
+
+            // --- Selectors & Computed Data ---
+            const isOverdue = (task) => task.dueDate && task.dueDate < today && task.status !== 'done';
+            
+            const uniqueAssignees = useMemo(() => Array.from(new Set(tasks.map(t => t.assignee).filter(Boolean))).sort(), [tasks]);
+            const uniqueTags = useMemo(() => {
+                const tags = new Set();
+                tasks.forEach(t => t.tags?.forEach(tag => tags.add(tag)));
+                return Array.from(tags).sort();
+            }, [tasks]);
+
+            const projectStats = useMemo(() => {
+                return projects.map(projName => {
+                    const pTasks = tasks.filter(t => t.projectId === projName);
+                    const total = pTasks.length;
+                    const done = pTasks.filter(t => t.status === 'done').length;
+                    const overdue = pTasks.some(isOverdue);
+                    const progress = total === 0 ? 0 : Math.round((done / total) * 100);
+                    return { name: projName, total, done, overdue, progress };
+                });
+            }, [tasks, projects]);
+
+            const displayTasks = useMemo(() => {
+                let filtered = tasks;
+                if (activeProject) filtered = filtered.filter(t => t.projectId === activeProject);
+                if (searchQuery) filtered = filtered.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()) || t.notes.toLowerCase().includes(searchQuery.toLowerCase()));
+                if (filterAssignee) filtered = filtered.filter(t => t.assignee === filterAssignee);
+                if (filterTag) filtered = filtered.filter(t => t.tags?.includes(filterTag));
+                
+                return filtered.sort((a, b) => {
+                    if (a.status === 'done' && b.status !== 'done') return 1;
+                    if (a.status !== 'done' && b.status === 'done') return -1;
+                    const dateA = a.dueDate || '9999-12-31';
+                    const dateB = b.dueDate || '9999-12-31';
+                    return dateA.localeCompare(dateB);
+                });
+            }, [tasks, activeProject, searchQuery, filterAssignee, filterTag]);
+
+            const activeProjectTasks = tasks.filter(t => t.projectId === activeProject);
+            const chartData = useMemo(() => {
+                let done=0, inProgress=0, todo=0, overdue=0;
+                activeProjectTasks.forEach(t => {
+                    if (t.status === 'done') done++;
+                    else if (isOverdue(t)) overdue++;
+                    else if (t.status === 'in_progress') inProgress++;
+                    else todo++;
+                });
+                return [done, inProgress, todo, overdue];
+            }, [activeProjectTasks]);
 
 
-      const renderTaskItem = (task) => {
-        const today = getTodayString();
-        let dateColorClass = 'text-[#dcddde]';
-        let iconColorClass = 'text-[#8a5cf5]';
+            if (!isInitialLoaded) {
+                return <div className="h-full flex items-center justify-center bg-gray-100 dark:bg-brand-darkbg"><Loader2 className="animate-spin text-brand-blue" size={32} /></div>;
+            }
 
-        if (task.dueDate) {
-          if (task.dueDate < today) { dateColorClass = 'text-[#ff6b6b]'; iconColorClass = 'text-[#ff6b6b]'; } 
-          else if (task.dueDate === today) { dateColorClass = 'text-[#feca57]'; iconColorClass = 'text-[#feca57]'; }
-        }
-
-        return (
-          <div key={task.id} onClick={() => handleOpenDetail(task)} className="bg-[#252525] border border-[#363636] rounded-xl p-3.5 flex items-start gap-3 active:scale-[0.98] transition-transform cursor-pointer shadow-sm hover:border-[#8b8b8b]">
-              <label className="relative flex items-center mt-0.5 shrink-0 pl-1" onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox" className="sr-only peer" checked={task.status === 'done'} onChange={() => handleToggleTask(task.id)} />
-                  <div className="w-5 h-5 border-2 border-[#8b8b8b] rounded flex items-center justify-center transition-colors bg-[#1e1e1e] peer-checked:bg-[#8a5cf5] peer-checked:border-[#8a5cf5]">
-                      <Check size={14} className={`text-white transition-opacity ${task.status === 'done' ? 'opacity-100' : 'opacity-0'}`} strokeWidth={3} />
-                  </div>
-              </label>
-              <div className="flex-1 min-w-0">
-                  <p className={`font-medium text-[15px] leading-tight mb-1 break-words whitespace-pre-wrap ${task.status === 'done' ? 'text-[#8b8b8b] line-through' : 'text-white'}`}>
-                    {renderTextWithLinks(task.title)}
-                  </p>
-                  {task.notes && (
-                    <p className="text-xs text-[#8b8b8b] line-clamp-2 mb-2 break-words whitespace-pre-wrap">{renderTextWithLinks(task.notes)}</p>
-                  )}
-                  <div className="flex flex-wrap items-start justify-between gap-2 mt-2">
-                      <div className="flex flex-wrap items-center gap-2.5">
-                          {task.dueDate && <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${dateColorClass}`}><CalendarBlankIcon className={iconColorClass} /> {task.dueDate}</span>}
-                          {task.recurrence && <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#48dbfb]"><Repeat size={12} /> {task.recurrence}</span>}
-                          {task.priority === 'high' && <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#ff6b6b]"><ChevronsUp size={12} /> High</span>}
-                          {task.priority === 'medium' && <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#feca57]"><ChevronUp size={12} /> Medium</span>}
-                      </div>
-                      {task.tags && task.tags.length > 0 && (
-                          <div className="flex flex-wrap items-center justify-end gap-1.5 ml-auto">
-                              {task.tags.map(tag => (
-                                  <span key={tag} className="inline-flex items-center gap-1 text-[11px] font-medium bg-[#1e1e1e] border border-[#363636] text-[#dcddde] px-1.5 py-0.5 rounded-md">
-                                      <span className="text-[#8a5cf5]">#</span> {tag}
-                                  </span>
-                              ))}
-                          </div>
-                      )}
-                  </div>
-              </div>
-          </div>
-        );
-      };
-
-      if (!isInitialLoaded) {
-        return (
-          <div className="h-screen flex flex-col items-center justify-center bg-[#1e1e1e] text-[#dcddde]">
-            <Loader2 size={40} className="text-[#8a5cf5] animate-spin mb-4" />
-            <p className="font-medium">Syncing with Obsidian...</p>
-          </div>
-        );
-      }
-
-      return (
-        <div className="h-screen flex flex-col antialiased selection:bg-[#2a1f42] selection:text-white relative bg-[#1e1e1e] text-[#dcddde] overflow-hidden font-sans">
-          
-          <div className={`fixed top-[calc(1rem+env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[100] transition-all duration-300 ${toast.show ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10 pointer-events-none'}`}>
-            <div className={`px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2.5 ${toast.type === 'error' ? 'bg-red-500/90 backdrop-blur text-white' : toast.type === 'info' ? 'bg-[#252525]/90 backdrop-blur text-white border border-[#363636]' : 'bg-[#8a5cf5]/90 backdrop-blur text-white'}`}>
-              {toast.type === 'error' ? <X size={16} /> : toast.type === 'info' ? <Info size={16} /> : <Check size={16} />}
-              <span className="text-sm font-medium whitespace-nowrap">{toast.message}</span>
-            </div>
-          </div>
-
-          <div className={`fixed inset-0 bg-black/60 z-40 backdrop-blur-sm transition-opacity duration-300 ${isDrawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsDrawerOpen(false)} />
-          <nav className={`fixed inset-y-0 left-0 w-4/5 max-w-sm bg-[#252525] border-r border-[#363636] z-50 flex flex-col shadow-2xl transition-transform duration-300 ${isDrawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-            <div className="p-5 pt-[calc(1.25rem+env(safe-area-inset-top))] border-b border-[#363636] flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-tr from-[#8a5cf5] to-purple-400 flex items-center justify-center text-white font-bold text-lg shadow-lg border border-[#363636] shrink-0">
-                    {githubConfig.owner ? <img src={`https://github.com/${githubConfig.owner}.png`} alt={githubConfig.owner} className="w-full h-full object-cover" /> : 'U'}
-                </div>
-                <div className="min-w-0">
-                    <h2 className="text-white font-semibold leading-tight truncate">{githubConfig.owner || 'Guest User'}</h2>
-                    <p className="text-xs text-[#8b8b8b]">Obsidian Sync</p>
-                </div>
-                <button className="ml-auto p-2 text-[#8b8b8b] hover:text-white rounded-lg bg-[#1e1e1e] border border-[#363636] shrink-0" onClick={() => setIsDrawerOpen(false)}><X size={18} /></button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-                <ul className="space-y-1">
-                    <li><button onClick={() => { setCurrentFilter({type: 'all', value: null}); setIsDrawerOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${currentFilter.type === 'all' ? 'bg-[#2a1f42]/50 text-[#8a5cf5] font-medium' : 'text-[#dcddde] hover:bg-[#1e1e1e]'}`}><Inbox size={20} /> Inbox <span className="ml-auto text-xs bg-[#8a5cf5]/20 text-[#8a5cf5] px-2 py-0.5 rounded-full">{tasks.filter(t=>t.status==='todo').length}</span></button></li>
-                    <li><button onClick={() => { setCurrentFilter({type: 'today', value: null}); setIsDrawerOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${currentFilter.type === 'today' ? 'bg-[#2a1f42]/50 text-[#8a5cf5] font-medium' : 'text-[#dcddde] hover:bg-[#1e1e1e]'}`}><CalendarDays size={20} className={currentFilter.type === 'today' ? '' : 'text-yellow-500/80'} /> Today</button></li>
-                </ul>
-                <div>
-                    <div className="flex items-center justify-between px-3 mb-2"><h3 className="text-xs font-semibold text-[#8b8b8b] uppercase tracking-wider">Smart Lists (Tags)</h3></div>
-                    <ul className="space-y-1">
-                        {allTags.map(tag => (
-                          <li key={tag}><button onClick={() => { setCurrentFilter({type: 'tag', value: tag}); setIsDrawerOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${currentFilter.type === 'tag' && currentFilter.value === tag ? 'bg-[#2a1f42]/50 text-[#8a5cf5]' : 'text-[#dcddde] hover:bg-[#1e1e1e]'}`}><Hash size={18} className={currentFilter.type === 'tag' && currentFilter.value === tag ? 'text-[#8a5cf5]' : 'text-gray-400'} /><span className="flex-1 text-left capitalize">{tag}</span><span className="text-[10px] text-[#8b8b8b]">#{tag}</span></button></li>
-                        ))}
-                    </ul>
-                </div>
-            </div>
-            <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-[#363636] bg-[#1e1e1e]/50">
-                <button onClick={() => { setIsSettingsOpen(true); setIsDrawerOpen(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#dcddde] hover:bg-[#252525] border border-transparent hover:border-[#363636] transition-all mb-1">
-                    <Github size={20} className={githubConfig.token ? 'text-[#8a5cf5]' : 'text-[#8b8b8b]'} />
-                    <div className="flex-1 text-left">
-                        <p className="text-sm font-medium">GitHub Sync</p>
-                        <p className="text-[10px] text-[#8b8b8b]">{githubConfig.token ? '接続済み' : '設定を開く'}</p>
-                    </div>
-                </button>
-            </div>
-          </nav>
-
-          <header className="flex items-center justify-between px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] bg-[#1e1e1e]/90 backdrop-blur-md sticky top-0 z-20 border-b border-[#363636] shadow-sm shrink-0">
-              <button className="p-2 -ml-2 text-[#8b8b8b] hover:text-white transition-colors rounded-lg active:bg-[#252525]" onClick={() => setIsDrawerOpen(true)}><Menu size={24} /></button>
-              <div className="flex flex-col items-center flex-1 min-w-0">
-                  <h1 className="font-semibold text-lg tracking-wide text-white capitalize truncate max-w-[150px]">
-                    {currentFilter.type === 'all' ? 'Inbox' : currentFilter.type === 'today' ? 'Today' : `#${currentFilter.value}`}
-                  </h1>
-                  <span className="text-[10px] text-[#8b8b8b] font-medium">{activeTasks.length} TASKS</span>
-              </div>
-              <div className="flex items-center -mr-2">
-                  {isSyncing ? ( <Cloud size={20} className="text-[#8a5cf5] animate-pulse mx-2" /> ) : (
-                    <button className={`p-2 transition-colors rounded-lg active:bg-[#252525] ${isFetching ? 'text-[#8a5cf5] animate-spin' : 'text-[#8b8b8b] hover:text-white'}`} onClick={() => handleFetchFromGithub(false)} title="手動で最新を読み込む"><RefreshCw size={20} /></button>
-                  )}
-              </div>
-          </header>
-
-          <div className="border-b border-[#363636]/50 bg-[#1e1e1e]/80 backdrop-blur-sm z-10 shrink-0">
-              <div className="flex items-center gap-2 overflow-x-auto px-4 py-2.5 scrollbar-hide">
-                  <button onClick={() => setCurrentFilter({type: 'all', value: null})} className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium border transition-colors ${currentFilter.type === 'all' ? 'bg-[#8a5cf5] text-white border-[#8a5cf5]' : 'bg-[#252525] text-[#dcddde] border-[#363636] hover:border-[#8b8b8b]'}`}>All</button>
-                  {allTags.map(tag => (
-                    <button key={tag} onClick={() => setCurrentFilter({type: 'tag', value: tag})} className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1 transition-colors ${currentFilter.type === 'tag' && currentFilter.value === tag ? 'bg-[#2a1f42] text-[#8a5cf5] border-[#8a5cf5]' : 'bg-[#252525] text-[#dcddde] border-[#363636] hover:border-[#8b8b8b]'}`}>
-                      <span className={currentFilter.type === 'tag' && currentFilter.value === tag ? 'text-[#8a5cf5]' : 'text-gray-400'}>#</span> {tag}
-                    </button>
-                  ))}
-              </div>
-          </div>
-
-          <main className="flex-1 overflow-y-auto pb-40 px-4 pt-4 scrollbar-hide">
-              
-              {!githubConfig.token && (
-                <div className="mb-6 bg-gradient-to-r from-[#8a5cf5]/20 to-[#2a1f42] border border-[#8a5cf5]/40 rounded-xl p-5 flex flex-col items-center text-center shadow-lg relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-2 opacity-10"><Github size={64}/></div>
-                  <div className="w-12 h-12 bg-[#8a5cf5] rounded-full flex items-center justify-center mb-3 shadow-md">
-                    <Github size={24} className="text-white" />
-                  </div>
-                  <h3 className="font-bold text-white text-lg mb-1">Obsidianと連携しよう</h3>
-                  <p className="text-sm text-[#dcddde] mb-4">設定を完了すると、あなたのVault内のタスクと自動的に同期されます。</p>
-                  <button onClick={() => setIsSettingsOpen(true)} className="px-5 py-2.5 bg-[#8a5cf5] text-white text-sm font-bold rounded-lg hover:bg-purple-500 shadow-md active:scale-95 transition-transform w-full max-w-[200px]">
-                    設定を開く
-                  </button>
-                </div>
-              )}
-
-              {activeTasks.length === 0 && githubConfig.token && (
-                <div className="text-center text-[#8b8b8b] mt-10 text-sm flex flex-col items-center">
-                  <Inbox size={48} className="mb-3 opacity-20" />
-                  タスクはありません<br/>下から追加してみましょう
-                </div>
-              )}
-
-              {groupedTasks.overdue.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-xs font-bold text-[#ff6b6b] mb-3 flex items-center gap-1.5 uppercase tracking-wider"><AlertCircle size={14} strokeWidth={2.5} /> Overdue</h2>
-                  <div className="space-y-2">{groupedTasks.overdue.map(renderTaskItem)}</div>
-                </div>
-              )}
-
-              {groupedTasks.today.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-xs font-bold text-[#feca57] mb-3 flex items-center gap-1.5 uppercase tracking-wider"><CalendarClock size={14} strokeWidth={2.5} /> Today</h2>
-                  <div className="space-y-2">{groupedTasks.today.map(renderTaskItem)}</div>
-                </div>
-              )}
-
-              {groupedTasks.upcoming.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-xs font-bold text-[#8b8b8b] mb-3 flex items-center gap-1.5 uppercase tracking-wider"><CalendarDays size={14} strokeWidth={2.5} /> Upcoming</h2>
-                  <div className="space-y-2">{groupedTasks.upcoming.map(renderTaskItem)}</div>
-                </div>
-              )}
-
-              {groupedTasks.noDue.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-xs font-bold text-[#8b8b8b] opacity-60 mb-3 flex items-center gap-1.5 uppercase tracking-wider"><ListTodo size={14} strokeWidth={2.5} /> No Due Date</h2>
-                  <div className="space-y-2">{groupedTasks.noDue.map(renderTaskItem)}</div>
-                </div>
-              )}
-
-              {completedTasks.length > 0 && (
-                <div className="mt-8 mb-6 border-t border-[#363636]/50 pt-4">
-                    <button className="flex items-center gap-2 text-sm font-medium text-[#8b8b8b] hover:text-white transition-colors w-full text-left py-2 group" onClick={(e) => { const el = e.currentTarget.nextElementSibling; const icon = e.currentTarget.querySelector('svg'); el.classList.toggle('hidden'); icon.classList.toggle('rotate-90'); }}>
-                        <ChevronRight size={16} className="transition-transform duration-200" />
-                        Completed ({completedTasks.length})
-                    </button>
-                    <div className="hidden space-y-2 mt-2 pl-2">
-                        {completedTasks.map(task => (
-                          <div key={task.id} className="flex items-start gap-3 p-2 opacity-50">
-                              <label className="relative flex items-center mt-0.5 shrink-0"><input type="checkbox" className="sr-only" checked readOnly /><div className="w-5 h-5 border-2 border-[#8a5cf5] bg-[#8a5cf5] rounded flex items-center justify-center"><Check size={14} className="text-white" strokeWidth={3} /></div></label>
-                              <div className="flex-1 min-w-0"><p className="text-[#dcddde] line-through text-[15px] break-words whitespace-pre-wrap">{task.title}</p></div>
-                          </div>
-                        ))}
-                    </div>
-                </div>
-              )}
-          </main>
-
-          <div className="fixed bottom-0 left-0 right-0 z-10">
-              {allTags.length > 0 && (
-                <div className="bg-gradient-to-t from-[#1e1e1e] via-[#1e1e1e] to-transparent pt-4 pb-2 px-3 flex items-center gap-2 overflow-x-auto scrollbar-hide">
-                  {allTags.map(tag => (
-                    <button 
-                      key={tag} 
-                      type="button"
-                      onClick={() => setInputValue(prev => prev + (prev && !prev.endsWith(' ') ? ' ' : '') + '#' + tag + ' ')}
-                      className="whitespace-nowrap px-3 py-1.5 rounded-full bg-[#252525] border border-[#363636] text-[#dcddde] text-xs font-medium hover:bg-[#8a5cf5]/20 hover:text-[#8a5cf5] hover:border-[#8a5cf5]/50 transition-colors shadow-sm"
-                    >
-                      <span className="text-[#8a5cf5] opacity-70">#</span> {tag}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <form onSubmit={handleAddTask} className="bg-[#1e1e1e]/95 backdrop-blur-md border-t border-[#363636] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(0,0,0,0.3)]">
-                  <div className="bg-[#252525] border border-[#363636] rounded-xl flex items-center p-1.5 focus-within:border-[#8a5cf5] focus-within:ring-1 focus-within:ring-[#8a5cf5] transition-all shadow-inner">
-                      <div className="p-2 text-[#8a5cf5]"><PlusCircle size={20} /></div>
-                      <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="タスクを追加... (#タグを自動認識)" className="flex-1 bg-transparent border-none py-2 px-1 text-[15px] text-white placeholder-[#8b8b8b] focus:outline-none w-full" autoComplete="off" />
-                      <div className="flex items-center gap-1 pr-1">
-                          <button type="submit" disabled={!inputValue.trim()} className="p-2 bg-[#8a5cf5] text-white rounded-lg hover:bg-purple-500 disabled:opacity-50 transition-colors ml-1 shadow-md active:scale-95"><Send size={18} /></button>
-                      </div>
-                  </div>
-              </form>
-          </div>
-
-          <div className={`fixed inset-0 bg-[#1e1e1e] z-[60] flex flex-col h-[100dvh] transition-transform duration-300 ${isDetailOpen ? 'translate-y-0' : 'translate-y-full'}`}>
-            {selectedTask && (
-              <>
-                <header className="flex items-center justify-between p-4 pt-[calc(1rem+env(safe-area-inset-top))] border-b border-[#363636] bg-[#1e1e1e]/95 backdrop-blur-md z-10 shrink-0">
-                    <button onClick={() => setIsDetailOpen(false)} className="p-2 -ml-2 text-[#8b8b8b] hover:text-white transition-colors rounded-lg active:bg-[#252525]"><ChevronDown size={24} /></button>
-                    <div className="font-semibold text-white text-[15px]">Edit Task</div>
-                    <button onClick={() => setIsDetailOpen(false)} className="text-[#8a5cf5] font-medium text-[15px] px-2 py-1 rounded-md hover:bg-[#2a1f42] transition-colors">Done</button>
-                </header>
-                <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 pb-[calc(2rem+env(safe-area-inset-bottom))]">
-                    <div className="flex items-start gap-3">
-                        <label className="relative flex items-center mt-1.5 shrink-0">
-                            <input type="checkbox" className="sr-only peer" checked={selectedTask.status === 'done'} onChange={() => handleUpdateTask({...selectedTask, status: selectedTask.status === 'todo' ? 'done' : 'todo'})} />
-                            <div className="w-6 h-6 border-2 border-[#8b8b8b] rounded flex items-center justify-center transition-colors bg-[#1e1e1e] peer-checked:bg-[#8a5cf5] peer-checked:border-[#8a5cf5]"><Check size={16} className={`text-white transition-opacity ${selectedTask.status === 'done' ? 'opacity-100' : 'opacity-0'}`} strokeWidth={3} /></div>
-                        </label>
-                        <textarea 
-                          value={selectedTask.title} 
-                          onChange={(e) => handleUpdateTask({...selectedTask, title: e.target.value})} 
-                          className="flex-1 bg-transparent border-none text-white font-semibold text-xl md:text-2xl focus:outline-none resize-none placeholder-[#8b8b8b] min-h-[40px] break-all" 
-                          rows={3} 
-                          placeholder="Task name" 
-                        />
-                    </div>
-                    <div className="bg-[#252525] border border-[#363636] rounded-xl overflow-hidden divide-y divide-[#363636]">
-                        <div className="flex items-center px-4 py-3 hover:bg-[#1e1e1e]/50 transition-colors">
-                            <div className="w-8 flex justify-center text-[#8b8b8b]"><Calendar size={18} /></div>
-                            <div className="flex-1 text-[15px] text-white">Due Date</div>
-                            <input type="date" value={selectedTask.dueDate || ''} onChange={(e) => handleUpdateTask({...selectedTask, dueDate: e.target.value})} className="bg-transparent text-[14px] text-[#8a5cf5] focus:outline-none text-right" />
-                        </div>
-                        <div className="flex items-center px-4 py-3 hover:bg-[#1e1e1e]/50 transition-colors">
-                            <div className="w-8 flex justify-center text-[#8b8b8b]"><Repeat size={18} /></div>
-                            <div className="flex-1 text-[15px] text-white">Repeat</div>
-                            <select value={selectedTask.recurrence || ''} onChange={(e) => handleUpdateTask({...selectedTask, recurrence: e.target.value})} className="bg-transparent text-[14px] text-right focus:outline-none appearance-none cursor-pointer text-[#48dbfb]">
-                              <option value="" className="bg-[#252525] text-[#dcddde]">None</option>
-                              <option value="every day" className="bg-[#252525]">Every day</option>
-                              <option value="every weekday" className="bg-[#252525]">Every weekday</option>
-                              <option value="every week" className="bg-[#252525]">Every week</option>
-                              <option value="every 2 weeks" className="bg-[#252525]">Every 2 weeks</option>
-                              <option value="every month" className="bg-[#252525]">Every month</option>
-                              <option value="every year" className="bg-[#252525]">Every year</option>
-                            </select>
-                        </div>
-                        <div className="flex items-center px-4 py-3 hover:bg-[#1e1e1e]/50 transition-colors">
-                            <div className="w-8 flex justify-center text-[#8b8b8b]"><Tag size={18} /></div>
-                            <div className="flex-1 text-[15px] text-white">Priority</div>
-                            <select value={selectedTask.priority} onChange={(e) => handleUpdateTask({...selectedTask, priority: e.target.value})} className="bg-transparent text-[14px] text-right focus:outline-none appearance-none cursor-pointer text-[#8a5cf5]">
-                              <option value="normal" className="bg-[#252525]">Normal</option><option value="low" className="bg-[#252525] text-[#48dbfb]">🔽 Low</option><option value="medium" className="bg-[#252525] text-[#feca57]">🔼 Medium</option><option value="high" className="bg-[#252525] text-[#ff6b6b]">⏫ High</option>
-                            </select>
-                        </div>
-
-                        <div className="flex flex-col px-4 py-3 hover:bg-[#1e1e1e]/50 transition-colors">
-                            <div className="flex items-center">
-                                <div className="w-8 flex justify-center text-[#8b8b8b]"><Hash size={18} /></div>
-                                <div className="flex-1 text-[15px] text-white">Tags</div>
-                            </div>
-                            <div className="pl-8 pt-2 flex flex-wrap items-center gap-2">
-                                {selectedTask.tags?.length === 0 && <span className="text-sm text-[#8b8b8b] italic">No tags selected</span>}
-                                {selectedTask.tags?.map(tag => (
-                                   <button key={tag} onClick={() => handleUpdateTask({...selectedTask, tags: selectedTask.tags.filter(t => t !== tag)})} className="bg-[#8a5cf5] text-white px-2 py-1 rounded-md text-[13px] font-medium flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform">
-                                     <span className="opacity-70">#</span>{tag} <X size={12} className="opacity-70 hover:opacity-100" />
-                                   </button>
-                                ))}
-                                {/* ★ 新規タグ手動入力フォーム */}
-                                <form 
-                                    onSubmit={(e) => {
-                                        e.preventDefault();
-                                        // ★ 修正ポイント: スペース区切りで複数のタグを一度に追加できるように拡張
-                                        const inputTags = newTagInput.trim().replace(/^#/, '').split(/\s+/).filter(Boolean);
-                                        const currentTags = selectedTask.tags || [];
-                                        const newTags = [...currentTags];
-                                        
-                                        inputTags.forEach(tag => {
-                                            if (!newTags.includes(tag)) newTags.push(tag);
-                                        });
-                                        
-                                        if (newTags.length > currentTags.length) {
-                                            handleUpdateTask({...selectedTask, tags: newTags});
-                                        }
-                                        setNewTagInput('');
-                                    }}
-                                    className="flex items-center bg-[#1e1e1e] border border-[#363636] rounded-md px-2 py-1 focus-within:border-[#8a5cf5] transition-colors"
-                                >
-                                    <span className="text-[#8b8b8b] text-[13px] mr-1 opacity-70">#</span>
-                                    <input 
-                                        type="text"
-                                        value={newTagInput}
-                                        onChange={(e) => setNewTagInput(e.target.value)}
-                                        placeholder="Add"
-                                        enterKeyHint="done"
-                                        className="bg-transparent text-[13px] text-white focus:outline-none w-16 placeholder-[#8b8b8b]"
-                                    />
-                                </form>
-                            </div>
-                            {allTags.filter(t => !selectedTask.tags?.includes(t)).length > 0 && (
-                              <div className="pl-8 pt-3 mt-1 border-t border-[#363636] flex flex-wrap gap-1.5">
-                                  {allTags.filter(t => !selectedTask.tags?.includes(t)).map(tag => (
-                                     <button key={tag} onClick={() => handleUpdateTask({...selectedTask, tags: [...(selectedTask.tags || []), tag]})} className="bg-[#1e1e1e] border border-[#363636] text-[#8b8b8b] hover:text-white px-2 py-1 rounded-md text-[12px] flex items-center gap-1 active:scale-95 transition-all">
-                                       <Plus size={10} /> {tag}
-                                     </button>
-                                  ))}
-                              </div>
+            // ==========================================
+            // Render
+            // ==========================================
+            return (
+                <div className="flex flex-col h-full font-sans bg-gray-100 dark:bg-brand-darkbg text-gray-900 dark:text-gray-100 transition-colors duration-200">
+                    
+                    {/* Global Header */}
+                    <header className="bg-white dark:bg-brand-darkcard border-b border-gray-300 dark:border-brand-darkborder px-4 py-3 flex justify-between items-center shrink-0 shadow-sm z-10 transition-colors">
+                        <div className="flex items-center gap-2">
+                            {!isMobileListOpen && (
+                                <button onClick={() => setIsMobileListOpen(true)} className="md:hidden mr-1 text-gray-500 dark:text-gray-400"><ChevronLeft size={24} /></button>
                             )}
+                            <Kanban className="text-brand-blue dark:text-blue-400" size={24} />
+                            <h1 className="text-lg md:text-xl font-bold hidden sm:block">TaskBoard</h1>
+                        </div>
+                        
+                        {/* Filters & Actions */}
+                        <div className="flex flex-1 max-w-2xl mx-4 gap-2">
+                            <div className="relative flex-1 hidden md:block">
+                                <Search className="absolute left-2.5 top-2 text-gray-400" size={16} />
+                                <input type="text" placeholder="タスクを検索..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} 
+                                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:border-brand-blue bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
+                            </div>
+                            <select value={filterAssignee} onChange={e=>setFilterAssignee(e.target.value)} 
+                                className="border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 text-sm bg-white dark:bg-gray-800 focus:outline-none hidden sm:block">
+                                <option value="">担当者: 全て</option>
+                                {uniqueAssignees.map(a => <option key={a} value={a}>{a}</option>)}
+                            </select>
+                            <select value={filterTag} onChange={e=>setFilterTag(e.target.value)} 
+                                className="border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 text-sm bg-white dark:bg-gray-800 focus:outline-none hidden lg:block">
+                                <option value="">タグ: 全て</option>
+                                {uniqueTags.map(t => <option key={t} value={t}>#{t}</option>)}
+                            </select>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <button onClick={toggleDarkMode} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors">
+                                {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                            </button>
+                            {isSyncing ? <Cloud size={20} className="text-brand-blue animate-pulse" /> : <button onClick={()=>handleFetchFromGithub(false)}><RefreshCw size={20} className="text-gray-400 hover:text-brand-blue dark:hover:text-blue-400" /></button>}
+                            <button onClick={() => setIsSettingsOpen(true)}><Settings size={20} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" /></button>
+                        </div>
+                    </header>
+
+                    {/* Main Layout (2 Column) */}
+                    <div className="flex flex-1 overflow-hidden">
+                        
+                        {/* Left Sidebar: Projects */}
+                        <aside className={`w-full md:w-80 bg-gray-50 dark:bg-[#18212f] border-r border-gray-300 dark:border-brand-darkborder flex flex-col shrink-0 transition-colors ${isMobileListOpen ? 'flex' : 'hidden md:flex'}`}>
+                            
+                            <div className="p-3 border-b border-gray-200 dark:border-brand-darkborder">
+                                <button 
+                                    onClick={() => selectProject(null)}
+                                    className={`w-full flex items-center gap-2 p-3 rounded-lg border transition ${activeProject === null ? 'bg-brand-lightblue dark:bg-blue-900/30 border-brand-blue text-brand-blue dark:text-blue-400 font-bold shadow-sm' : 'bg-white dark:bg-brand-darkcard border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                                >
+                                    <LayoutList size={20} />
+                                    <span>すべてのタスク</span>
+                                </button>
+                            </div>
+
+                            <div className="p-3 pb-1">
+                                <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Projects</h2>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-2">
+                                {projectStats.map(stat => (
+                                    <div 
+                                        key={stat.name} 
+                                        onClick={() => selectProject(stat.name)}
+                                        className={`p-3 rounded-lg border cursor-pointer transition ${activeProject === stat.name ? 'bg-white dark:bg-brand-darkcard border-brand-blue shadow-md' : 'bg-white dark:bg-brand-darkcard border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'} ${stat.overdue && activeProject !== stat.name ? 'border-brand-lightred dark:border-red-900/50' : ''}`}
+                                    >
+                                        <div className="flex justify-between items-start mb-1.5">
+                                            <h3 className={`font-bold text-sm ${activeProject === stat.name ? 'text-brand-blue dark:text-blue-400' : ''}`}>{stat.name}</h3>
+                                            {stat.overdue && <span className="bg-brand-red text-white text-[10px] px-1.5 py-0.5 rounded font-bold">遅延</span>}
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs mb-1.5">
+                                            <span className="font-medium text-gray-600 dark:text-gray-400">進捗: {stat.progress}%</span>
+                                            <span className="text-gray-500 dark:text-gray-500">{stat.done} / {stat.total}</span>
+                                        </div>
+                                        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
+                                            <div className={`h-1.5 rounded-full ${stat.progress === 100 ? 'bg-gray-400 dark:bg-gray-500' : 'bg-brand-green'}`} style={{ width: `${stat.progress}%` }}></div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </aside>
+
+                        {/* Right Content: Tasks List / Dashboard */}
+                        <main className={`flex-1 flex flex-col bg-white dark:bg-brand-darkbg overflow-hidden relative transition-colors ${!isMobileListOpen ? 'flex' : 'hidden md:flex'}`}>
+                            
+                            {/* Dashboard Header */}
+                            {activeProject && (
+                                <div className="bg-white dark:bg-brand-darkcard px-6 py-5 border-b border-gray-200 dark:border-brand-darkborder shrink-0 transition-colors">
+                                    <div className="flex flex-col xl:flex-row justify-between gap-6">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <h2 className="text-2xl font-bold">{activeProject}</h2>
+                                                {chartData[3] > 0 && <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-brand-lightred dark:bg-red-900/30 text-brand-red dark:text-red-400 border border-brand-lightred dark:border-red-800"><AlertCircle size={12} className="mr-1"/>要注意</span>}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-6 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700 min-w-[280px]">
+                                            <div className="chart-container"><StatusChart dataValues={chartData} isDarkMode={isDarkMode} /></div>
+                                            <div className="flex flex-col gap-1.5">
+                                                <div className="flex justify-between gap-4 text-sm"><span className="text-gray-600 dark:text-gray-400"><span className="inline-block w-2.5 h-2.5 rounded-full bg-brand-green mr-1.5"></span>完了</span><span className="font-bold">{chartData[0]}</span></div>
+                                                <div className="flex justify-between gap-4 text-sm"><span className="text-gray-600 dark:text-gray-400"><span className="inline-block w-2.5 h-2.5 rounded-full bg-brand-blue mr-1.5"></span>進行中</span><span className="font-bold">{chartData[1]}</span></div>
+                                                <div className="flex justify-between gap-4 text-sm"><span className="text-gray-600 dark:text-gray-400"><span className={`inline-block w-2.5 h-2.5 rounded-full ${isDarkMode ? 'bg-gray-600' : 'bg-gray-400'} mr-1.5`}></span>未着手</span><span className="font-bold">{chartData[2]}</span></div>
+                                                <div className="flex justify-between gap-4 text-sm border-t border-gray-200 dark:border-gray-700 pt-1 mt-0.5"><span className="text-brand-red dark:text-red-400 font-bold"><span className="inline-block w-2.5 h-2.5 rounded-full bg-brand-red mr-1.5"></span>遅延</span><span className="font-bold text-brand-red dark:text-red-400">{chartData[3]}</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!activeProject && (
+                                <div className="bg-white dark:bg-brand-darkcard px-6 py-4 border-b border-gray-200 dark:border-brand-darkborder shrink-0 flex items-center gap-3 transition-colors">
+                                    <LayoutList className="text-gray-400" size={24} />
+                                    <div>
+                                        <h2 className="text-lg font-bold">すべてのタスク</h2>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">対応日付順にソートされています</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Task List Area */}
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 dark:bg-brand-darkbg transition-colors">
+                                
+                                <form onSubmit={handleQuickAdd} className="bg-white dark:bg-brand-darkcard p-2 rounded-lg border border-brand-blue dark:border-blue-500/50 shadow-sm mb-6 flex items-center gap-3 transition-colors">
+                                    <Plus className="text-brand-blue dark:text-blue-400 ml-2" size={20} />
+                                    <input type="text" placeholder={`${activeProject || 'Inbox'} にタスクを追加...`} value={newTaskTitle} onChange={e=>setNewTaskTitle(e.target.value)} 
+                                        className="flex-1 border-none focus:ring-0 text-sm bg-transparent outline-none py-1 placeholder-gray-400 dark:placeholder-gray-500" />
+                                    <button type="submit" disabled={!newTaskTitle} className="bg-brand-blue dark:bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-md hover:bg-blue-700 dark:hover:bg-blue-500 disabled:opacity-50 transition">追加</button>
+                                </form>
+
+                                <div className="bg-white dark:bg-brand-darkcard rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-colors">
+                                    <table className="min-w-full text-left text-sm">
+                                        <thead className="bg-brand-lightgray dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 hidden md:table-header-group">
+                                            <tr>
+                                                <th className="w-12 px-4 py-3 text-center"></th>
+                                                <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">タスク名</th>
+                                                {!activeProject && <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">プロジェクト</th>}
+                                                <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">担当者</th>
+                                                <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">ステータス</th>
+                                                <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-400">期限日</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800 block md:table-row-group">
+                                            {displayTasks.map(task => {
+                                                const overdue = isOverdue(task);
+                                                const rowBg = overdue ? 'bg-red-50 dark:bg-red-900/10' : task.status === 'done' ? 'bg-gray-50 dark:bg-gray-800/50 opacity-60' : 'hover:bg-gray-50 dark:hover:bg-gray-800';
+                                                
+                                                return (
+                                                    <tr key={task.id} className={`${rowBg} transition cursor-pointer block md:table-row py-3 md:py-0 border-b md:border-b-0`} onClick={() => setSelectedTask(task)}>
+                                                        <td className="px-4 md:py-3 text-center align-middle inline-block md:table-cell" onClick={e=>e.stopPropagation()}>
+                                                            <div className="relative flex items-center justify-center cursor-pointer" onClick={() => handleToggleTaskStatus(task)}>
+                                                                <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-colors ${task.status === 'done' ? 'bg-brand-green border-brand-green' : task.status === 'in_progress' ? 'bg-brand-blue border-brand-blue' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'}`}>
+                                                                    {task.status === 'done' && <Check size={14} className="text-white" strokeWidth={3} />}
+                                                                    {task.status === 'in_progress' && <div className="w-2.5 h-0.5 bg-white rounded"></div>}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 md:py-3 align-middle inline-block md:table-cell w-[calc(100%-3rem)] md:w-auto">
+                                                            <span className={`font-medium ${task.status === 'done' ? 'line-through text-gray-500' : ''} ${overdue ? 'font-bold' : ''}`}>{task.title}</span>
+                                                        </td>
+                                                        {!activeProject && (
+                                                            <td className="px-4 py-1 md:py-3 text-xs md:text-sm block md:table-cell ml-8 md:ml-0 text-gray-500 dark:text-gray-400">
+                                                                <span className="md:hidden mr-1 text-[10px]">Project:</span>{task.projectId}
+                                                            </td>
+                                                        )}
+                                                        <td className="px-4 py-1 md:py-3 text-xs md:text-sm block md:table-cell ml-8 md:ml-0">
+                                                            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                                                <span className="md:hidden mr-1 text-[10px]">担当:</span>
+                                                                {task.assignee ? <><User size={14}/>{task.assignee}</> : <span>-</span>}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-1 md:py-3 block md:table-cell ml-8 md:ml-0">
+                                                            <span className="md:hidden text-gray-400 mr-1 text-[10px]">状態:</span>
+                                                            {overdue ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-white dark:bg-gray-800 text-brand-red dark:text-red-400 border border-brand-red dark:border-red-500/50">遅延</span>
+                                                             : task.status === 'done' ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-brand-lightgreen dark:bg-green-900/30 text-brand-green dark:text-green-400 border border-brand-green dark:border-green-500/50">完了</span>
+                                                             : task.status === 'in_progress' ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-brand-lightblue dark:bg-blue-900/30 text-brand-blue dark:text-blue-400 border border-brand-blue dark:border-blue-500/50">進行中</span>
+                                                             : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600">未着手</span>}
+                                                        </td>
+                                                        <td className="px-4 py-1 md:py-3 block md:table-cell ml-8 md:ml-0">
+                                                            <span className="md:hidden text-gray-400 mr-1 text-[10px]">期限:</span>
+                                                            {task.dueDate ? (
+                                                                <span className={`font-bold flex items-center gap-1 text-sm ${overdue ? 'text-brand-red dark:text-red-400' : task.dueDate === today ? 'text-brand-orange dark:text-orange-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                                                                    {overdue && <AlertCircle size={14}/>} {task.dueDate}
+                                                                </span>
+                                                            ) : <span className="text-gray-400 dark:text-gray-500">-</span>}
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })}
+                                            {displayTasks.length === 0 && (
+                                                <tr><td colSpan="6" className="text-center py-8 text-gray-500">タスクが見つかりません</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </main>
+                    </div>
+
+                    {/* ==========================================
+                        Task Edit Slide-over
+                    ========================================== */}
+                    <div className={`fixed inset-y-0 right-0 w-full md:w-96 bg-white dark:bg-brand-darkcard shadow-2xl z-50 transform transition-transform duration-300 border-l border-gray-200 dark:border-gray-700 flex flex-col ${selectedTask ? 'translate-x-0' : 'translate-x-full'}`}>
+                        {selectedTask && (
+                            <>
+                                <header className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 shrink-0">
+                                    <h3 className="font-bold">タスク詳細の編集</h3>
+                                    <button onClick={()=>setSelectedTask(null)} className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"><X size={20}/></button>
+                                </header>
+                                <div className="p-5 overflow-y-auto flex-1 space-y-5">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">タスク名</label>
+                                        <textarea value={selectedTask.title} onChange={e=>handleUpdateTask({...selectedTask, title:e.target.value})} 
+                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none resize-none" rows="2" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">ステータス</label>
+                                            <select value={selectedTask.status} onChange={e=>handleUpdateTask({...selectedTask, status:e.target.value})} 
+                                                className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none">
+                                                <option value="todo">未着手 ( - [ ] )</option>
+                                                <option value="in_progress">進行中 ( - [/] )</option>
+                                                <option value="done">完了 ( - [x] )</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">担当者</label>
+                                            <input type="text" value={selectedTask.assignee || ''} onChange={e=>handleUpdateTask({...selectedTask, assignee:e.target.value})} placeholder="例: 佐藤" 
+                                                className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none" />
+                                            <p className="text-[10px] text-gray-400 mt-0.5">#担当者(名前) で保存</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">期限日</label>
+                                        <input type="date" value={selectedTask.dueDate || ''} onChange={e=>handleUpdateTask({...selectedTask, dueDate:e.target.value})} 
+                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none text-brand-blue dark:text-blue-400" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">その他のタグ</label>
+                                        <input type="text" value={selectedTask.tags?.join(' ') || ''} onChange={e=>handleUpdateTask({...selectedTask, tags: e.target.value.split(/\s+/).filter(Boolean)})} placeholder="design front-end (スペース区切り)" 
+                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none" />
+                                    </div>
+                                    <div className="flex-1 flex flex-col">
+                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">ノート・詳細 (Markdown)</label>
+                                        <textarea value={selectedTask.notes || ''} onChange={e=>handleUpdateTask({...selectedTask, notes:e.target.value})} 
+                                            className="w-full min-h-[150px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none font-mono resize-none flex-1" />
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* ==========================================
+                        Settings Modal
+                    ========================================== */}
+                    <div className={`fixed inset-0 bg-black/60 z-50 flex items-center justify-center transition-opacity ${isSettingsOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+                        <div className="bg-white dark:bg-brand-darkcard rounded-lg shadow-xl w-full max-w-md overflow-hidden m-4 transition-colors">
+                            <header className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                                <h3 className="font-bold flex items-center gap-2"><Github size={20}/> GitHub Sync 設定</h3>
+                                <button onClick={()=>setIsSettingsOpen(false)}><X size={20} className="text-gray-500 dark:text-gray-400"/></button>
+                            </header>
+                            <div className="p-5 space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Personal Access Token</label>
+                                    <input type="password" value={githubConfig.token} onChange={e=>setGithubConfig({...githubConfig, token:e.target.value})} 
+                                        className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm" />
+                                </div>
+                                <div className="flex gap-3">
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Owner</label>
+                                        <input type="text" value={githubConfig.owner} onChange={e=>setGithubConfig({...githubConfig, owner:e.target.value})} 
+                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Repo</label>
+                                        <input type="text" value={githubConfig.repo} onChange={e=>setGithubConfig({...githubConfig, repo:e.target.value})} 
+                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">File Path</label>
+                                    <input type="text" value={githubConfig.path} onChange={e=>setGithubConfig({...githubConfig, path:e.target.value})} placeholder="Tasks.md" 
+                                        className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm" />
+                                </div>
+                                <button onClick={() => { localStorage.setItem('obsidian_github_config', JSON.stringify(githubConfig)); setIsSettingsOpen(false); handleFetchFromGithub(false); }} 
+                                    className="w-full bg-brand-blue dark:bg-blue-600 text-white font-bold py-2 rounded mt-2 flex items-center justify-center gap-2 hover:bg-blue-700 dark:hover:bg-blue-500">
+                                    <Save size={18}/> 保存して同期
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div className="space-y-2 flex-1 flex flex-col h-full">
-                        <label className="text-sm text-[#8b8b8b] font-medium flex items-center gap-2 px-1"><AlignLeft size={18} /> Notes / Description</label>
-                        <textarea 
-                          value={selectedTask.notes || ''} 
-                          onChange={(e) => handleUpdateTask({...selectedTask, notes: e.target.value})} 
-                          className="w-full min-h-[250px] bg-[#1e1e1e] border border-[#363636] rounded-xl p-4 text-[15px] text-[#dcddde] font-mono leading-relaxed focus:outline-none focus:border-[#8a5cf5] focus:ring-1 focus:ring-[#8a5cf5] transition-all placeholder-[#363636] break-all whitespace-pre-wrap" 
-                          placeholder="- [ ] Subtask 1&#10;- [ ] Subtask 2&#10;&#10;Add markdown notes here..." 
-                        />
-                    </div>
-                    <div className="pt-4 pb-4">
-                       <button onClick={() => handleDeleteTask(selectedTask.id)} className="w-full py-3 text-[#ff6b6b] bg-[#ff6b6b]/10 hover:bg-[#ff6b6b]/20 rounded-xl font-medium transition-colors">Delete Task</button>
-                    </div>
+
                 </div>
-              </>
-            )}
-          </div>
+            );
+        }
 
-          <div className={`fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-4 transition-opacity duration-300 ${isSettingsOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-            <div className={`bg-[#252525] border border-[#363636] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transition-transform duration-300 ${isSettingsOpen ? 'scale-100' : 'scale-95'}`}>
-                <header className="flex items-center justify-between p-4 border-b border-[#363636] bg-[#1e1e1e]/50">
-                    <div className="flex items-center gap-2 font-semibold text-white"><Github size={20} /> GitHub Sync Settings</div>
-                    <button onClick={() => setIsSettingsOpen(false)} className="text-[#8b8b8b] hover:text-white p-1"><X size={20} /></button>
-                </header>
-                <div className="p-5 space-y-4">
-                    <p className="text-xs text-[#8b8b8b] mb-4">ObsidianのVault内にあるMarkdownファイルと直接同期するための設定です。GitHub Personal Access Token (PAT) が必要です。</p>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-[#dcddde]">Personal Access Token (repo scope)</label>
-                      <input type="password" value={githubConfig.token} onChange={(e) => setGithubConfig({...githubConfig, token: e.target.value})} placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" className="w-full bg-[#1e1e1e] border border-[#363636] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#8a5cf5]" />
-                    </div>
-                    <div className="flex gap-3">
-                      <div className="space-y-1 flex-1">
-                        <label className="text-xs font-medium text-[#dcddde]">Owner (Username)</label>
-                        <input type="text" value={githubConfig.owner} onChange={(e) => setGithubConfig({...githubConfig, owner: e.target.value})} placeholder="octocat" className="w-full bg-[#1e1e1e] border border-[#363636] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#8a5cf5]" />
-                      </div>
-                      <div className="space-y-1 flex-1">
-                        <label className="text-xs font-medium text-[#dcddde]">Repository Name</label>
-                        <input type="text" value={githubConfig.repo} onChange={(e) => setGithubConfig({...githubConfig, repo: e.target.value})} placeholder="my-vault" className="w-full bg-[#1e1e1e] border border-[#363636] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#8a5cf5]" />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-[#dcddde]">File Path</label>
-                      <input type="text" value={githubConfig.path} onChange={(e) => setGithubConfig({...githubConfig, path: e.target.value})} placeholder="path/to/Tasks.md" className="w-full bg-[#1e1e1e] border border-[#363636] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#8a5cf5]" />
-                    </div>
-                    <button onClick={handleSaveSettings} className="w-full bg-[#8a5cf5] hover:bg-purple-500 text-white font-medium py-2.5 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2">
-                      <Save size={18} /> Save & Sync
-                    </button>
-                </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    const CalendarBlankIcon = ({className}) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
-      </svg>
-    );
-
-    const root = createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
