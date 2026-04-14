@@ -377,8 +377,8 @@
                 const overdue = isOverdue(task);
                 const rowBg = overdue ? 'bg-red-50 dark:bg-red-900/10' : task.status === 'done' ? 'bg-gray-50 dark:bg-gray-800/50 opacity-60' : 'hover:bg-gray-50 dark:hover:bg-gray-800';
                 return (
-                    <tr key={task.id} className={`${rowBg} transition cursor-pointer block md:table-row py-3 md:py-0 border-b md:border-b-0 border-gray-100 dark:border-gray-800`} onClick={() => setSelectedTask(task)}>
-                        <td className="px-4 md:py-3 text-center align-middle inline-block md:table-cell" onClick={e=>e.stopPropagation()}>
+                    <tr key={task.id} className={`${rowBg} transition cursor-pointer flex md:table-row py-3 md:py-0 border-b border-gray-200 dark:border-gray-700 md:border-none`} onClick={() => setSelectedTask(task)}>
+                        <td className="pl-4 pr-3 md:px-4 py-0 md:py-3 text-center align-top md:align-middle w-10 flex-shrink-0 mt-0.5 md:mt-0" onClick={e=>e.stopPropagation()}>
                             <div className="relative flex items-center justify-center cursor-pointer" onClick={() => handleToggleTaskStatus(task)}>
                                 <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-colors ${task.status === 'done' ? 'bg-brand-green border-brand-green' : task.status === 'in_progress' ? 'bg-brand-blue border-brand-blue' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'}`}>
                                     {task.status === 'done' && <Check size={14} className="text-white" strokeWidth={3} />}
@@ -386,23 +386,36 @@
                                 </div>
                             </div>
                         </td>
-                        <td className="px-4 md:py-3 align-middle inline-block md:table-cell w-[calc(100%-3rem)] md:w-auto">
-                            <span className={`font-medium ${task.status === 'done' ? 'line-through text-gray-500' : ''} ${overdue ? 'font-bold' : ''}`}>{task.title}</span>
-                            {task.recurrence && <span className="ml-2 inline-flex items-center text-[10px] text-brand-blue dark:text-blue-400 border border-brand-blue/30 px-1 rounded"><Repeat size={10} className="mr-0.5"/>{task.recurrence}</span>}
+                        <td className="flex-1 min-w-0 pr-4 md:px-4 md:py-3 align-middle">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                                <span className={`font-medium leading-tight ${task.status === 'done' ? 'line-through text-gray-500' : ''} ${overdue ? 'font-bold' : ''}`}>{task.title}</span>
+                                {task.recurrence && <span className="inline-flex items-center text-[10px] text-brand-blue dark:text-blue-400 border border-brand-blue/30 px-1 rounded"><Repeat size={10} className="mr-0.5"/>{task.recurrence}</span>}
+                            </div>
+                            
+                            {/* モバイル向けメタ情報をコンパクトに1行にまとめる */}
+                            <div className="flex md:hidden flex-wrap items-center gap-x-3 gap-y-1.5 mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+                                {!activeProject && <span>{task.projectId}</span>}
+                                {task.assignee && <span className="flex items-center gap-0.5"><User size={10}/>{task.assignee}</span>}
+                                {overdue ? <span className="text-brand-red dark:text-red-400 border border-brand-red dark:border-red-500/50 px-1 rounded">遅延</span>
+                                 : task.status === 'done' ? <span className="text-brand-green dark:text-green-400 border border-brand-green dark:border-green-500/50 px-1 rounded">完了</span>
+                                 : task.status === 'in_progress' ? <span className="text-brand-blue dark:text-blue-400 border border-brand-blue dark:border-blue-500/50 px-1 rounded">進行中</span>
+                                 : <span className="border border-gray-300 dark:border-gray-600 px-1 rounded">未着手</span>}
+                                {task.dueDate && <span className={`flex items-center gap-0.5 font-medium ${overdue ? 'text-brand-red dark:text-red-400' : task.dueDate === today ? 'text-brand-orange dark:text-orange-400' : ''}`}>{overdue && <AlertCircle size={10}/>} {task.dueDate}</span>}
+                            </div>
                         </td>
-                        {!activeProject && <td className="px-4 py-1 md:py-3 text-xs md:text-sm block md:table-cell ml-8 md:ml-0 text-gray-500 dark:text-gray-400"><span className="md:hidden mr-1 text-[10px]">Project:</span>{task.projectId}</td>}
-                        <td className="px-4 py-1 md:py-3 text-xs md:text-sm block md:table-cell ml-8 md:ml-0">
-                            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400"><span className="md:hidden mr-1 text-[10px]">担当:</span>{task.assignee ? <><User size={14}/>{task.assignee}</> : <span>-</span>}</div>
+                        
+                        {/* PC表示用のセル (モバイル時は非表示) */}
+                        {!activeProject && <td className="hidden md:table-cell px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{task.projectId}</td>}
+                        <td className="hidden md:table-cell px-4 py-3 text-sm">
+                            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">{task.assignee ? <><User size={14}/>{task.assignee}</> : <span>-</span>}</div>
                         </td>
-                        <td className="px-4 py-1 md:py-3 block md:table-cell ml-8 md:ml-0">
-                            <span className="md:hidden text-gray-400 mr-1 text-[10px]">状態:</span>
+                        <td className="hidden md:table-cell px-4 py-3">
                             {overdue ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-white dark:bg-gray-800 text-brand-red dark:text-red-400 border border-brand-red dark:border-red-500/50">遅延</span>
                              : task.status === 'done' ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-brand-lightgreen dark:bg-green-900/30 text-brand-green dark:text-green-400 border border-brand-green dark:border-green-500/50">完了</span>
                              : task.status === 'in_progress' ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-brand-lightblue dark:bg-blue-900/30 text-brand-blue dark:text-blue-400 border border-brand-blue dark:border-blue-500/50">進行中</span>
                              : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600">未着手</span>}
                         </td>
-                        <td className="px-4 py-1 md:py-3 block md:table-cell ml-8 md:ml-0">
-                            <span className="md:hidden text-gray-400 mr-1 text-[10px]">期限:</span>
+                        <td className="hidden md:table-cell px-4 py-3">
                             {task.dueDate ? <span className={`font-bold flex items-center gap-1 text-sm ${overdue ? 'text-brand-red dark:text-red-400' : task.dueDate === today ? 'text-brand-orange dark:text-orange-400' : 'text-gray-600 dark:text-gray-400'}`}>{overdue && <AlertCircle size={14}/>} {task.dueDate}</span> : <span className="text-gray-400 dark:text-gray-500">-</span>}
                         </td>
                     </tr>
