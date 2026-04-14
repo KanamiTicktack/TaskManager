@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>タスク管理ダッシュボード (Obsidian Sync)</title>
+    <title>TaskBoard (Obsidian Sync)</title>
     
+    <!-- PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="TaskBoard">
+    <meta name="theme-color" content="#005BAC">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -32,7 +38,12 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
-        body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; overscroll-behavior: none; }
+        body { 
+            -webkit-font-smoothing: antialiased; 
+            -moz-osx-font-smoothing: grayscale; 
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none;
+        }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -41,8 +52,8 @@
         .dark ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
     </style>
 </head>
-<body class="h-[100dvh] flex flex-col overflow-hidden text-sm bg-gray-100 dark:bg-brand-darkbg text-gray-900 dark:text-gray-100 transition-colors duration-200">
-    <div id="root" class="h-full flex flex-col overflow-hidden"></div>
+<body class="h-screen flex flex-col overflow-hidden text-sm bg-gray-100 dark:bg-brand-darkbg text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <div id="root" class="h-full"></div>
 
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect, useMemo, useRef } from 'https://esm.sh/react@18.2.0';
@@ -50,8 +61,13 @@
         import { 
             Kanban, Search, Calendar, Inbox, Clock, Edit2, ChevronLeft, ChevronDown, ChevronRight,
             PlusCircle, Plus, Send, Github, Settings, X, Check, Save, RefreshCw, 
-            Info, Loader2, Cloud, AlertCircle, LayoutList, Hash, User, Moon, Sun, Repeat, FolderPlus
+            Info, Loader2, Cloud, AlertCircle, LayoutList, Hash, User, Moon, Sun, Repeat, FolderPlus, GripVertical
         } from 'https://esm.sh/lucide-react@0.292.0';
+
+        // ドラッグ＆ドロップ機能のための dnd-kit インポート
+        import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from 'https://esm.sh/@dnd-kit/core@6.0.8?deps=react@18.2.0';
+        import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from 'https://esm.sh/@dnd-kit/sortable@7.0.2?deps=react@18.2.0,@dnd-kit/core@6.0.8';
+        import { CSS } from 'https://esm.sh/@dnd-kit/utilities@3.2.1?deps=react@18.2.0';
 
         const getTodayString = () => new Date().toISOString().split('T')[0];
 
@@ -99,11 +115,9 @@
                     const statusChar = taskMatch[2].toLowerCase();
                     let content = taskMatch[3];
                     let status = statusChar === 'x' ? 'done' : statusChar === '/' ? 'in_progress' : 'todo';
-                    let priority = 'normal';
-                    let dueDate = '';
-                    let recurrence = '';
+                    
+                    let priority = 'normal', dueDate = '', recurrence = '', assignee = null;
                     const tags = [];
-                    let assignee = null;
                     
                     if (content.includes('⏫')) { priority = 'high'; content = content.replace('⏫', ''); }
                     else if (content.includes('🔼')) { priority = 'medium'; content = content.replace('🔼', ''); }
@@ -127,8 +141,7 @@
                     
                     currentTask = {
                         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                        projectId: currentProjectName,
-                        title: content.trim(), status, priority, dueDate, recurrence, tags, assignee, notes: ''
+                        projectId: currentProjectName, title: content.trim(), status, priority, dueDate, recurrence, tags, assignee, notes: ''
                     };
                     tasks.push(currentTask);
                 } else if (currentTask && line.trim() !== '') {
@@ -185,9 +198,77 @@
 - [ ] 日報の提出 🔁 every weekday 📅 2026-04-13 #routine
 `;
 
+        // ==========================================
+        // プロジェクト項目 (ドラッグ＆ドロップ可能)
+        // ==========================================
+        const SortableProjectItem = ({ stat, activeProject, selectProject }) => {
+            const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: stat.name });
+            const style = {
+                transform: CSS.Transform.toString(transform),
+                transition,
+                zIndex: isDragging ? 10 : 1,
+                opacity: isDragging ? 0.6 : 1,
+            };
+
+            return (
+                <div ref={setNodeRef} style={style} className={`p-3 rounded-lg border flex items-center transition-colors ${activeProject === stat.name ? 'bg-white dark:bg-brand-darkcard border-brand-blue shadow-md' : 'bg-white dark:bg-brand-darkcard border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'} ${stat.overdue && activeProject !== stat.name ? 'border-brand-lightred dark:border-red-900/50' : ''}`}>
+                    {/* ドラッグハンドル */}
+                    <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 -ml-1 mr-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 touch-none">
+                        <GripVertical size={16} />
+                    </div>
+                    {/* プロジェクト情報 */}
+                    <div className="flex-1 cursor-pointer" onClick={() => selectProject(stat.name)}>
+                        <div className="flex justify-between items-start mb-1.5">
+                            <h3 className={`font-bold text-sm ${activeProject === stat.name ? 'text-brand-blue dark:text-blue-400' : ''}`}>{stat.name}</h3>
+                            {stat.overdue && <span className="bg-brand-red text-white text-[10px] px-1.5 py-0.5 rounded font-bold">遅延</span>}
+                        </div>
+                        <div className="flex items-center justify-between text-xs mb-1.5">
+                            <span className="font-medium text-gray-600 dark:text-gray-400">進捗: {stat.progress}%</span>
+                            <span className="text-gray-500 dark:text-gray-500">{stat.done} / {stat.total}</span>
+                        </div>
+                        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
+                            <div className={`h-1.5 rounded-full ${stat.progress === 100 ? 'bg-gray-400 dark:bg-gray-500' : 'bg-brand-green'}`} style={{ width: `${stat.progress}%` }}></div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         function App() {
             const today = getTodayString();
             
+            // PWA
+            useEffect(() => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512; canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#005BAC';
+                ctx.fillRect(0, 0, 512, 512);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 40;
+                ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                ctx.beginPath();
+                ctx.moveTo(130, 260); ctx.lineTo(220, 350); ctx.lineTo(390, 160);
+                ctx.stroke();
+                const iconDataUrl = canvas.toDataURL('image/png');
+
+                const manifest = {
+                    name: "TaskBoard Sync", short_name: "TaskBoard", start_url: ".", display: "standalone",
+                    background_color: "#f3f4f6", theme_color: "#005BAC",
+                    icons: [{ src: iconDataUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" }]
+                };
+                const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+                const manifestURL = URL.createObjectURL(blob);
+                
+                let manifestLink = document.querySelector('link[rel="manifest"]');
+                if (!manifestLink) { manifestLink = document.createElement('link'); manifestLink.rel = 'manifest'; document.head.appendChild(manifestLink); }
+                manifestLink.href = manifestURL;
+                let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+                if (!appleIcon) { appleIcon = document.createElement('link'); appleIcon.rel = 'apple-touch-icon'; document.head.appendChild(appleIcon); }
+                appleIcon.href = iconDataUrl;
+            }, []);
+
+            // DarkMode
             const [isDarkMode, setIsDarkMode] = useState(() => {
                 if (localStorage.getItem('theme') === 'dark') return true;
                 if (localStorage.getItem('theme') === 'light') return false;
@@ -200,6 +281,7 @@
                 else { root.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
             }, [isDarkMode]);
 
+            // States
             const [tasks, setTasks] = useState([]);
             const [projects, setProjects] = useState(['Inbox']);
             const [activeProject, setActiveProject] = useState(null);
@@ -220,15 +302,23 @@
             const [isSyncing, setIsSyncing] = useState(false);
             const autoSaveTimerRef = useRef(null);
 
-            // スワイプ操作用のState (右ドロワーを閉じる処理)
-            const [touchStartX, setTouchStartX] = useState(null);
-
             const [githubConfig, setGithubConfig] = useState(() => {
                 const saved = localStorage.getItem('obsidian_github_config');
                 return saved ? JSON.parse(saved) : { token: '', owner: '', repo: '', path: 'Tasks.md' };
             });
 
-            const handleFetchFromGithub = async (isInitial = false) => {
+            // Swipe to close
+            const [touchStartX, setTouchStartX] = useState(null);
+            const [touchEndX, setTouchEndX] = useState(null);
+            const handleTouchStart = (e) => { setTouchEndX(null); setTouchStartX(e.targetTouches[0].clientX); };
+            const handleTouchMove = (e) => { setTouchEndX(e.targetTouches[0].clientX); };
+            const handleTouchEnd = () => {
+                if (!touchStartX || !touchEndX) return;
+                if (touchStartX - touchEndX < -50) setSelectedTask(null);
+            };
+
+            // API Sync
+            const handleFetchFromGithub = async () => {
                 const { token, owner, repo, path } = githubConfig;
                 if (!token || !owner || !repo || !path) {
                     if (tasks.length === 0) {
@@ -237,6 +327,7 @@
                     }
                     setIsInitialLoaded(true); return;
                 }
+                setIsSyncing(true);
                 try {
                     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
                     const res = await fetch(url, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
@@ -245,13 +336,10 @@
                     const base64Content = data.content.replace(/\n/g, '');
                     const bytes = new Uint8Array(atob(base64Content).length);
                     for (let i = 0; i < bytes.length; i++) bytes[i] = atob(base64Content).charCodeAt(i);
-                    const parsed = parseMarkdownToTasks(new TextDecoder().decode(bytes));
+                    const markdownContent = new TextDecoder().decode(bytes);
+                    const parsed = parseMarkdownToTasks(markdownContent);
                     setTasks(parsed.tasks); setProjects(parsed.projects);
-                } catch (error) {
-                    console.error("Fetch Error:", error);
-                } finally {
-                    setIsInitialLoaded(true);
-                }
+                } catch (error) { console.error("Fetch Error:", error); } finally { setIsSyncing(false); setIsInitialLoaded(true); }
             };
 
             const triggerAutoSave = (newTasks, newProjects = projects) => {
@@ -265,7 +353,8 @@
                         let fileSha = null;
                         try { const getRes = await fetch(url, { headers }); if (getRes.ok) fileSha = (await getRes.json()).sha; } catch(e){}
                         const markdownContent = serializeTasksToMarkdown(newTasks, newProjects);
-                        const base64Content = btoa(Array.from(new TextEncoder().encode(markdownContent), byte => String.fromCodePoint(byte)).join(""));
+                        const bytes = new TextEncoder().encode(markdownContent);
+                        const base64Content = btoa(Array.from(bytes, byte => String.fromCodePoint(byte)).join(""));
                         const body = { message: 'Auto-sync from Dashboard', content: base64Content };
                         if (fileSha) body.sha = fileSha;
                         await fetch(url, { method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -273,17 +362,14 @@
                 }, 2000);
             };
 
-            useEffect(() => { handleFetchFromGithub(true); }, []);
+            useEffect(() => { handleFetchFromGithub(); }, []);
 
+            // Handlers
             const changeTaskStatus = (task, nextStatus) => {
                 let newTasks = [...tasks];
                 if (nextStatus === 'done' && task.status !== 'done' && task.recurrence) {
                     const nextDate = calculateNextDate(task.dueDate || today, task.recurrence);
-                    newTasks.push({
-                        ...task,
-                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                        status: 'todo', dueDate: nextDate
-                    });
+                    newTasks.push({ ...task, id: Date.now().toString() + Math.random().toString(36).substr(2, 9), status: 'todo', dueDate: nextDate });
                 }
                 newTasks = newTasks.map(t => t.id === task.id ? { ...t, status: nextStatus } : t);
                 setTasks(newTasks);
@@ -291,7 +377,10 @@
                 triggerAutoSave(newTasks, projects);
             };
 
-            const handleToggleTaskStatus = (task) => changeTaskStatus(task, task.status === 'done' ? 'todo' : task.status === 'todo' ? 'in_progress' : 'done');
+            const handleToggleTaskStatus = (task) => {
+                let nextStatus = task.status === 'done' ? 'todo' : task.status === 'todo' ? 'in_progress' : 'done';
+                changeTaskStatus(task, nextStatus);
+            };
 
             const handleQuickAdd = (e) => {
                 e.preventDefault();
@@ -321,26 +410,40 @@
                 setActiveProject(projName); setIsMobileListOpen(false); setShowCompleted(false);
             };
 
-            // スワイプ処理ハンドラ
-            const handleTouchStart = (e) => setTouchStartX(e.targetTouches[0].clientX);
-            const handleTouchMove = (e) => {
-                if (touchStartX === null) return;
-                if (e.targetTouches[0].clientX - touchStartX > 60) { // 60px以上右へスワイプで閉じる
-                    setSelectedTask(null); setTouchStartX(null);
+            // DnD Handlers
+            const sensors = useSensors(
+                useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), // 5pxドラッグで開始
+                useSensor(KeyboardSensor)
+            );
+
+            const handleDragEnd = (event) => {
+                const { active, over } = event;
+                if (over && active.id !== over.id) {
+                    const oldIndex = projects.indexOf(active.id);
+                    const newIndex = projects.indexOf(over.id);
+                    const newProjects = arrayMove(projects, oldIndex, newIndex);
+                    setProjects(newProjects);
+                    triggerAutoSave(tasks, newProjects);
                 }
             };
-            const handleTouchEnd = () => setTouchStartX(null);
 
+            // Selectors
             const isOverdue = (task) => task.dueDate && task.dueDate < today && task.status !== 'done';
             const uniqueAssignees = useMemo(() => Array.from(new Set(tasks.map(t => t.assignee).filter(Boolean))).sort(), [tasks]);
-            const uniqueTags = useMemo(() => Array.from(new Set(tasks.flatMap(t => t.tags || []))).sort(), [tasks]);
+            const uniqueTags = useMemo(() => {
+                const tags = new Set();
+                tasks.forEach(t => t.tags?.forEach(tag => tags.add(tag)));
+                return Array.from(tags).sort();
+            }, [tasks]);
 
-            const projectStats = useMemo(() => projects.map(projName => {
-                const pTasks = tasks.filter(t => t.projectId === projName);
-                const total = pTasks.length;
-                const done = pTasks.filter(t => t.status === 'done').length;
-                return { name: projName, total, done, overdue: pTasks.some(isOverdue), progress: total === 0 ? 0 : Math.round((done / total) * 100) };
-            }), [tasks, projects]);
+            const projectStats = useMemo(() => {
+                return projects.map(projName => {
+                    const pTasks = tasks.filter(t => t.projectId === projName);
+                    const total = pTasks.length, done = pTasks.filter(t => t.status === 'done').length, overdue = pTasks.some(isOverdue);
+                    const progress = total === 0 ? 0 : Math.round((done / total) * 100);
+                    return { name: projName, total, done, overdue, progress };
+                });
+            }, [tasks, projects]);
 
             const displayTasks = useMemo(() => {
                 let filtered = tasks;
@@ -358,18 +461,19 @@
             const uncompletedTasks = displayTasks.filter(t => t.status !== 'done');
             const completedTasks = displayTasks.filter(t => t.status === 'done');
 
-            const activeProjectTasks = tasks.filter(t => t.projectId === activeProject);
-            const chartData = useMemo(() => {
+            const headerTasks = activeProject ? tasks.filter(t => t.projectId === activeProject) : tasks;
+            const headerStats = useMemo(() => {
                 let done=0, inProgress=0, todo=0, overdue=0;
-                activeProjectTasks.forEach(t => {
-                    if (t.status === 'done') done++;
-                    else if (isOverdue(t)) overdue++;
-                    else if (t.status === 'in_progress') inProgress++;
-                    else todo++;
+                headerTasks.forEach(t => {
+                    if (t.status === 'done') done++; else if (isOverdue(t)) overdue++; else if (t.status === 'in_progress') inProgress++; else todo++;
                 });
-                return [done, inProgress, todo, overdue];
-            }, [activeProjectTasks]);
-
+                const total = done + inProgress + todo + overdue;
+                return { 
+                    done, inProgress, todo, overdue, total,
+                    donePct: total ? (done/total)*100 : 0, inProgPct: total ? (inProgress/total)*100 : 0,
+                    todoPct: total ? (todo/total)*100 : 0, overduePct: total ? (overdue/total)*100 : 0,
+                };
+            }, [headerTasks, today]);
 
             if (!isInitialLoaded) return <div className="h-full flex items-center justify-center bg-gray-100 dark:bg-brand-darkbg"><Loader2 className="animate-spin text-brand-blue" size={32} /></div>;
 
@@ -391,8 +495,6 @@
                                 <span className={`font-medium leading-tight ${task.status === 'done' ? 'line-through text-gray-500' : ''} ${overdue ? 'font-bold' : ''}`}>{task.title}</span>
                                 {task.recurrence && <span className="inline-flex items-center text-[10px] text-brand-blue dark:text-blue-400 border border-brand-blue/30 px-1 rounded"><Repeat size={10} className="mr-0.5"/>{task.recurrence}</span>}
                             </div>
-                            
-                            {/* モバイル向けメタ情報をコンパクトに1行にまとめる */}
                             <div className="flex md:hidden flex-wrap items-center gap-x-3 gap-y-1.5 mt-2 text-[11px] text-gray-500 dark:text-gray-400">
                                 {!activeProject && <span>{task.projectId}</span>}
                                 {task.assignee && <span className="flex items-center gap-0.5"><User size={10}/>{task.assignee}</span>}
@@ -403,12 +505,8 @@
                                 {task.dueDate && <span className={`flex items-center gap-0.5 font-medium ${overdue ? 'text-brand-red dark:text-red-400' : task.dueDate === today ? 'text-brand-orange dark:text-orange-400' : ''}`}>{overdue && <AlertCircle size={10}/>} {task.dueDate}</span>}
                             </div>
                         </td>
-                        
-                        {/* PC表示用のセル (モバイル時は非表示) */}
                         {!activeProject && <td className="hidden md:table-cell px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{task.projectId}</td>}
-                        <td className="hidden md:table-cell px-4 py-3 text-sm">
-                            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">{task.assignee ? <><User size={14}/>{task.assignee}</> : <span>-</span>}</div>
-                        </td>
+                        <td className="hidden md:table-cell px-4 py-3 text-sm"><div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">{task.assignee ? <><User size={14}/>{task.assignee}</> : <span>-</span>}</div></td>
                         <td className="hidden md:table-cell px-4 py-3">
                             {overdue ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-white dark:bg-gray-800 text-brand-red dark:text-red-400 border border-brand-red dark:border-red-500/50">遅延</span>
                              : task.status === 'done' ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-brand-lightgreen dark:bg-green-900/30 text-brand-green dark:text-green-400 border border-brand-green dark:border-green-500/50">完了</span>
@@ -423,8 +521,7 @@
             };
 
             return (
-                <div className="flex flex-col h-full font-sans bg-gray-100 dark:bg-brand-darkbg text-gray-900 dark:text-gray-100">
-                    
+                <div className="flex flex-col h-full font-sans bg-gray-100 dark:bg-brand-darkbg text-gray-900 dark:text-gray-100 transition-colors duration-200">
                     <header className="bg-white dark:bg-brand-darkcard border-b border-gray-300 dark:border-brand-darkborder px-4 py-3 flex justify-between items-center shrink-0 shadow-sm z-10 transition-colors">
                         <div className="flex items-center gap-2">
                             {!isMobileListOpen && <button onClick={() => setIsMobileListOpen(true)} className="md:hidden mr-1 text-gray-500 dark:text-gray-400"><ChevronLeft size={24} /></button>}
@@ -438,95 +535,72 @@
                                     className="w-full border border-gray-300 dark:border-gray-600 rounded-md pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:border-brand-blue bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
                             </div>
                             <select value={filterAssignee} onChange={e=>setFilterAssignee(e.target.value)} className="border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 text-sm bg-white dark:bg-gray-800 focus:outline-none hidden sm:block">
-                                <option value="">担当者: 全て</option>
-                                {uniqueAssignees.map(a => <option key={a} value={a}>{a}</option>)}
+                                <option value="">担当者: 全て</option>{uniqueAssignees.map(a => <option key={a} value={a}>{a}</option>)}
+                            </select>
+                            <select value={filterTag} onChange={e=>setFilterTag(e.target.value)} className="border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 text-sm bg-white dark:bg-gray-800 focus:outline-none hidden lg:block">
+                                <option value="">タグ: 全て</option>{uniqueTags.map(t => <option key={t} value={t}>#{t}</option>)}
                             </select>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button onClick={toggleDarkMode} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors">{isDarkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
-                            {isSyncing ? <Cloud size={20} className="text-brand-blue animate-pulse" /> : <button onClick={()=>handleFetchFromGithub(false)}><RefreshCw size={20} className="text-gray-400 hover:text-brand-blue" /></button>}
+                            <button onClick={toggleDarkMode} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors">
+                                {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                            </button>
+                            {isSyncing ? <Cloud size={20} className="text-brand-blue animate-pulse" /> : <button onClick={()=>handleFetchFromGithub()}><RefreshCw size={20} className="text-gray-400 hover:text-brand-blue dark:hover:text-blue-400" /></button>}
                             <button onClick={() => setIsSettingsOpen(true)}><Settings size={20} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" /></button>
                         </div>
                     </header>
 
                     <div className="flex flex-1 overflow-hidden">
-                        
-                        {/* 左サイドバー: 内部スクロール */}
-                        <aside className={`w-full md:w-80 bg-gray-50 dark:bg-[#18212f] border-r border-gray-300 dark:border-brand-darkborder flex flex-col h-full shrink-0 transition-colors ${isMobileListOpen ? 'flex' : 'hidden md:flex'}`}>
-                            <div className="shrink-0 p-3 border-b border-gray-200 dark:border-brand-darkborder">
+                        <aside className={`w-full md:w-80 bg-gray-50 dark:bg-[#18212f] border-r border-gray-300 dark:border-brand-darkborder flex flex-col shrink-0 transition-colors ${isMobileListOpen ? 'flex' : 'hidden md:flex'}`}>
+                            <div className="p-3 border-b border-gray-200 dark:border-brand-darkborder">
                                 <button onClick={() => selectProject(null)} className={`w-full flex items-center gap-2 p-3 rounded-lg border transition ${activeProject === null ? 'bg-brand-lightblue dark:bg-blue-900/30 border-brand-blue text-brand-blue dark:text-blue-400 font-bold shadow-sm' : 'bg-white dark:bg-brand-darkcard border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                                     <LayoutList size={20} /><span>すべてのタスク</span>
                                 </button>
                             </div>
-                            <div className="shrink-0 p-3 pb-1">
+                            <div className="p-3 pb-1 flex justify-between items-center">
                                 <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Projects</h2>
                             </div>
                             
+                            {/* Drag & Drop Context for Projects */}
                             <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-2">
-                                {projectStats.map(stat => (
-                                    <div key={stat.name} onClick={() => selectProject(stat.name)}
-                                        className={`p-3 rounded-lg border cursor-pointer transition ${activeProject === stat.name ? 'bg-white dark:bg-brand-darkcard border-brand-blue shadow-md' : 'bg-white dark:bg-brand-darkcard border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'} ${stat.overdue && activeProject !== stat.name ? 'border-brand-lightred dark:border-red-900/50' : ''}`}>
-                                        <div className="flex justify-between items-start mb-1.5">
-                                            <h3 className={`font-bold text-sm ${activeProject === stat.name ? 'text-brand-blue dark:text-blue-400' : ''}`}>{stat.name}</h3>
-                                            {stat.overdue && <span className="bg-brand-red text-white text-[10px] px-1.5 py-0.5 rounded font-bold">遅延</span>}
-                                        </div>
-                                        <div className="flex items-center justify-between text-xs mb-1.5">
-                                            <span className="font-medium text-gray-600 dark:text-gray-400">進捗: {stat.progress}%</span>
-                                            <span className="text-gray-500 dark:text-gray-500">{stat.done} / {stat.total}</span>
-                                        </div>
-                                        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
-                                            <div className={`h-1.5 rounded-full ${stat.progress === 100 ? 'bg-gray-400 dark:bg-gray-500' : 'bg-brand-green'}`} style={{ width: `${stat.progress}%` }}></div>
-                                        </div>
-                                    </div>
-                                ))}
+                                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                    <SortableContext items={projects} strategy={verticalListSortingStrategy}>
+                                        {projectStats.map(stat => (
+                                            <SortableProjectItem key={stat.name} stat={stat} activeProject={activeProject} selectProject={selectProject} />
+                                        ))}
+                                    </SortableContext>
+                                </DndContext>
                             </div>
-                            <div className="shrink-0 p-3 border-t border-gray-200 dark:border-brand-darkborder bg-white dark:bg-brand-darkcard">
+
+                            <div className="p-3 border-t border-gray-200 dark:border-brand-darkborder bg-white dark:bg-brand-darkcard">
                                 <button onClick={() => setIsNewProjectOpen(true)} className="w-full flex items-center justify-center gap-2 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-brand-blue dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition border border-dashed border-gray-300 dark:border-gray-600">
                                     <FolderPlus size={18}/> 新規プロジェクト
                                 </button>
                             </div>
                         </aside>
 
-                        {/* メインコンテンツ: 内部スクロール */}
-                        <main className={`flex-1 flex flex-col bg-white dark:bg-brand-darkbg h-full overflow-hidden relative transition-colors ${!isMobileListOpen ? 'flex' : 'hidden md:flex'}`}>
-                            
-                            {/* コンパクトなプロジェクトヘッダー */}
-                            {activeProject && (
-                                <div className="bg-white dark:bg-brand-darkcard px-4 md:px-6 py-3 border-b border-gray-200 dark:border-brand-darkborder shrink-0 transition-colors flex flex-col gap-2.5">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <h2 className="text-xl font-bold">{activeProject}</h2>
-                                            {chartData[3] > 0 && <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-brand-lightred dark:bg-red-900/30 text-brand-red dark:text-red-400 border border-brand-lightred dark:border-red-800"><AlertCircle size={12} className="mr-1"/>要注意</span>}
-                                        </div>
-                                        <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">総タスク: {activeProjectTasks.length}</div>
+                        <main className={`flex-1 flex flex-col bg-white dark:bg-brand-darkbg overflow-hidden relative transition-colors ${!isMobileListOpen ? 'flex' : 'hidden md:flex'}`}>
+                            <div className="bg-white dark:bg-brand-darkcard px-4 md:px-6 py-4 border-b border-gray-200 dark:border-brand-darkborder shrink-0 transition-colors">
+                                <div className="flex justify-between items-end mb-2">
+                                    <div className="flex items-center gap-3">
+                                        <h2 className="text-xl md:text-2xl font-bold">{activeProject || 'すべてのタスク'}</h2>
+                                        {headerStats.overdue > 0 && <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-brand-lightred dark:bg-red-900/30 text-brand-red dark:text-red-400 border border-brand-lightred dark:border-red-800"><AlertCircle size={12} className="mr-1"/>要注意</span>}
                                     </div>
-                                    
-                                    <div className="flex flex-col gap-1.5">
-                                        <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full flex overflow-hidden">
-                                            {activeProjectTasks.length > 0 && (
-                                                <>
-                                                    <div className="bg-brand-green transition-all duration-500" style={{width: `${(chartData[0] / activeProjectTasks.length) * 100}%`}}></div>
-                                                    <div className="bg-brand-blue transition-all duration-500" style={{width: `${(chartData[1] / activeProjectTasks.length) * 100}%`}}></div>
-                                                    <div className="bg-brand-red transition-all duration-500" style={{width: `${(chartData[3] / activeProjectTasks.length) * 100}%`}}></div>
-                                                </>
-                                            )}
-                                        </div>
-                                        <div className="flex flex-wrap gap-4 text-xs font-medium mt-0.5">
-                                            <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-brand-green"></span>完了: {chartData[0]}</span>
-                                            <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-brand-blue"></span>進行中: {chartData[1]}</span>
-                                            <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span className={`w-2.5 h-2.5 rounded-full ${isDarkMode ? 'bg-gray-600' : 'bg-gray-400'}`}></span>未着手: {chartData[2]}</span>
-                                            {chartData[3] > 0 && <span className="flex items-center gap-1 text-brand-red dark:text-red-400"><span className="w-2.5 h-2.5 rounded-full bg-brand-red"></span>遅延: {chartData[3]}</span>}
-                                        </div>
-                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">総タスク: {headerStats.total}</div>
                                 </div>
-                            )}
-
-                            {!activeProject && (
-                                <div className="bg-white dark:bg-brand-darkcard px-6 py-4 border-b border-gray-200 dark:border-brand-darkborder shrink-0 flex items-center gap-3 transition-colors">
-                                    <LayoutList className="text-gray-400" size={24} />
-                                    <div><h2 className="text-lg font-bold">すべてのタスク</h2><p className="text-xs text-gray-500 dark:text-gray-400">対応日付順にソートされています</p></div>
+                                <div className="flex w-full h-2 rounded-full overflow-hidden mb-2.5 bg-gray-200 dark:bg-gray-700">
+                                    {headerStats.donePct > 0 && <div style={{width: `${headerStats.donePct}%`}} className="bg-brand-green"></div>}
+                                    {headerStats.inProgPct > 0 && <div style={{width: `${headerStats.inProgPct}%`}} className="bg-brand-blue"></div>}
+                                    {headerStats.todoPct > 0 && <div style={{width: `${headerStats.todoPct}%`}} className="bg-gray-400 dark:bg-gray-500"></div>}
+                                    {headerStats.overduePct > 0 && <div style={{width: `${headerStats.overduePct}%`}} className="bg-brand-red"></div>}
                                 </div>
-                            )}
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+                                    <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300"><span className="w-2.5 h-2.5 rounded-full bg-brand-green"></span>完了: {headerStats.done}</span>
+                                    <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300"><span className="w-2.5 h-2.5 rounded-full bg-brand-blue"></span>進行中: {headerStats.inProgress}</span>
+                                    <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300"><span className="w-2.5 h-2.5 rounded-full bg-gray-400 dark:bg-gray-500"></span>未着手: {headerStats.todo}</span>
+                                    <span className="flex items-center gap-1.5 text-brand-red dark:text-red-400 font-bold"><span className="w-2.5 h-2.5 rounded-full bg-brand-red"></span>遅延: {headerStats.overdue}</span>
+                                </div>
+                            </div>
 
                             <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 dark:bg-brand-darkbg transition-colors">
                                 <form onSubmit={handleQuickAdd} className="bg-white dark:bg-brand-darkcard p-2 rounded-lg border border-brand-blue dark:border-blue-500/50 shadow-sm mb-6 flex items-center gap-3 transition-colors">
@@ -578,89 +652,74 @@
                         </main>
                     </div>
 
-                    {/* タスク詳細ドロワー: 内部スクロール & スワイプ対応 */}
+                    {/* Task Edit Slide-over with Swipe Support */}
                     <div 
-                        className={`fixed inset-y-0 right-0 w-full md:w-96 bg-white dark:bg-brand-darkcard shadow-2xl z-50 transform transition-transform duration-300 border-l border-gray-200 dark:border-gray-700 flex flex-col h-[100dvh] ${selectedTask ? 'translate-x-0' : 'translate-x-full'}`}
-                        onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
+                        className={`fixed inset-y-0 right-0 w-full md:w-96 bg-white dark:bg-brand-darkcard shadow-2xl z-50 transform transition-transform duration-300 border-l border-gray-200 dark:border-gray-700 flex flex-col ${selectedTask ? 'translate-x-0' : 'translate-x-full'}`}
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
                     >
                         {selectedTask && (
                             <>
-                                <header className="shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
-                                    <h3 className="font-bold flex items-center gap-2">
-                                        <button className="md:hidden text-gray-400" onClick={()=>setSelectedTask(null)}><ChevronRight size={20}/></button>
-                                        タスク詳細
-                                    </h3>
+                                <header className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 shrink-0">
+                                    <h3 className="font-bold">タスク詳細の編集</h3>
                                     <button onClick={()=>setSelectedTask(null)} className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"><X size={20}/></button>
                                 </header>
-                                <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                                <div className="p-5 overflow-y-auto flex-1 space-y-5">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">プロジェクト</label>
-                                        <select value={selectedTask.projectId} onChange={e=>handleUpdateTask({...selectedTask, projectId:e.target.value})} 
-                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none">
+                                        <select value={selectedTask.projectId} onChange={e=>handleUpdateTask({...selectedTask, projectId:e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none">
                                             {projects.map(p => <option key={p} value={p}>{p}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">タスク名</label>
-                                        <textarea value={selectedTask.title} onChange={e=>handleUpdateTask({...selectedTask, title:e.target.value})} 
-                                            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm focus:border-brand-blue outline-none resize-none" rows="2" />
+                                        <textarea value={selectedTask.title} onChange={e=>handleUpdateTask({...selectedTask, title:e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm focus:border-brand-blue outline-none resize-none" rows="2" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">ステータス</label>
-                                            <select value={selectedTask.status} onChange={e => changeTaskStatus(selectedTask, e.target.value)} 
-                                                className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none">
-                                                <option value="todo">未着手 ( - [ ] )</option>
-                                                <option value="in_progress">進行中 ( - [/] )</option>
-                                                <option value="done">完了 ( - [x] )</option>
+                                            <select value={selectedTask.status} onChange={e => changeTaskStatus(selectedTask, e.target.value)} className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none">
+                                                <option value="todo">未着手 ( - [ ] )</option><option value="in_progress">進行中 ( - [/] )</option><option value="done">完了 ( - [x] )</option>
                                             </select>
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">担当者</label>
-                                            <input type="text" value={selectedTask.assignee || ''} onChange={e=>handleUpdateTask({...selectedTask, assignee:e.target.value})} placeholder="例: 佐藤" 
-                                                className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none" />
+                                            <input type="text" value={selectedTask.assignee || ''} onChange={e=>handleUpdateTask({...selectedTask, assignee:e.target.value})} placeholder="例: 佐藤" className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none" />
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">期限日</label>
-                                            <input type="date" value={selectedTask.dueDate || ''} onChange={e=>handleUpdateTask({...selectedTask, dueDate:e.target.value})} 
-                                                className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none text-brand-blue dark:text-blue-400" />
+                                            <input type="date" value={selectedTask.dueDate || ''} onChange={e=>handleUpdateTask({...selectedTask, dueDate:e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none text-brand-blue dark:text-blue-400" />
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Repeat size={12}/> 繰り返し</label>
-                                            <select value={selectedTask.recurrence || ''} onChange={e=>handleUpdateTask({...selectedTask, recurrence:e.target.value})} 
-                                                className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none">
-                                                <option value="">なし</option>
-                                                <option value="every day">毎日</option>
-                                                <option value="every weekday">平日</option>
-                                                <option value="every week">毎週</option>
-                                                <option value="every month">毎月</option>
-                                                <option value="every year">毎年</option>
+                                            <select value={selectedTask.recurrence || ''} onChange={e=>handleUpdateTask({...selectedTask, recurrence:e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none">
+                                                <option value="">なし</option><option value="every day">毎日</option><option value="every weekday">平日</option><option value="every week">毎週</option><option value="every month">毎月</option><option value="every year">毎年</option>
                                             </select>
                                         </div>
                                     </div>
                                     <div className="flex-1 flex flex-col">
                                         <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">ノート・詳細 (Markdown)</label>
-                                        <textarea value={selectedTask.notes || ''} onChange={e=>handleUpdateTask({...selectedTask, notes:e.target.value})} 
-                                            className="w-full min-h-[150px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none font-mono resize-none flex-1" />
+                                        <textarea value={selectedTask.notes || ''} onChange={e=>handleUpdateTask({...selectedTask, notes:e.target.value})} className="w-full min-h-[150px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-2 text-sm outline-none font-mono resize-none flex-1" />
                                     </div>
                                 </div>
                             </>
                         )}
                     </div>
 
-                    {/* モーダル群 (New Project & Settings) は省略せず維持 */}
+                    {/* Create Project Modal */}
                     <div className={`fixed inset-0 bg-black/60 z-50 flex items-center justify-center transition-opacity ${isNewProjectOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-                        <div className="bg-white dark:bg-brand-darkcard rounded-lg shadow-xl w-full max-w-sm m-4">
+                        <div className="bg-white dark:bg-brand-darkcard rounded-lg shadow-xl w-full max-w-sm overflow-hidden m-4">
                             <header className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
-                                <h3 className="font-bold flex items-center gap-2"><FolderPlus size={18}/> 新規プロジェクト</h3>
+                                <h3 className="font-bold flex items-center gap-2"><FolderPlus size={18}/> 新規プロジェクトの作成</h3>
                                 <button onClick={()=>setIsNewProjectOpen(false)}><X size={20} className="text-gray-500"/></button>
                             </header>
                             <form onSubmit={handleCreateProject} className="p-5 space-y-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">プロジェクト名</label>
-                                    <input type="text" value={newProjectName} onChange={e=>setNewProjectName(e.target.value)} placeholder="例: デザインリニューアル" autoFocus className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm outline-none focus:border-brand-blue" />
+                                    <input type="text" value={newProjectName} onChange={e=>setNewProjectName(e.target.value)} placeholder="例: デザインリニューアル" className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm focus:border-brand-blue outline-none" />
                                 </div>
                                 <div className="flex gap-2 justify-end pt-2">
                                     <button type="button" onClick={()=>setIsNewProjectOpen(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">キャンセル</button>
@@ -670,20 +729,29 @@
                         </div>
                     </div>
 
+                    {/* Settings Modal */}
                     <div className={`fixed inset-0 bg-black/60 z-[60] flex items-center justify-center transition-opacity ${isSettingsOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-                        <div className="bg-white dark:bg-brand-darkcard rounded-lg shadow-xl w-full max-w-md m-4">
+                        <div className="bg-white dark:bg-brand-darkcard rounded-lg shadow-xl w-full max-w-md overflow-hidden m-4 transition-colors">
                             <header className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
                                 <h3 className="font-bold flex items-center gap-2"><Github size={20}/> GitHub Sync 設定</h3>
                                 <button onClick={()=>setIsSettingsOpen(false)}><X size={20} className="text-gray-500"/></button>
                             </header>
                             <div className="p-5 space-y-4">
-                                <div><label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Personal Access Token</label><input type="password" value={githubConfig.token} onChange={e=>setGithubConfig({...githubConfig, token:e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm outline-none" /></div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Personal Access Token</label>
+                                    <input type="password" value={githubConfig.token} onChange={e=>setGithubConfig({...githubConfig, token:e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm outline-none" />
+                                </div>
                                 <div className="flex gap-3">
                                     <div className="flex-1"><label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Owner</label><input type="text" value={githubConfig.owner} onChange={e=>setGithubConfig({...githubConfig, owner:e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm outline-none" /></div>
                                     <div className="flex-1"><label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Repo</label><input type="text" value={githubConfig.repo} onChange={e=>setGithubConfig({...githubConfig, repo:e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm outline-none" /></div>
                                 </div>
-                                <div><label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">File Path</label><input type="text" value={githubConfig.path} onChange={e=>setGithubConfig({...githubConfig, path:e.target.value})} placeholder="Tasks.md" className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm outline-none" /></div>
-                                <button onClick={() => { localStorage.setItem('obsidian_github_config', JSON.stringify(githubConfig)); setIsSettingsOpen(false); handleFetchFromGithub(false); }} className="w-full bg-brand-blue dark:bg-blue-600 text-white font-bold py-2 rounded mt-2 flex items-center justify-center gap-2 hover:bg-blue-700 dark:hover:bg-blue-500"><Save size={18}/> 保存して同期</button>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">File Path</label>
+                                    <input type="text" value={githubConfig.path} onChange={e=>setGithubConfig({...githubConfig, path:e.target.value})} placeholder="Tasks.md" className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 text-sm outline-none" />
+                                </div>
+                                <button onClick={() => { localStorage.setItem('obsidian_github_config', JSON.stringify(githubConfig)); setIsSettingsOpen(false); handleFetchFromGithub(); }} className="w-full bg-brand-blue dark:bg-blue-600 text-white font-bold py-2 rounded mt-2 flex items-center justify-center gap-2 hover:bg-blue-700">
+                                    <Save size={18}/> 保存して同期
+                                </button>
                             </div>
                         </div>
                     </div>
